@@ -1,3 +1,4 @@
+// src/server.js
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -6,8 +7,7 @@ const passport = require('passport');
 const http = require('http');
 const os = require('os');
 require('dotenv').config();
-require('../backend/src/config/passport');
-const importCSVtoDatabase = require('./src/scripts/csv'); // Đảm bảo đường dẫn chính xác
+require('./src/config/passport');
 
 const app = express();
 const server = http.createServer(app);
@@ -29,9 +29,6 @@ const getLocalIP = () => {
 
 const localIP = getLocalIP();
 
-// Gọi hàm tạo bảng
-// createTablesIfNotExists();
-
 // Cấu hình CORS và các middleware khác
 app.use(cors({
   origin: ['http://localhost:3001', 'http://localhost:3000'],
@@ -48,26 +45,16 @@ app.use(session({
   saveUninitialized: true,
   cookie: { secure: false },
 }));
-
-app.use(session({ secret: 'your_secret_key', resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-// app.use('/auth', require('./src/routes/authRoutes')); // Đã cập nhật đúng đường dẫn
+// Định tuyến
+app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api', require('./src/routes/wordRoutes'));
 app.use('/account', require('./src/routes/userRoutes'));
 
 // Cấu hình WebSocket
 setupSocket(server);
-
-// Gọi hàm import CSV
-// const csvFilePath = './src/data/advance.csv'; 
-// importCSVtoDatabase(csvFilePath).catch(err => {
-//   console.error('Error importing CSV:', err);
-// });
 
 server.listen(process.env.PORT || 3000, () => {
   console.log(`Server is running on http://${localIP}:${process.env.PORT || 3000}`);

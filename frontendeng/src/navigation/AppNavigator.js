@@ -31,8 +31,8 @@ const AppTabs = () => (
       },
     })}
   >
-    <Tab.Screen name="Home" component={HomePage} options={{ headerShown: false }} />
-    <Tab.Screen name="Profile" component={ProfilePage} options={{ headerShown: false }} />
+    <Tab.Screen name="Home" component={HomePage} />
+    <Tab.Screen name="Profile" component={ProfilePage} />
   </Tab.Navigator>
 );
 
@@ -45,8 +45,10 @@ const AppNavigator = () => {
     const loadUser = async () => {
       try {
         const userJson = await AsyncStorage.getItem('user');
+        console.log("Loaded user from AsyncStorage:", userJson);
         if (userJson) {
           const user = JSON.parse(userJson);
+          console.log("Parsed user:", user);
           if (user) {
             dispatch(loginAction(user));
           }
@@ -65,24 +67,18 @@ const AppNavigator = () => {
     return <ActivityIndicator size="large" color="#007bff" />;
   }
 
+  console.log("Current user state:", user);
+
   return (
     <NavigationContainer>
       <Stack.Navigator>
         {user ? (
           <>
             <Stack.Screen name="AppTabs" component={AppTabs} options={{ headerShown: false }} />
-            <Stack.Screen 
-              name="CreateWord" 
-              component={CreateWordPage} 
-              options={{ title: 'Đóng góp từ vựng' }} 
-            />
+            <Stack.Screen name="CreateWord" component={CreateWordPage} />
           </>
         ) : (
-          <Stack.Screen 
-            name="Login" 
-            component={LoginPage} 
-            options={{ title: 'Thông Tin' }} 
-          />
+          <Stack.Screen name="Login" component={LoginPage} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import FlashMessage, { showMessage } from 'react-native-flash-message';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import useLogin from '../hooks/useLogin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 GoogleSignin.configure({
-  offlineAccess: true,
-  webClientId: '342637437251-nb4i03dmvpl0cvnqqco8bsdprj4to0r0.apps.googleusercontent.com', 
+  offlineAccess: false,
+  webClientId: '342637437251-io70dqt8qaoq9n2jk5mtj88pvqli2160.apps.googleusercontent.com',
 });
-
 
 const Login = () => {
   const { email, setEmail, password, setPassword, login, error } = useLogin();
@@ -23,10 +21,11 @@ const Login = () => {
     const { params } = route;
     if (params?.login === 'success') {
       AsyncStorage.getItem('user').then(user => {
+        console.log("User retrieved after login success:", user);
         if (user) {
           navigation.reset({
             index: 0,
-            routes: [{ name: 'Home' }],
+            routes: [{ name: 'AppTabs' }],  // Ensure this route name matches with Stack Navigator
           });
           showMessage({
             message: "Đăng nhập thành công!",
@@ -41,11 +40,12 @@ const Login = () => {
     setLoading(true);
     try {
       const { success, user } = await login();
+      console.log("Login response:", { success, user });
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         navigation.reset({
           index: 0,
-          routes: [{ name: 'Home' }],
+          routes: [{ name: 'AppTabs' }],  // Ensure this route name matches with Stack Navigator
         });
         showMessage({
           message: "Đăng nhập thành công!",
@@ -69,39 +69,48 @@ const Login = () => {
   };
 
   const handleGoogleLogin = async () => {
+    setLoading(true);
     try {
       await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
+      const { idToken } = await GoogleSignin.signIn();
   
-      // Gửi thông tin người dùng đến backend để xử lý đăng nhập
-      const response = await fetch('http://26.169.114.72:3000/auth/google/callback', {
+      const response = await fetch('http://26.169.114.72:3000/auth/google/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token: userInfo.idToken }),
+        body: JSON.stringify({ token: idToken }),
       });
-      
-      const result = await response.json();
-      if (response.ok) {
-        Alert.alert('Đăng nhập thành công', `Xin chào ${result.name}`);
+  
+      const data = await response.json();
+      console.log("Google login response:", data);
+      if (data.success) {
+        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'AppTabs' }],  // Ensure this route name matches with Stack Navigator
+        });
+        showMessage({
+          message: "Đăng nhập thành công!",
+          type: "success",
+        });
       } else {
-        Alert.alert('Đăng nhập thất bại', result.message || 'Có lỗi xảy ra');
+        showMessage({
+          message: "Đăng nhập thất bại",
+          type: "danger",
+        });
       }
     } catch (error) {
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // Người dùng hủy đăng nhập
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        // Đăng nhập đang được thực hiện
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        // Google Play Services không khả dụng
-      } else {
-        // Xử lý các lỗi khác
-        Alert.alert('Lỗi', error.message);
-      }
+      console.error('Lỗi đăng nhập Google:', error);
+      showMessage({
+        message: 'Lỗi đăng nhập',
+        description: error.message,
+        type: 'danger',
+      });
+    } finally {
+      setLoading(false);
     }
   };
-  
 
   return (
     <View style={styles.container}>

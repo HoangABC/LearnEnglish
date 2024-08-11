@@ -1,13 +1,11 @@
-const express = require('express');
+// src/config/passport.js
+require('dotenv').config();
 const passport = require('passport');
-const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
-const app = express();
-
 passport.use(new GoogleStrategy({
-  clientID: '342637437251-nb4i03dmvpl0cvnqqco8bsdprj4to0r0.apps.googleusercontent.com', // Thay thế bằng Google Client ID của bạn
-  clientSecret: 'GOOGLE_CLIENT_SECRET', // Thay thế bằng Google Client Secret của bạn
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: 'http://localhost:3000/auth/google/callback'
 },
 function(accessToken, refreshToken, profile, done) {
