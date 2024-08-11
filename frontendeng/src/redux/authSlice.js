@@ -1,3 +1,4 @@
+// authSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { api } from '../apis/api';
 
@@ -24,7 +25,7 @@ export const googleLogin = createAsyncThunk(
   async (token, { rejectWithValue }) => {
     try {
       const response = await api.googleLogin(token);
-      if (response.data.message === 'User logged in successfully!') {
+      if (response.data.success && response.data.user) {
         return response.data.user;
       } else {
         return rejectWithValue(response.data.message || 'Đăng nhập không thành công');
@@ -45,6 +46,9 @@ const authSlice = createSlice({
   reducers: {
     logout: (state) => {
       state.user = null;
+    },
+    setUser: (state, action) => {
+      state.user = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -74,5 +78,5 @@ const authSlice = createSlice({
   }
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, setUser } = authSlice.actions;
 export default authSlice.reducer;

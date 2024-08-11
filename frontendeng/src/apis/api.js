@@ -18,3 +18,4 @@ export const api = {
   addWord: (word, definition, phonetic = '', example = '') => 
     apiClient.post('/api/words', { word, definition, phonetic, example }),  
 };
+

@@ -2,17 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import FlashMessage, { showMessage } from 'react-native-flash-message';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useDispatch } from 'react-redux'; // Import useDispatch từ react-redux
 import useLogin from '../hooks/useLogin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { setUser } from '../redux/authSlice'; // Import hành động setUser từ redux slice
 
 GoogleSignin.configure({
+  forceConsentPrompt: true,
   offlineAccess: false,
   webClientId: '342637437251-io70dqt8qaoq9n2jk5mtj88pvqli2160.apps.googleusercontent.com',
 });
 
 const Login = () => {
-  const { email, setEmail, password, setPassword, login, error } = useLogin();
+  const dispatch = useDispatch(); // Khởi tạo dispatch
+  const { email, setEmail, password, setPassword, login, googleLogin, error } = useLogin();
   const navigation = useNavigation();
   const route = useRoute();
   const [loading, setLoading] = useState(false);
@@ -74,21 +78,17 @@ const Login = () => {
       await GoogleSignin.hasPlayServices();
       const { idToken } = await GoogleSignin.signIn();
   
-      const response = await fetch('http://26.169.114.72:3000/auth/google/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: idToken }),
-      });
+      const { success, user } = await googleLogin(idToken);
+      console.log("Google login response:", { success, user });
   
-      const data = await response.json();
-      console.log("Google login response:", data);
-      if (data.success) {
-        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+      if (success) {
+        // Lưu thông tin người dùng vào AsyncStorage
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+        // Cập nhật Redux store
+        dispatch(setUser(user)); // Sử dụng dispatch để gọi setUser
         navigation.reset({
           index: 0,
-          routes: [{ name: 'AppTabs' }],  // Ensure this route name matches with Stack Navigator
+          routes: [{ name: 'AppTabs' }],  // Đảm bảo tên route này khớp với Stack Navigator
         });
         showMessage({
           message: "Đăng nhập thành công!",
@@ -111,6 +111,7 @@ const Login = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <View style={styles.container}>

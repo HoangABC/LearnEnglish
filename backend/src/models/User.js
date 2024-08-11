@@ -14,7 +14,11 @@ const create = async (user) => {
     .input('googleId', sql.NVarChar, user.googleId)
     .input('name', sql.NVarChar, user.name)
     .input('email', sql.NVarChar, user.email)
-    .query('INSERT INTO [User] (GoogleId, Name, Email) VALUES (@googleId, @name, @email)');
+    .input('password', sql.NVarChar, user.password || null) // Có thể bỏ qua nếu không cần
+    .query(`
+      INSERT INTO [User] (GoogleId, Name, Email, Password)
+      VALUES (@googleId, @name, @email, @password)
+    `);
 };
 
 module.exports = { findOne, create };

@@ -3,14 +3,23 @@ import { View, Text, Button, StyleSheet } from 'react-native';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logout as logoutAction } from '../redux/authSlice';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const Profile = () => {
   const dispatch = useDispatch();
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('user'); // Xóa thông tin người dùng khỏi AsyncStorage
-      dispatch(logoutAction()); // Thực hiện hành động logout để xóa thông tin người dùng khỏi Redux store
+      // Xóa thông tin người dùng khỏi AsyncStorage
+      await AsyncStorage.removeItem('user');
+      
+      // Đăng xuất khỏi Google
+      await GoogleSignin.signOut();
+      
+      // Thực hiện hành động logout để xóa thông tin người dùng khỏi Redux store
+      dispatch(logoutAction());
+      
+      console.log('Logout successful');
     } catch (error) {
       console.error('Logout failed:', error);
     }

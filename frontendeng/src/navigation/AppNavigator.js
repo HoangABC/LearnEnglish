@@ -2,15 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login as loginAction } from '../redux/authSlice';
+import { setUser } from '../redux/authSlice'; // Import action để cập nhật Redux store
 import LoginPage from '../pages/LoginPage';
 import HomePage from '../pages/HomePage';
 import ProfilePage from '../pages/ProfilePage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CreateWordPage from '../pages/CreateWordPage';
 import { ActivityIndicator } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -50,7 +50,8 @@ const AppNavigator = () => {
           const user = JSON.parse(userJson);
           console.log("Parsed user:", user);
           if (user) {
-            dispatch(loginAction(user));
+            // Dispatch login action
+            dispatch(setUser(user));
           }
         }
       } catch (error) {
