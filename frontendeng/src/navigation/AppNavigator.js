@@ -79,7 +79,7 @@ const AppNavigator = () => {
             <Stack.Screen name="CreateWord" component={CreateWordPage} />
           </>
         ) : (
-          <Stack.Screen name="Login" component={LoginPage} />
+          <Stack.Screen name="Login" component={LoginPage} options={{ headerShown: false }}/>
         )}
       </Stack.Navigator>
     </NavigationContainer>

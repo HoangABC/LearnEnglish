@@ -115,44 +115,65 @@ const Login = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Đăng Nhập</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#666"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Mật khẩu"
-        secureTextEntry
-        placeholderTextColor="#666"
-        value={password}
-        onChangeText={setPassword}
-      />
-      {loading ? (
-        <ActivityIndicator size="large" color="#007bff" />
-      ) : (
-        <>
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Đăng nhập</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleGoogleLogin}>
-            <Text style={styles.buttonText}>Đăng nhập bằng Google</Text>
-          </TouchableOpacity>
-        </>
-      )}
-      <FlashMessage position="top" />
-    </View>
+      <View style={styles.loginCard}>
+        <View style={styles.loginBox}>
+          <Text style={styles.title}>Đăng Nhập</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#666"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Mật khẩu"
+            secureTextEntry
+            placeholderTextColor="#666"
+            value={password}
+            onChangeText={setPassword}
+          />
+        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#007bff" />
+        ) : (
+          <>
+            <TouchableOpacity style={styles.button} onPress={handleLogin}>
+              <Text style={styles.buttonText}>Đăng nhập</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={handleGoogleLogin}>
+              <Text style={styles.buttonText}>Đăng nhập bằng Google</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    <FlashMessage position="top" />
+  </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    
     justifyContent: 'center',
-    padding: 16,
+    alignItems: 'center',
     backgroundColor: '#f5f5f5',
+  },
+  loginCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    width: '90%',
+    maxWidth: 400, // Đặt giới hạn chiều rộng tối đa
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+    marginTop:'48%'
+  },
+  loginBox: {
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
