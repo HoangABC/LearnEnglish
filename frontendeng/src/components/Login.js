@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import FlashMessage, { showMessage } from 'react-native-flash-message';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useDispatch } from 'react-redux'; // Import useDispatch từ react-redux
+import { useDispatch } from 'react-redux';
 import useLogin from '../hooks/useLogin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { setUser } from '../redux/authSlice'; // Import hành động setUser từ redux slice
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { setUser } from '../redux/authSlice';
 
 GoogleSignin.configure({
   forceConsentPrompt: true,
@@ -15,7 +15,7 @@ GoogleSignin.configure({
 });
 
 const Login = () => {
-  const dispatch = useDispatch(); // Khởi tạo dispatch
+  const dispatch = useDispatch();
   const { email, setEmail, password, setPassword, login, googleLogin, error } = useLogin();
   const navigation = useNavigation();
   const route = useRoute();
@@ -82,13 +82,11 @@ const Login = () => {
       console.log("Google login response:", { success, user });
   
       if (success) {
-        // Lưu thông tin người dùng vào AsyncStorage
         await AsyncStorage.setItem('user', JSON.stringify(user));
-        // Cập nhật Redux store
-        dispatch(setUser(user)); // Sử dụng dispatch để gọi setUser
+        dispatch(setUser(user));
         navigation.reset({
           index: 0,
-          routes: [{ name: 'AppTabs' }],  // Đảm bảo tên route này khớp với Stack Navigator
+          routes: [{ name: 'AppTabs' }],  // Ensure this route name matches with Stack Navigator
         });
         showMessage({
           message: "Đăng nhập thành công!",
@@ -101,20 +99,31 @@ const Login = () => {
         });
       }
     } catch (error) {
-      console.error('Lỗi đăng nhập Google:', error);
-      showMessage({
-        message: 'Lỗi đăng nhập',
-        description: error.message,
-        type: 'danger',
-      });
+      // Bỏ qua toàn bộ lỗi và không hiển thị thông báo
+      if (error.code !== statusCodes.SIGN_IN_CANCELLED) {
+        console.error('Lỗi đăng nhập Google:', error);
+        showMessage({
+          message: 'Lỗi đăng nhập',
+          description: error.message,
+          type: 'danger',
+        });
+      }
+      // Không làm gì nếu lỗi là SIGN_IN_CANCELLED
     } finally {
       setLoading(false);
     }
   };
   
-
+  
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <Image
+        source={require('../assets/images/logo.png')} 
+        style={styles.logo}
+      />
       <View style={styles.loginCard}>
         <View style={styles.loginBox}>
           <Text style={styles.title}>Đăng Nhập</Text>
@@ -134,7 +143,9 @@ const Login = () => {
             onChangeText={setPassword}
           />
         </View>
-        {loading ? (
+      </View>
+      <View>
+      {loading ? (
           <ActivityIndicator size="large" color="#007bff" />
         ) : (
           <>
@@ -146,31 +157,37 @@ const Login = () => {
             </TouchableOpacity>
           </>
         )}
-      </View>
-    <FlashMessage position="top" />
-  </View>
+        </View>
+      <FlashMessage position="top" />
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
+    paddingHorizontal: 20,
+  },
+  logo: {
+    width: 250,  // Tăng kích thước logo
+    height: 250, // Tăng kích thước logo
+    marginBottom: 20,
+    resizeMode: 'contain',
   },
   loginCard: {
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 10,
-    width: '90%',
-    maxWidth: 400, // Đặt giới hạn chiều rộng tối đa
+    width: '100%',
+    maxWidth: 400,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 5,
-    marginTop:'48%'
+    marginBottom: 20,
   },
   loginBox: {
     marginBottom: 20,
@@ -203,5 +220,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
 
 export default Login;
