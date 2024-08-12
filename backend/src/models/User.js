@@ -13,11 +13,12 @@ const create = async (user) => {
   await pool.request()
     .input('googleId', sql.NVarChar, user.googleId)
     .input('name', sql.NVarChar, user.name)
+    .input('username', sql.NVarChar, user.username || null)
     .input('email', sql.NVarChar, user.email)
     .input('password', sql.NVarChar, user.password || null) // Có thể bỏ qua nếu không cần
     .query(`
-      INSERT INTO [User] (GoogleId, Name, Email, Password)
-      VALUES (@googleId, @name, @email, @password)
+      INSERT INTO [User] (GoogleId, Name, Username, Email, Password)
+      VALUES (@googleId, @name, @username, @email, @password)
     `);
 };
 

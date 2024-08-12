@@ -3,17 +3,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login, googleLogin } from '../redux/authSlice';
 
 const useLogin = () => {
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const dispatch = useDispatch();
   const error = useSelector((state) => state.auth.error);
 
   const loginUser = async () => {
-    if (!email || !password) {
-      return { success: false, user: null, message: 'Email and password are required' };
+    if (!emailOrUsername || !password) {
+      return { success: false, user: null, message: 'Email hoặc username và mật khẩu là bắt buộc' };
     }
     try {
-      const resultAction = await dispatch(login({ email, password }));
+      const resultAction = await dispatch(login({ emailOrUsername, password }));
       if (login.fulfilled.match(resultAction)) {
         const user = resultAction.payload;
         return { success: true, user };
@@ -21,34 +21,32 @@ const useLogin = () => {
         return { success: false, user: null, message: resultAction.payload };
       }
     } catch (e) {
-      console.error('Login failed:', e);
+      console.error('Đăng nhập thất bại:', e);
       return { success: false, user: null, message: e.message };
     }
   };
 
   const googleLoginUser = async (idToken) => {
     try {
-      console.log("Attempting Google login with token:", idToken);
+      console.log("Thực hiện đăng nhập Google với token:", idToken);
       const resultAction = await dispatch(googleLogin(idToken));
       if (googleLogin.fulfilled.match(resultAction)) {
         const user = resultAction.payload;
-        console.log("Google login successful:", user);
+        console.log("Đăng nhập Google thành công:", user);
         return { success: true, user };
       } else {
-        console.error('Google login error:', resultAction.payload);
+        console.error('Lỗi đăng nhập Google:', resultAction.payload);
         return { success: false, user: null, message: resultAction.payload };
       }
     } catch (e) {
-      console.error('Google login failed:', e);
+      console.error('Đăng nhập Google thất bại:', e);
       return { success: false, user: null, message: e.message };
     }
   };
   
-  
-
   return {
-    email,
-    setEmail,
+    emailOrUsername,
+    setEmailOrUsername,
     password,
     setPassword,
     login: loginUser,
@@ -56,6 +54,5 @@ const useLogin = () => {
     error,
   };
 };
-
 
 export default useLogin;

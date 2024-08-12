@@ -2,12 +2,28 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { api } from '../apis/api';
 
+export const register = createAsyncThunk(
+  'auth/register',
+  async ({ name, username, email, password }, { rejectWithValue }) => {
+    try {
+      const response = await api.register(name, username, email, password);
+      if (response.data.message === 'User registered successfully!') {
+        return response.data.user;
+      } else {
+        return rejectWithValue(response.data.message || 'Đăng ký không thành công');
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
 // Thunk cho đăng nhập bằng email và mật khẩu
 export const login = createAsyncThunk(
   'auth/login',
-  async ({ email, password }, { rejectWithValue }) => {
+  async ({ emailOrUsername, password }, { rejectWithValue }) => {
     try {
-      const response = await api.login(email, password);
+      const response = await api.login(emailOrUsername, password);
       if (response.data.message === 'User logged in successfully!') {
         return response.data.user;
       } else {

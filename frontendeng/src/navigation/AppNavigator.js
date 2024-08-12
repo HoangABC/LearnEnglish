@@ -11,6 +11,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import CreateWordPage from '../pages/CreateWordPage';
 import { ActivityIndicator } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import RegisterPage from '../pages/RegisterPage';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -79,7 +80,10 @@ const AppNavigator = () => {
             <Stack.Screen name="CreateWord" component={CreateWordPage} />
           </>
         ) : (
+          <>
           <Stack.Screen name="Login" component={LoginPage} options={{ headerShown: false }}/>
+          <Stack.Screen name="Register" component={RegisterPage} options={{ headerTitle: '' }}/>
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

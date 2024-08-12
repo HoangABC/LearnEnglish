@@ -29,13 +29,15 @@ const createTablesIfNotExists = async () => {
     BEGIN
       CREATE TABLE [User] (
         Id INT IDENTITY(1,1) PRIMARY KEY,
-        GoogleId NVARCHAR(255), -- ID Google
-        Name NVARCHAR(255) NOT NULL,
-        Email NVARCHAR(255) UNIQUE NOT NULL,
-        Password NVARCHAR(255),
-        CreatedAt DATETIME DEFAULT GETDATE(),
-        UpdatedAt DATETIME DEFAULT GETDATE(),
-        Status TINYINT DEFAULT 1
+        GoogleId NVARCHAR(MAX), -- ID Google
+        Name NVARCHAR(MAX) NOT NULL,
+        Username VARCHAR(50), -- Tên đăng nhập (điều chỉnh kích thước nếu cần)
+        Email VARCHAR(255) UNIQUE NOT NULL, -- Địa chỉ email (kích thước phù hợp)
+        Password NVARCHAR(255), -- Mật khẩu (có thể cần thêm mã hóa)
+        ConfirmationToken NVARCHAR(255) NULL, -- Token xác nhận, có thể không có giá trị
+        CreatedAt DATETIME DEFAULT GETDATE(), -- Thời gian tạo (mặc định là thời gian hiện tại)
+        UpdatedAt DATETIME DEFAULT GETDATE(), -- Thời gian cập nhật (mặc định là thời gian hiện tại)
+        Status TINYINT DEFAULT 1 -- Trạng thái (mặc định là 1)
       );
     END
   `;

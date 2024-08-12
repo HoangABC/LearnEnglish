@@ -16,7 +16,7 @@ GoogleSignin.configure({
 
 const Login = () => {
   const dispatch = useDispatch();
-  const { email, setEmail, password, setPassword, login, googleLogin, error } = useLogin();
+  const { emailOrUsername, setEmailOrUsername, password, setPassword, login, googleLogin, error } = useLogin();
   const navigation = useNavigation();
   const route = useRoute();
   const [loading, setLoading] = useState(false);
@@ -25,11 +25,11 @@ const Login = () => {
     const { params } = route;
     if (params?.login === 'success') {
       AsyncStorage.getItem('user').then(user => {
-        console.log("User retrieved after login success:", user);
+        console.log("Người dùng lấy sau khi đăng nhập thành công:", user);
         if (user) {
           navigation.reset({
             index: 0,
-            routes: [{ name: 'AppTabs' }],  // Ensure this route name matches with Stack Navigator
+            routes: [{ name: 'AppTabs' }],
           });
           showMessage({
             message: "Đăng nhập thành công!",
@@ -44,12 +44,12 @@ const Login = () => {
     setLoading(true);
     try {
       const { success, user } = await login();
-      console.log("Login response:", { success, user });
+      console.log("Phản hồi đăng nhập:", { success, user });
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         navigation.reset({
           index: 0,
-          routes: [{ name: 'AppTabs' }],  // Ensure this route name matches with Stack Navigator
+          routes: [{ name: 'AppTabs' }],
         });
         showMessage({
           message: "Đăng nhập thành công!",
@@ -79,14 +79,14 @@ const Login = () => {
       const { idToken } = await GoogleSignin.signIn();
   
       const { success, user } = await googleLogin(idToken);
-      console.log("Google login response:", { success, user });
+      console.log("Phản hồi đăng nhập Google:", { success, user });
   
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         dispatch(setUser(user));
         navigation.reset({
           index: 0,
-          routes: [{ name: 'AppTabs' }],  // Ensure this route name matches with Stack Navigator
+          routes: [{ name: 'AppTabs' }],
         });
         showMessage({
           message: "Đăng nhập thành công!",
@@ -99,7 +99,6 @@ const Login = () => {
         });
       }
     } catch (error) {
-      // Bỏ qua toàn bộ lỗi và không hiển thị thông báo
       if (error.code !== statusCodes.SIGN_IN_CANCELLED) {
         console.error('Lỗi đăng nhập Google:', error);
         showMessage({
@@ -108,17 +107,20 @@ const Login = () => {
           type: 'danger',
         });
       }
-      // Không làm gì nếu lỗi là SIGN_IN_CANCELLED
     } finally {
       setLoading(false);
     }
   };
-  
+
+  const navigateToRegister = () => {
+    navigation.navigate('Register');
+  };
   
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0} // Adjust the offset as needed
     >
       <Image
         source={require('../assets/images/logo.png')} 
@@ -129,10 +131,10 @@ const Login = () => {
           <Text style={styles.title}>Đăng Nhập</Text>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="Email hoặc Username"
             placeholderTextColor="#666"
-            value={email}
-            onChangeText={setEmail}
+            value={emailOrUsername}
+            onChangeText={setEmailOrUsername}
           />
           <TextInput
             style={styles.input}
@@ -145,7 +147,7 @@ const Login = () => {
         </View>
       </View>
       <View>
-      {loading ? (
+        {loading ? (
           <ActivityIndicator size="large" color="#007bff" />
         ) : (
           <>
@@ -157,7 +159,17 @@ const Login = () => {
             </TouchableOpacity>
           </>
         )}
-        </View>
+      </View>
+      <View style={styles.registerContainer}>
+      <View style={styles.registerRow}>
+        <Text style={styles.registerText}>
+          Bạn chưa có tài khoản?{' '}
+        </Text>
+        <TouchableOpacity onPress={navigateToRegister}>
+          <Text style={styles.registerLink}>Đăng ký</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
       <FlashMessage position="top" />
     </KeyboardAvoidingView>
   );
@@ -169,11 +181,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   logo: {
     width: 250,  // Tăng kích thước logo
     height: 250, // Tăng kích thước logo
-    marginBottom: 20,
+    marginBottom: 5,
     resizeMode: 'contain',
   },
   loginCard: {
@@ -219,7 +232,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  registerContainer: {
+    marginTop: 20,
+    alignItems: 'center', 
+  },
+  registerRow: {
+    flexDirection: 'row',
+    alignItems: 'center', 
+  },
+  registerText: {
+    fontSize: 16,
+  },
+  registerLink: {
+    color: '#007bff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
-
 
 export default Login;

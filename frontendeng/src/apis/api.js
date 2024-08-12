@@ -11,11 +11,11 @@ const apiClient = axios.create({
 });
 
 export const api = {
-  login: (email, password) => apiClient.post('/account/login', { email, password }),
+  login: (emailOrUsername, password) => apiClient.post('/account/login', { emailOrUsername, password }),
+  register: (name, username, email, password) => apiClient.post('/account/register', { name, username, email, password }), 
   fetchCustomers: () => apiClient.get('/api/customers'),
   logout: () => apiClient.post('/account/logout'),
   googleLogin: (token) => apiClient.post('/auth/google/login', { token }),
   addWord: (word, definition, phonetic = '', example = '') => 
     apiClient.post('/api/words', { word, definition, phonetic, example }),  
 };
-

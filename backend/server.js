@@ -13,7 +13,10 @@ const app = express();
 const server = http.createServer(app);
 const { setupSocket } = require('./src/Module/socket');
 const createTablesIfNotExists = require('./src/scripts/createTable');
+const { sendEmail } = require('./src/scripts/nodeMailer');
 
+createTablesIfNotExists();
+// sendEmail();
 // Hàm lấy địa chỉ IP cục bộ
 const getLocalIP = () => {
   const interfaces = os.networkInterfaces();
