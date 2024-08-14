@@ -2,7 +2,6 @@ require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { poolPromise, sql } = require('../config/db');
 const nodemailer = require('nodemailer');
-const { v4: uuidv4 } = require('uuid');
 
 const saltRounds = 10;
 
@@ -14,10 +13,9 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-
 const register = async (req, res) => {
   const { name, username, email, password } = req.body;
-
+  
   if (!name || !username || !email || !password) {
     return res.status(400).json({ message: 'Name, username, email, and password are required' });
   }
@@ -26,7 +24,6 @@ const register = async (req, res) => {
     const pool = await poolPromise;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Kiểm tra sự tồn tại của email và username
     const existingUser = await pool.request()
       .input('Email', sql.VarChar, email)
       .input('Username', sql.VarChar, username)
@@ -36,63 +33,33 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Email or username already exists' });
     }
 
-    // Tạo mã xác nhận và lưu vào cơ sở dữ liệu
-    const confirmationToken = uuidv4();
     await pool.request()
-    await pool.request()
-    .input('GoogleId', sql.NVarChar, null)
-    .input('Name', sql.NVarChar, name)
-    .input('Username', sql.VarChar, username)
-    .input('Email', sql.VarChar, email)
-    .input('Password', sql.NVarChar, hashedPassword)
-    .input('ConfirmationToken', sql.NVarChar, confirmationToken)
-    .input('Status', sql.Int, 0)
-    .query('INSERT INTO [User] (GoogleId, Name, Username, Email, Password, ConfirmationToken, Status) VALUES (@GoogleId, @Name, @Username, @Email, @Password, @ConfirmationToken, @Status)');
-  
-    // Gửi email xác nhận
-    const confirmationUrl = `http://localhost:3000/confirm-email?token=${confirmationToken}`;
+      .input('GoogleId', sql.NVarChar, null)
+      .input('Name', sql.NVarChar, name)
+      .input('Username', sql.VarChar, username)
+      .input('Email', sql.VarChar, email)
+      .input('Password', sql.NVarChar, hashedPassword)
+      .input('ConfirmationToken', sql.NVarChar, null)
+      .input('Status', sql.Int, 1)
+      .query('INSERT INTO [User] (GoogleId, Name, Username, Email, Password, ConfirmationToken, Status) VALUES (@GoogleId, @Name, @Username, @Email, @Password, @ConfirmationToken, @Status)');
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'Xác nhận Email',
-      text: `Vui lòng xác nhận email của bạn bằng cách nhấp vào liên kết sau: ${confirmationUrl}`
+      subject: 'Cảm ơn bạn đã đăng ký!',
+      text: 'Cảm ơn bạn đã đăng ký tài khoản với chúng tôi. Bạn có thể đăng nhập ngay lập tức!'
     };
 
     await transporter.sendMail(mailOptions);
 
-    res.status(200).json({ message: 'User registered successfully! Please check your email to confirm your registration.' });
+    res.status(200).json({
+      message: 'User registered successfully!',
+      user: { name, username, email } // Trả về thông tin người dùng
+    });
+
   } catch (err) {
     console.error('Registration error:', err);
-    res.status(500).send(err.message);
-  }
-};
-
-const confirmEmail = async (req, res) => {
-  const { token } = req.query;
-
-  if (!token) {
-    return res.status(400).json({ message: 'Confirmation token is required' });
-  }
-
-  try {
-    const pool = await poolPromise;
-    // Xác thực mã xác nhận
-    const user = await pool.request()
-      .input('ConfirmationToken', sql.NVarChar, token)
-      .query('SELECT * FROM [User] WHERE ConfirmationToken = @ConfirmationToken AND Status = 0');
-
-    if (user.recordset.length === 0) {
-      return res.status(400).json({ message: 'Invalid or expired confirmation token' });
-    }
-
-    // Cập nhật trạng thái người dùng
-    await pool.request()
-      .input('ConfirmationToken', sql.NVarChar, token)
-      .query('UPDATE [User] SET Status = 1, ConfirmationToken = NULL WHERE ConfirmationToken = @ConfirmationToken');
-
-    res.status(200).json({ message: 'Email confirmed successfully! You can now log in.' });
-  } catch (err) {
-    res.status(500).send(err.message);
+    res.status(500).send({ message: err.message });
   }
 };
 
@@ -128,7 +95,7 @@ const login = async (req, res) => {
       res.status(401).json({ message: 'Invalid credentials' });
     }
   } catch (err) {
-    res.status(500).send(err.message);
+    res.status(500).send({ message: err.message });
   }
 };
 
@@ -143,13 +110,12 @@ const logout = (req, res) => {
       res.status(200).json({ message: 'User logged out successfully!' });
     });
   } catch (err) {
-    res.status(500).send(err.message);
+    res.status(500).send({ message: err.message });
   }
 };
 
 module.exports = {
   register,
-  confirmEmail,
   login,
   logout
 };

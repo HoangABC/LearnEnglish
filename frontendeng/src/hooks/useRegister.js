@@ -1,35 +1,37 @@
-// hooks/useRegister.js
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { register } from '../redux/authSlice';
+import { showMessage } from 'react-native-flash-message';
+import { unwrapResult } from '@reduxjs/toolkit';
 
-const useRegister = () => {
+const useRegister = (onRegisterSuccess) => {
+  const dispatch = useDispatch();
+  const { error, status, successMessage } = useSelector((state) => state.auth);
+
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
-  const error = useSelector((state) => state.auth.error);
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const registerUser = async () => {
-    if (!name || !username || !email || !password) {
-      return { success: false, user: null, message: 'Tất cả các trường đều yêu cầu' };
+  const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      showMessage({ message: 'Mật khẩu và xác nhận mật khẩu không khớp!', type: 'danger' });
+      return;
     }
-    setLoading(true);
+
     try {
       const resultAction = await dispatch(register({ name, username, email, password }));
-      if (register.fulfilled.match(resultAction)) {
-        const user = resultAction.payload;
-        return { success: true, user };
+      const result = unwrapResult(resultAction);
+      if (result.user) {
+        showMessage({ message: successMessage || 'Đăng ký thành công!', type: 'success' });
+        if (onRegisterSuccess) onRegisterSuccess();
       } else {
-        return { success: false, user: null, message: resultAction.payload };
+        showMessage({ message: error || '', type: 'danger' });
       }
-    } catch (e) {
-      console.error('Đăng ký không thành công:', e);
-      return { success: false, user: null, message: e.message };
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra';
+      showMessage({ message: errorMessage, type: 'danger' });
     }
   };
 
@@ -42,9 +44,11 @@ const useRegister = () => {
     setEmail,
     password,
     setPassword,
-    loading,
-    register: registerUser,
+    confirmPassword,
+    setConfirmPassword,
+    handleRegister,
     error,
+    loading: status === 'loading',
   };
 };
 

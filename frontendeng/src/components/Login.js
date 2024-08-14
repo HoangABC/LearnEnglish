@@ -25,52 +25,39 @@ const Login = () => {
     const { params } = route;
     if (params?.login === 'success') {
       AsyncStorage.getItem('user').then(user => {
-        console.log("Người dùng lấy sau khi đăng nhập thành công:", user);
         if (user) {
           navigation.reset({
             index: 0,
             routes: [{ name: 'AppTabs' }],
           });
-          showMessage({
-            message: "Đăng nhập thành công!",
-            type: "success",
-          });
+          showMessage({ message: "Đăng nhập thành công!", type: "success" });
         }
       });
     }
   }, [route.params, navigation]);
+  
 
   const handleLogin = async () => {
     setLoading(true);
     try {
       const { success, user } = await login();
-      console.log("Phản hồi đăng nhập:", { success, user });
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         navigation.reset({
           index: 0,
           routes: [{ name: 'AppTabs' }],
         });
-        showMessage({
-          message: "Đăng nhập thành công!",
-          type: "success",
-        });
+        showMessage({ message: "Đăng nhập thành công!", type: "success" });
       } else {
-        showMessage({
-          message: error || "Có lỗi xảy ra",
-          type: "danger",
-        });
+        showMessage({ message: error || "Có lỗi xảy ra", type: "danger" });
       }
     } catch (e) {
-      showMessage({
-        message: 'Lỗi đăng nhập',
-        description: e.message,
-        type: 'danger',
-      });
+      showMessage({ message: 'Lỗi đăng nhập', description: e.message, type: 'danger' });
     } finally {
       setLoading(false);
     }
   };
+  
 
   const handleGoogleLogin = async () => {
     setLoading(true);

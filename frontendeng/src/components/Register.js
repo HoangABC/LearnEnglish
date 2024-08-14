@@ -1,39 +1,30 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
 import FlashMessage, { showMessage } from 'react-native-flash-message';
-import useRegister from '../hooks/useRegister';
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation
+import { useDispatch, useSelector } from 'react-redux';
+import { register } from '../redux/authSlice';
 
 const Register = () => {
-  const {
-    name,
-    setName,
-    username,
-    setUsername,
-    email,
-    setEmail,
-    password,
-    setPassword,
-    loading,
-    register,
-    error,
-  } = useRegister();
+  const dispatch = useDispatch();
+  const { status, successMessage, error } = useSelector(state => state.auth);
 
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const navigation = useNavigation(); // Hook navigation
+  const [name, setName] = React.useState('');
+  const [username, setUsername] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
-      showMessage({ message: 'Mật khẩu và xác nhận mật khẩu không khớp!', type: 'danger' });
+      showMessage({ message: 'Passwords do not match', type: 'danger' });
       return;
     }
-    const result = await register();
-    if (result.success) {
-      showMessage({ message: 'Đăng ký thành công!', type: 'success' });
-      // Điều hướng đến trang đăng nhập
-      navigation.navigate('Login');
-    } else {
-      showMessage({ message: result.message, type: 'danger' });
+
+    try {
+      await dispatch(register({ name, username, email, password })).unwrap();
+      showMessage({ message: 'Registration successful', type: 'success' });
+    } catch (err) {
+      showMessage({ message: err, type: 'danger' });
     }
   };
 
@@ -93,7 +84,7 @@ const Register = () => {
           </View>
         </View>
         <View style={styles.buttonContainer}>
-          {loading ? (
+          {status === 'loading' ? (
             <ActivityIndicator size="large" color="#007bff" />
           ) : (
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
