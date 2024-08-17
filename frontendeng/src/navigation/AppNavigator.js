@@ -17,25 +17,26 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const AppTabs = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      tabBarIcon: ({ color, size }) => {
-        let iconName;
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ color, size }) => {
+          let iconName;
 
-        if (route.name === 'Home') {
-          iconName = 'home';
-        } else if (route.name === 'Profile') {
-          iconName = 'person';
-        }
+          if (route.name === 'Home') {
+            iconName = 'home';
+          } else if (route.name === 'Profile') {
+            iconName = 'person';
+          }
 
-        return <Icon name={iconName} size={size} color={color} />;
-      },
-    })}
-  >
-    <Tab.Screen name="Home" component={HomePage} />
-    <Tab.Screen name="Profile" component={ProfilePage} />
-  </Tab.Navigator>
-);
+          return <Icon name={iconName} size={size} color={color} />;
+        },
+        tabBarLabel: () => null, 
+      })}
+    >
+      <Tab.Screen name="Home" component={HomePage} options={{headerShown: false, headerTitle: '' }}/>
+      <Tab.Screen name="Profile" component={ProfilePage} options={{headerShown: false, headerTitle: '' }} />
+    </Tab.Navigator>
+  );
 
 const AppNavigator = () => {
   const dispatch = useDispatch();

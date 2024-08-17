@@ -63,10 +63,12 @@ const Login = () => {
     setLoading(true);
     try {
       await GoogleSignin.hasPlayServices();
-      const { idToken } = await GoogleSignin.signIn();
+      
+      // Đăng xuất người dùng nếu đã đăng nhập
+      await GoogleSignin.signOut();
   
+      const { idToken } = await GoogleSignin.signIn();
       const { success, user } = await googleLogin(idToken);
-      console.log("Phản hồi đăng nhập Google:", { success, user });
   
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
@@ -98,6 +100,7 @@ const Login = () => {
       setLoading(false);
     }
   };
+  
 
   const navigateToRegister = () => {
     navigation.navigate('Register');
