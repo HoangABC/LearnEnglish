@@ -33,10 +33,10 @@ const getLocalIP = () => {
 };
 
 const localIP = getLocalIP();
-
+console.log('ip:',localIP);
 // Cấu hình CORS và các middleware khác
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://localhost:3000'],
+  origin: [`http://localhost:3001`, `http://localhost:3000`,`http://localhost:3002`],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,

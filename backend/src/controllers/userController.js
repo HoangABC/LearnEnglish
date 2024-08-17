@@ -114,8 +114,73 @@ const logout = (req, res) => {
   }
 };
 
+const getAllUsers = async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .query('SELECT * FROM [User]');
+
+    res.status(200).json(result.recordset);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+};
+
+const updateUser = async (req, res) => {
+  const { id } = req.params;
+  const { name, username, email, password, status } = req.body;
+
+  if (!id || !name || !username || !email || !password || !status) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  try {
+    const pool = await poolPromise;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    await pool.request()
+      .input('Id', sql.Int, id)
+      .input('Name', sql.NVarChar, name)
+      .input('Username', sql.VarChar, username)
+      .input('Email', sql.VarChar, email)
+      .input('Password', sql.NVarChar, hashedPassword)
+      .input('Status', sql.Int, status)
+      .query(`
+        UPDATE [User]
+        SET Name = @Name, Username = @Username, Email = @Email, Password = @Password, Status = @Status
+        WHERE Id = @Id
+      `);
+
+    res.status(200).json({ message: 'User updated successfully' });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: 'User ID is required' });
+  }
+
+  try {
+    const pool = await poolPromise;
+    await pool.request()
+      .input('Id', sql.Int, id)
+      .query('DELETE FROM [User] WHERE Id = @Id');
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+};
+
 module.exports = {
   register,
   login,
-  logout
+  logout,
+  getAllUsers,
+  updateUser,
+  deleteUser
 };

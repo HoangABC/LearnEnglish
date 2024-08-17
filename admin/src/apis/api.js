@@ -15,4 +15,5 @@ export const api = {
   getWordsStatus0: () => apiClient.get('/api/words/status0'),
   updateWordStatus: (id, newStatus) =>
     apiClient.put('/api/update-word-status', { id, newStatus }),
+  getAllUser: () => apiClient.get('/account/users'),
 };

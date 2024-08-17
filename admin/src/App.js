@@ -1,27 +1,19 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { Provider } from 'react-redux'; // Import Provider
-import store from './redux/store'; // Đảm bảo đường dẫn là chính xác
-import Dashboard from './pages/Dashboard';
-import Navbar from './components/Navbar';
-import WordManagement from './pages/WordManagement';
-// import Reports from './pages/Reports';
 
-function App() {
+import '../src/global.css';
+
+import { useScrollToTop } from '../src/hooks/use-scroll-to-top';
+
+import Router from '../src/routes/sections';
+import ThemeProvider from '../src/theme';
+
+// ----------------------------------------------------------------------
+
+export default function App() {
+  useScrollToTop();
+
   return (
-    <Provider store={store}> {/* Bọc ứng dụng với Provider */}
-      <Router>
-        <Navbar />
-        <div className="container">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/word-management" element={<WordManagement />} />
-            {/* <Route path="/reports" element={<Reports />} /> */}
-          </Routes>
-        </div>
-      </Router>
-    </Provider>
+    <ThemeProvider>
+      <Router />
+    </ThemeProvider>
   );
 }
-
-export default App;
