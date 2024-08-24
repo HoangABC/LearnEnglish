@@ -17,6 +17,11 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#f9f9f9',
   },
+  languageText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'blue',
+  },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
