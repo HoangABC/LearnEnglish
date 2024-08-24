@@ -56,13 +56,13 @@ export default function UserTableRow({
           </Stack>
         </TableCell>
 
-        <TableCell>{Username}</TableCell>
+        <TableCell>{Username || 'N/A'}</TableCell>
 
-        <TableCell>{Email}</TableCell>
+        <TableCell>{Email || 'N/A'}</TableCell>
 
         <TableCell>{GoogleId || 'N/A'}</TableCell>
 
-        <TableCell>{Password}</TableCell>
+        <TableCell>{Password || 'N/A'}</TableCell>
 
         <TableCell>{formatDate(new Date(CreatedAt))}</TableCell>
 

@@ -2,7 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const fetch = require('node-fetch');
 const router = express.Router();
-const { findOne, create } = require('../models/User');
+const { findOne, create, updateGoogleId } = require('../models/User');
 
 // Route để bắt đầu quá trình xác thực với Google (GET)
 router.get('/google', passport.authenticate('google', {
@@ -33,10 +33,16 @@ router.post('/google/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Token không hợp lệ' });
     }
 
-    // Tìm người dùng trong cơ sở dữ liệu
-    let user = await findOne({ googleId: userInfo.sub });
+    // Tìm người dùng trong cơ sở dữ liệu bằng googleId hoặc email
+    let user = await findOne({ googleId: userInfo.sub, email: userInfo.email });
 
-    if (!user) {
+    if (user) {
+      // Nếu người dùng tồn tại và không có googleId, cập nhật googleId
+      if (!user.googleId) {
+        await updateGoogleId(user.email, userInfo.sub);
+        user.googleId = userInfo.sub;
+      }
+    } else {
       // Nếu người dùng chưa tồn tại, thêm vào cơ sở dữ liệu
       user = {
         googleId: userInfo.sub,

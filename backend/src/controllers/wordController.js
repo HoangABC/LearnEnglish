@@ -173,9 +173,43 @@ const updateWordStatus = async (req, res) => {
   }
 };
 
+const searchWord = async (req, res) => {
+  try {
+    const { keyword = '' } = req.query;
+    
+    // Kết nối cơ sở dữ liệu
+    const pool = await poolPromise;
+    
+    // Truy vấn lấy 10 kết quả đầu tiên
+    const result = await pool.request()
+      .input('keyword', sql.NVarChar, `%${keyword}%`)
+      .query(`
+        SELECT TOP 10 * 
+        FROM Word 
+        WHERE Word LIKE @keyword
+        ORDER BY Word
+      `);
+
+    // Kiểm tra kết quả
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ message: 'No words found matching the keyword.' });
+    }
+
+    // Trả về danh sách các từ tìm được
+    return res.status(200).json(result.recordset);
+  } catch (err) {
+    console.error('Error searching word:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+
+
 module.exports = {
   addWord,
   getWordsByStatus1,
   getWordsByStatus0,
-  updateWordStatus
+  updateWordStatus,
+  searchWord
 };

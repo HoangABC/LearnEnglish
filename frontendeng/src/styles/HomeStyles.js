@@ -3,110 +3,157 @@ import { StyleSheet } from 'react-native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
     position: 'relative',
   },
   header: {
     flexDirection: 'row',
-    padding: 16,
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'white',
-    elevation: 2,
+    padding: 16,
+    backgroundColor: '#fff',
+    elevation: 4,
   },
   header2: {
+    flex: 1,
     padding: 16,
-    backgroundColor: 'white',
-    elevation: 2,
-    flexDirection: 'column',
+    backgroundColor: '#f9f9f9',
   },
   headerContent: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  languageText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'blue',
+    alignItems: 'center',
   },
   dictionaryText: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: 'black',
-  },
-  bellIcon: {
-    marginLeft: 16,
   },
   settingsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   settingsText: {
-    fontSize: 15, 
-    color: 'gray',
-    marginRight: 8, 
-    fontWeight: 'bold',
-  },
-  settingsIcon: {
-    // Bạn có thể thêm style ở đây nếu cần
+    marginRight: 8,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'gray',
-    borderRadius: 20,
-    height: 40, 
+    borderBottomWidth: 1,
+    borderColor: '#ddd',
+    marginTop: 16,
+    borderColor:'black',
+    borderWidth:1,
+    borderRadius:50,
   },
   searchIcon: {
-    marginLeft: 8,
+    padding:10,
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    paddingVertical: 0,
-    paddingHorizontal: 8,
+    fontSize: 18,
+  },
+  dropdownContainer: {
+    position: 'absolute',
+    top: 110,
+    left: 16,
+    right: 16,
+    backgroundColor: 'white',
+    borderRadius: 4,
+    elevation: 10,  
+    zIndex: 1000, 
+  },
+  dropdownScrollView: {
+    maxHeight: 200,
+  },
+  dropdownContentContainer: {
+    paddingVertical: 8,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  noResultsText: {
+    padding: 12,
+    textAlign: 'center',
+  },
+  fixedView: {
+    position: 'absolute',
+    top: 140,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    elevation: 2,  
+    paddingVertical: 10,
+    zIndex: 10, 
+  },
+  scrollView: {
+    paddingHorizontal: 16,
+  },
+  cardContainer: {
+    flexDirection: 'row',
+    padding:'10%'
+  },
+  card: {
+    width: 200,
+    aspectRatio: 3 / 4,
+    backgroundColor: '#007bff',
+    borderRadius: 15,
+    padding: 16,
+    marginHorizontal: 8,
+    justifyContent: 'space-between',
+  },
+  cardGreen: {
+    backgroundColor: '#28a745',
+  },
+  cardText: {
+    fontSize: 18,
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  cardSubText: {
+    fontSize: 14,
+    color: 'white',
+  },
+  cardIcon: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#ff9800',
+    borderRadius: 20,
+    padding: 5,
+  },
+  cardImage: {
+    width: '100%',
+    height: 120,
   },
   timerButton: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+    bottom: 60, // Adjust based on button position
+    right: 16,
   },
   fireIcon: {
-    top: 10, 
-    left: 10, 
+    position: 'absolute',
+    top: 10,
+    left: 10,
   },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  timeSelector: {
+  modalContent: {
+    width: 300,
     backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
+    borderRadius: 8,
+    elevation: 4,
   },
-  selectorLabel: {
+  timeOption: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  timeText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  optionButton: {
-    padding: 10,
-    backgroundColor: 'lightgray',
-    borderRadius: 5,
-    margin: 5,
-  },
-  optionText: {
-    fontSize: 16,
   },
 });
 

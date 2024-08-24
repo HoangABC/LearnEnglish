@@ -15,4 +15,7 @@ router.get('/words/status0', wordController.getWordsByStatus0);
 // Route để cập nhật trạng thái của từ
 router.put('/update-word-status', wordController.updateWordStatus);
 
+// Route để tìm kiếm từ
+router.get('/search', wordController.searchWord);
+
 module.exports = router;

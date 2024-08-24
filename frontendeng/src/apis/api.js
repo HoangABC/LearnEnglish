@@ -18,4 +18,5 @@ export const api = {
   googleLogin: (token) => apiClient.post('/auth/google/login', { token }),
   addWord: (word, definition, phonetic = '', example = '') => 
     apiClient.post('/api/words', { word, definition, phonetic, example }),  
+  searchWord: (keyword) => apiClient.get('/api/search', { params: { keyword } }),
 };

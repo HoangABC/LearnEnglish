@@ -1,7 +1,7 @@
 require('dotenv').config();
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { findOne, create } = require('../models/User');
+const { findOne, create, updateGoogleId } = require('../models/User');
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
@@ -10,11 +10,16 @@ passport.use(new GoogleStrategy({
 },
 async (accessToken, refreshToken, profile, done) => {
   try {
-    // Tìm người dùng trong cơ sở dữ liệu
-    const existingUser = await findOne({ googleId: profile.id });
+    // Tìm người dùng trong cơ sở dữ liệu bằng googleId hoặc email
+    const existingUser = await findOne({ googleId: profile.id, email: profile.emails[0].value });
 
     if (existingUser) {
-      // Người dùng đã tồn tại, trả về người dùng đó
+      // Người dùng đã tồn tại
+      if (!existingUser.googleId) {
+        // Nếu người dùng có email nhưng không có googleId, cập nhật googleId
+        await updateGoogleId(existingUser.email, profile.id);
+        existingUser.googleId = profile.id;
+      }
       return done(null, existingUser);
     }
 

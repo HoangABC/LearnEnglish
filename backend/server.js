@@ -14,12 +14,15 @@ const server = http.createServer(app);
 const { setupSocket } = require('./src/Module/socket');
 const createTablesIfNotExists = require('./src/scripts/createTable');
 const { sendEmail } = require('./src/scripts/nodeMailer');
+// const { parseTxtFile, syncWordsWithDatabase } = require('./src/scripts/tranlate');
 
 
 createTablesIfNotExists();
 
+
 // sendEmail();
-// Hàm lấy địa chỉ IP cục bộ
+
+
 const getLocalIP = () => {
   const interfaces = os.networkInterfaces();
   for (const key of Object.keys(interfaces)) {
@@ -29,14 +32,15 @@ const getLocalIP = () => {
       }
     }
   }
-  return '127.0.0.1'; // Trả về địa chỉ IP mặc định nếu không tìm thấy địa chỉ IP cục bộ
+  return '127.0.0.1'; 
 };
 
 const localIP = getLocalIP();
-console.log('ip:',localIP);
+console.log('IP:', localIP);
+
 // Cấu hình CORS và các middleware khác
 app.use(cors({
-  origin: [`http://localhost:3001`, `http://localhost:3000`,`http://localhost:3002`],
+  origin: [`http://localhost:3001`, `http://localhost:3000`, `http://localhost:3002`],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -61,6 +65,14 @@ app.use('/account', require('./src/routes/userRoutes'));
 // Cấu hình WebSocket
 setupSocket(server);
 
+// Đồng bộ dữ liệu từ file với cơ sở dữ liệu khi server khởi động
+// const filePath = './src/data/atv.txt';
+// const wordsDefinitions = parseTxtFile(filePath);
+// syncWordsWithDatabase(wordsDefinitions)
+//   .then(() => console.log('Database updated successfully.'))
+//   .catch(err => console.error('Error updating database:', err));
+
+// Khởi động server
 server.listen(process.env.PORT || 3000, () => {
   console.log(`Server is running on http://${localIP}:${process.env.PORT || 3000}`);
 });
