@@ -5,9 +5,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logout as logoutAction } from '../redux/authSlice';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Icon from 'react-native-vector-icons/MaterialIcons'; 
+import { useNavigation } from '@react-navigation/native';
 
 const Profile = () => {
   const dispatch = useDispatch();
+  const navigation = useNavigation();
 
   const handleLogout = async () => {
     try {
@@ -19,6 +21,12 @@ const Profile = () => {
       
       // Thực hiện hành động logout để xóa thông tin người dùng khỏi Redux store
       dispatch(logoutAction());
+      
+      // Thiết lập lại stack điều hướng để chuyển về màn hình đăng nhập
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
       
       console.log('Logout successful');
     } catch (error) {

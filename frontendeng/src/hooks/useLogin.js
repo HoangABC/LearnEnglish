@@ -16,6 +16,7 @@ const useLogin = () => {
       const resultAction = await dispatch(login({ emailOrUsername, password }));
       if (login.fulfilled.match(resultAction)) {
         const user = resultAction.payload;
+        console.log("Đăng nhập thành công:", user); // Thêm dòng này để kiểm tra kết quả
         return { success: true, user };
       } else {
         return { success: false, user: null, message: resultAction.payload };
@@ -24,7 +25,8 @@ const useLogin = () => {
       console.error('Đăng nhập thất bại:', e);
       return { success: false, user: null, message: e.message };
     }
-  };
+};
+
 
   const googleLoginUser = async (idToken) => {
     try {

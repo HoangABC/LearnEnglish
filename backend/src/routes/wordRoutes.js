@@ -18,4 +18,7 @@ router.put('/update-word-status', wordController.updateWordStatus);
 // Route để tìm kiếm từ
 router.get('/search', wordController.searchWord);
 
+// Route để lấy từ vựng ngẫu nhiên theo mức độ
+router.get('/random-words', wordController.getRandomWordsByLevel);
+
 module.exports = router;

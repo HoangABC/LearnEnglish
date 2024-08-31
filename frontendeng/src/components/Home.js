@@ -18,6 +18,7 @@ const Home = () => {
 
   const { status, error, searchResults, handleSearchWord, clearSearchResults } = useWordActions();
 
+
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -163,19 +164,20 @@ const Home = () => {
                 keyboardShouldPersistTaps="handled"
               >
                 {limitedSearchResults.length > 0 ? (
-                  limitedSearchResults.map((item) => (
-                    <TouchableOpacity
-                      key={item.Id}
-                      style={styles.dropdownItem}
-                      onPress={() => handleDropdownItemPress(item)}
-                    >
-                      <Text>{item.Word}</Text>
-                      <Text>{item.DefinitionVI}</Text>
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <Text style={styles.noResultsText}>Không có kết quả nào.</Text>
-                )}
+                    limitedSearchResults.map((item) => (
+                      <TouchableOpacity
+                        key={item.Id}
+                        style={styles.dropdownItem}
+                        onPress={() => handleDropdownItemPress(item)}
+                      >
+                        <Text>{item.Word}</Text>
+                        <Text>{item.DefinitionVI ? item.DefinitionVI.split(';')[0] : 'No definition available'}</Text>
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <Text style={styles.noResultsText}>Không có kết quả nào.</Text>
+                  )}
+
               </ScrollView>
             </View>
           )}
@@ -251,6 +253,8 @@ const Home = () => {
             </TouchableWithoutFeedback>
           </Modal>
           </View>
+        
+
         </View>
       </View>
     </TouchableWithoutFeedback>

@@ -21,9 +21,10 @@ const create = async (user) => {
     .input('username', sql.NVarChar, user.username || null)
     .input('email', sql.NVarChar, user.email)
     .input('password', sql.NVarChar, user.password || null) // Có thể bỏ qua nếu không cần
+    .input('levelId', sql.Int, user.levelId || null) // Cập nhật nếu có trường LevelId
     .query(`
-      INSERT INTO [User] (GoogleId, Name, Username, Email, Password)
-      VALUES (@googleId, @name, @username, @email, @password)
+      INSERT INTO [User] (GoogleId, Name, Username, Email, Password, LevelId)
+      VALUES (@googleId, @name, @username, @email, @password, @levelId)
     `);
 };
 

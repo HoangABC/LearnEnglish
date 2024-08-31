@@ -16,7 +16,9 @@ export const api = {
   fetchCustomers: () => apiClient.get('/api/customers'),
   logout: () => apiClient.post('/account/logout'),
   googleLogin: (token) => apiClient.post('/auth/google/login', { token }),
-  addWord: (word, definition, phonetic = '', example = '') => 
-    apiClient.post('/api/words', { word, definition, phonetic, example }),  
+  addWord: (word, definition, phonetic = '', example = '') => apiClient.post('/api/words', { word, definition, phonetic, example }),  
   searchWord: (keyword) => apiClient.get('/api/search', { params: { keyword } }),
+  updateUserLevel: (id, levelId) => apiClient.put(`/account/users/${id}/level`, { levelId }),
+  fetchLevels: () => apiClient.get('/account/levels'),
 };
+

@@ -20,7 +20,12 @@ async (accessToken, refreshToken, profile, done) => {
         await updateGoogleId(existingUser.email, profile.id);
         existingUser.googleId = profile.id;
       }
-      return done(null, existingUser);
+      return done(null, {
+        id: existingUser.Id,
+        name: existingUser.Name,
+        email: existingUser.Email,
+        levelId: existingUser.LevelId // Thêm LevelId vào đối tượng người dùng
+      });
     }
 
     // Người dùng chưa tồn tại, thêm vào cơ sở dữ liệu
@@ -28,11 +33,16 @@ async (accessToken, refreshToken, profile, done) => {
       googleId: profile.id,
       name: profile.displayName,
       email: profile.emails[0].value,
-      // password: null // Optional
+      levelId: null // LevelId có thể là null khi tạo mới
     };
 
     await create(newUser);
-    return done(null, newUser);
+    return done(null, {
+      id: newUser.Id,
+      name: newUser.name,
+      email: newUser.email,
+      levelId: null // LevelId có thể là null khi tạo mới
+    });
   } catch (error) {
     return done(error, null);
   }
@@ -45,7 +55,12 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await findOne({ googleId: id });
-    done(null, user);
+    done(null, {
+      id: user.Id,
+      name: user.Name,
+      email: user.Email,
+      levelId: user.LevelId // Thêm LevelId vào đối tượng người dùng
+    });
   } catch (error) {
     done(error, null);
   }

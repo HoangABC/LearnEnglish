@@ -13,6 +13,7 @@ const partOfSpeechMapping = {
     'ngoại động từ': 'verb',
     'mạo từ': 'indefinite article',
     'thán từ': 'exclamation',
+    'động từ': 'verb',
 };
 
 // Đọc và phân tích file TXT
@@ -49,18 +50,31 @@ function parseTxtFile(filePath) {
                 // Cập nhật loại từ mới
                 currentPartOfSpeech = line.slice(1).trim().split(',').map(pos => partOfSpeechMapping[pos.trim()] || 'unknown');
                 definition = '';
-            } else if (line.startsWith('-') || line.startsWith('=')) {
-                // Thêm định nghĩa
-                definition += line.slice(1).trim() + ' ';
-            } else if (line.startsWith('!')) {
-                // Xử lý thán từ
-                const exclamation = line.slice(1).trim();
-                currentPartOfSpeech.forEach(pos => {
-                    if (!definitionsMap[pos]) {
-                        definitionsMap[pos] = '';
-                    }
-                    definitionsMap[pos] += exclamation.trim() + ' ';
-                });
+            } else if (line.startsWith('-')) {
+                // Thêm định nghĩa với dấu gạch đầu dòng
+                definition += `- ${line.slice(1).trim()} `;
+            } else if (line.startsWith('=')) {
+                // Xử lý các ví dụ hoặc thông tin thêm
+                if (definition) {
+                    // Nếu có định nghĩa trước đó, lưu nó trước khi xử lý ví dụ
+                    currentPartOfSpeech.forEach(pos => {
+                        if (!definitionsMap[pos]) {
+                            definitionsMap[pos] = '';
+                        }
+                        definitionsMap[pos] += definition.trim() + ' ';
+                    });
+                    definition = ''; // Xóa định nghĩa sau khi lưu
+                }
+                if (!definitionsMap['examples']) {
+                    definitionsMap['examples'] = '';
+                }
+                definitionsMap['examples'] += `\n* ${line.slice(1).trim()}: `;
+            } else if (line.includes('/')) {
+                // Bỏ qua dòng chứa phiên âm (có dấu gạch chéo)
+                continue;
+            } else {
+                // Xử lý các thông tin thêm
+                definition += `${line.trim()} `;
             }
         }
 

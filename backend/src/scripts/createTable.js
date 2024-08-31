@@ -24,12 +24,23 @@ const createTablesIfNotExists = async () => {
         Status INT DEFAULT 0 -- Trạng thái (mặc định là 0)
       );
     END
-
-    -- Tạo bảng User nếu chưa tồn tại
+    -- Tạo bảng Level nếu chưa tồn tại
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Level' AND xtype='U')
+    BEGIN
+      CREATE TABLE [Level] (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        LevelName NVARCHAR(50) NOT NULL, -- Tên cấp độ (ví dụ: Mới bắt đầu, Trung bình, Khá, Giỏi)
+        CreatedAt DATETIME DEFAULT GETDATE(), -- Thời gian tạo (mặc định là thời gian hiện tại)
+        UpdatedAt DATETIME DEFAULT GETDATE(), -- Thời gian cập nhật (mặc định là thời gian hiện tại)
+        Status INT DEFAULT 1
+      );
+    END
+    -- Tạo bảng User nếu chưa tồn tại và cập nhật cấu trúc bảng nếu cần
     IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='User' AND xtype='U')
     BEGIN
       CREATE TABLE [User] (
         Id INT IDENTITY(1,1) PRIMARY KEY,
+        LevelId INT NULL, -- Cấp độ liên kết với bảng Level
         GoogleId NVARCHAR(MAX), -- ID Google
         Name NVARCHAR(MAX) NOT NULL,
         Username VARCHAR(50), -- Tên đăng nhập (điều chỉnh kích thước nếu cần)
@@ -38,7 +49,8 @@ const createTablesIfNotExists = async () => {
         ConfirmationToken NVARCHAR(255) NULL, -- Token xác nhận, có thể không có giá trị
         CreatedAt DATETIME DEFAULT GETDATE(), -- Thời gian tạo (mặc định là thời gian hiện tại)
         UpdatedAt DATETIME DEFAULT GETDATE(), -- Thời gian cập nhật (mặc định là thời gian hiện tại)
-        Status TINYINT DEFAULT 1 -- Trạng thái (mặc định là 1)
+        Status TINYINT DEFAULT 1, -- Trạng thái (mặc định là 1)
+        CONSTRAINT FK_User_Level FOREIGN KEY (LevelId) REFERENCES [Level](Id) -- Khóa ngoại liên kết với bảng Level
       );
     END
   `;

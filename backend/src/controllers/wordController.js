@@ -180,9 +180,9 @@ const searchWord = async (req, res) => {
     // Kết nối cơ sở dữ liệu
     const pool = await poolPromise;
     
-    // Truy vấn lấy 10 kết quả đầu tiên
+    // Truy vấn lấy 10 kết quả đầu tiên bắt đầu bằng từ khóa
     const result = await pool.request()
-      .input('keyword', sql.NVarChar, `%${keyword}%`)
+      .input('keyword', sql.NVarChar, `${keyword}%`) // Ký tự % chỉ đặt ở cuối
       .query(`
         SELECT TOP 10 * 
         FROM Word 
@@ -203,7 +203,39 @@ const searchWord = async (req, res) => {
   }
 };
 
+const getRandomWordsByLevel = async (req, res) => {
+  try {
+    const { level } = req.query;
 
+    if (!level) {
+      return res.status(400).json({ message: 'Level is required' });
+    }
+
+    const pool = await poolPromise;
+
+    // Lấy tất cả các từ theo mức độ
+    const wordsResult = await pool.request()
+      .input('level', sql.NVarChar, level)
+      .query('SELECT * FROM Word WHERE Level = @level AND Status = 1');
+
+    const words = wordsResult.recordset;
+
+    if (words.length === 0) {
+      return res.status(404).json({ message: 'No words found for this level.' });
+    }
+
+    // Shuffle words array
+    for (let i = words.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [words[i], words[j]] = [words[j], words[i]];
+    }
+
+    res.status(200).json(words);
+  } catch (err) {
+    console.error('Error fetching random words by level:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
 
 
 module.exports = {
@@ -211,5 +243,6 @@ module.exports = {
   getWordsByStatus1,
   getWordsByStatus0,
   updateWordStatus,
-  searchWord
+  searchWord,
+  getRandomWordsByLevel,
 };

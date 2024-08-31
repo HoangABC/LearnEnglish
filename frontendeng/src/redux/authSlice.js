@@ -7,8 +7,6 @@ export const register = createAsyncThunk(
   async ({ name, username, email, password }, { rejectWithValue }) => {
     try {
       const response = await api.register(name, username, email, password);
-      // Kiểm tra thông điệp phản hồi từ backend
-      console.log(response);
       if (response.data.message === 'User registered successfully!') {
         return { user: response.data.user, message: response.data.message };
       } else {
@@ -54,10 +52,42 @@ export const googleLogin = createAsyncThunk(
   }
 );
 
+// Thunk để cập nhật LevelId của người dùng
+export const updateUserLevel = createAsyncThunk(
+  'auth/updateUserLevel',
+  async ({ id, levelId }, { rejectWithValue }) => {
+    try {
+      const response = await api.updateUserLevel(id, levelId);
+      if (response.status === 200) {
+        return { id, levelId };
+      } else {
+        return rejectWithValue('Cập nhật LevelId không thành công');
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
+// Thunk để lấy danh sách Levels
+export const fetchLevels = createAsyncThunk(
+  'auth/fetchLevels',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.fetchLevels();
+      return response.data; // Giả sử response.data là danh sách các levels
+    } catch (error) {
+      console.error('Fetch Levels Error:', error); // Thêm log để kiểm tra lỗi
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi lấy dữ liệu Levels');
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
+    levels: [], // Thêm state để lưu danh sách levels
     error: null,
     status: 'idle',
     successMessage: null,
@@ -73,6 +103,7 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Xử lý các trạng thái của login
       .addCase(login.pending, (state) => {
         state.status = 'loading';
       })
@@ -84,6 +115,7 @@ const authSlice = createSlice({
         state.error = action.payload;
         state.status = 'failed';
       })
+      // Xử lý các trạng thái của register
       .addCase(register.pending, (state) => {
         state.status = 'loading';
       })
@@ -97,6 +129,7 @@ const authSlice = createSlice({
         state.status = 'failed';
         state.successMessage = null;
       })
+      // Xử lý các trạng thái của googleLogin
       .addCase(googleLogin.pending, (state) => {
         state.status = 'loading';
       })
@@ -107,10 +140,37 @@ const authSlice = createSlice({
       .addCase(googleLogin.rejected, (state, action) => {
         state.error = action.payload;
         state.status = 'failed';
+      })
+      // Xử lý các trạng thái của updateUserLevel
+      .addCase(updateUserLevel.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(updateUserLevel.fulfilled, (state, action) => {
+        const { id, levelId } = action.payload;
+        if (state.user && state.user.id === id) {
+          state.user.levelId = levelId;
+        }
+        state.status = 'succeeded';
+      })
+      .addCase(updateUserLevel.rejected, (state, action) => {
+        state.error = action.payload;
+        state.status = 'failed';
+      })
+      // Xử lý các trạng thái của fetchLevels
+      .addCase(fetchLevels.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(fetchLevels.fulfilled, (state, action) => {
+        state.levels = action.payload; // Lưu danh sách levels vào state
+        state.status = 'succeeded';
+      })
+      .addCase(fetchLevels.rejected, (state, action) => {
+        state.error = action.payload;
+        state.status = 'failed';
       });
   },
 });
 
-
 export const { logout, setUser } = authSlice.actions;
+
 export default authSlice.reducer;

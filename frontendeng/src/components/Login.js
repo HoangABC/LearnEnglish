@@ -22,20 +22,30 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log('Loading user from AsyncStorage...');
     const { params } = route;
     if (params?.login === 'success') {
       AsyncStorage.getItem('user').then(user => {
         if (user) {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'AppTabs' }],
-          });
+          console.log('User JSON:', user);
+          const parsedUser = JSON.parse(user);
+          console.log('Parsed User:', parsedUser);
+          if (parsedUser.LevelId === null) {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'LevelListView' }],
+            });
+          } else {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'AppTabs' }],
+            });
+          }
           showMessage({ message: "Đăng nhập thành công!", type: "success" });
         }
       });
     }
   }, [route.params, navigation]);
-  
 
   const handleLogin = async () => {
     setLoading(true);
@@ -43,10 +53,18 @@ const Login = () => {
       const { success, user } = await login();
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'AppTabs' }],
-        });
+        console.log('Login successful, user:', user);
+        if (user.LevelId === null) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'LevelListView' }],
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'AppTabs' }],
+          });
+        }
         showMessage({ message: "Đăng nhập thành công!", type: "success" });
       } else {
         showMessage({ message: error || "Có lỗi xảy ra", type: "danger" });
@@ -57,83 +75,55 @@ const Login = () => {
       setLoading(false);
     }
   };
-  
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
       await GoogleSignin.hasPlayServices();
-      
-      // Đăng xuất người dùng nếu đã đăng nhập
       await GoogleSignin.signOut();
-  
       const { idToken } = await GoogleSignin.signIn();
       const { success, user } = await googleLogin(idToken);
-  
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         dispatch(setUser(user));
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'AppTabs' }],
-        });
-        showMessage({
-          message: "Đăng nhập thành công!",
-          type: "success",
-        });
+        console.log('Google login successful, user:', user);
+        if (user.LevelId === null) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'LevelListView' }],
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'AppTabs' }],
+          });
+        }
+        showMessage({ message: "Đăng nhập thành công!", type: "success" });
       } else {
-        showMessage({
-          message: "Đăng nhập thất bại",
-          type: "danger",
-        });
+        showMessage({ message: "Đăng nhập thất bại", type: "danger" });
       }
     } catch (error) {
       if (error.code !== statusCodes.SIGN_IN_CANCELLED) {
         console.error('Lỗi đăng nhập Google:', error);
-        showMessage({
-          message: 'Lỗi đăng nhập',
-          description: error.message,
-          type: 'danger',
-        });
+        showMessage({ message: 'Lỗi đăng nhập', description: error.message, type: 'danger' });
       }
     } finally {
       setLoading(false);
     }
   };
-  
 
   const navigateToRegister = () => {
     navigation.navigate('Register');
   };
-  
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0} // Adjust the offset as needed
-    >
-      <Image
-        source={require('../assets/images/logo.png')} 
-        style={styles.logo}
-      />
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+      <Image source={require('../assets/images/logo.png')} style={styles.logo} />
       <View style={styles.loginCard}>
         <View style={styles.loginBox}>
           <Text style={styles.title}>Đăng Nhập</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Email hoặc Username"
-            placeholderTextColor="#666"
-            value={emailOrUsername}
-            onChangeText={setEmailOrUsername}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Mật khẩu"
-            secureTextEntry
-            placeholderTextColor="#666"
-            value={password}
-            onChangeText={setPassword}
-          />
+          <TextInput style={styles.input} placeholder="Email hoặc Username" placeholderTextColor="#666" value={emailOrUsername} onChangeText={setEmailOrUsername} />
+          <TextInput style={styles.input} placeholder="Mật khẩu" secureTextEntry placeholderTextColor="#666" value={password} onChangeText={setPassword} />
         </View>
       </View>
       <View>
@@ -151,15 +141,13 @@ const Login = () => {
         )}
       </View>
       <View style={styles.registerContainer}>
-      <View style={styles.registerRow}>
-        <Text style={styles.registerText}>
-          Bạn chưa có tài khoản?{' '}
-        </Text>
-        <TouchableOpacity onPress={navigateToRegister}>
-          <Text style={styles.registerLink}>Đăng ký</Text>
-        </TouchableOpacity>
+        <View style={styles.registerRow}>
+          <Text style={styles.registerText}>Bạn chưa có tài khoản?{' '}</Text>
+          <TouchableOpacity onPress={navigateToRegister}>
+            <Text style={styles.registerLink}>Đăng ký</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
       <FlashMessage position="top" />
     </KeyboardAvoidingView>
   );
@@ -174,8 +162,8 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   logo: {
-    width: 250,  // Tăng kích thước logo
-    height: 250, // Tăng kích thước logo
+    width: 250,
+    height: 250,
     marginBottom: 5,
     resizeMode: 'contain',
   },
@@ -224,11 +212,11 @@ const styles = StyleSheet.create({
   },
   registerContainer: {
     marginTop: 20,
-    alignItems: 'center', 
+    alignItems: 'center',
   },
   registerRow: {
     flexDirection: 'row',
-    alignItems: 'center', 
+    alignItems: 'center',
   },
   registerText: {
     fontSize: 16,
