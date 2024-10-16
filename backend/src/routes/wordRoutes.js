@@ -19,6 +19,17 @@ router.put('/update-word-status', wordController.updateWordStatus);
 router.get('/search', wordController.searchWord);
 
 // Route để lấy từ vựng ngẫu nhiên theo mức độ
-router.get('/random-words', wordController.getRandomWordsByLevel);
+router.get('/random-words', wordController.getRandomWordByLevel);
+
+// Route để thêm hoặc xóa từ khỏi danh sách yêu thích
+router.post('/toggle-favorite-word', wordController.toggleFavoriteWord);
+
+// Route để lấy danh sách từ yêu thích của người dùng
+router.get('/favorite-words', wordController.getFavoriteWords);
+
+// Route để lấy từ ngẫu nhiên cho Word Guess theo LevelId
+router.get('/random-word-for-guess', wordController.getRandomWordForGuess);
+
+router.post('/submit-answer', wordController.submitWordGuessAnswer);
 
 module.exports = router;

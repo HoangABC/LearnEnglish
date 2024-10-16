@@ -1,66 +1,243 @@
 const { poolPromise } = require('../config/db');
 
-const createTablesIfNotExists = async () => {
+const createTablesAndUpdateData = async () => {
   const pool = await poolPromise;
-  const createTablesQuery = `
-    -- Tạo bảng Word_New nếu chưa tồn tại
-    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Word' AND xtype='U')
-    BEGIN
-      CREATE TABLE [Word] (
-        Id INT IDENTITY(1,1) PRIMARY KEY,
-        QueryURL NVARCHAR(MAX),
-        Word NVARCHAR(MAX) NOT NULL, -- Từ (chắc chắn có giá trị)
-        PartOfSpeech NVARCHAR(MAX), -- Từ loại (ví dụ: noun, verb, adjective)
-        Level NVARCHAR(10), -- Cấp độ (ví dụ: A1, B2, C1)
-        Definition NVARCHAR(MAX), -- Định nghĩa (chắc chắn có giá trị)
-        DefinitionVI NVARCHAR(MAX), -- Định nghĩa tiếng Việt
-        PhoneticUK NVARCHAR(MAX), -- Phiên âm UK
-        PhoneticUS NVARCHAR(MAX), -- Phiên âm US
-        AudioUK NVARCHAR(MAX), -- Liên kết âm thanh phát âm UK
-        AudioUS NVARCHAR(MAX), -- Liên kết âm thanh phát âm US
-        Example NVARCHAR(MAX), -- Ví dụ sử dụng từ
-        CreatedAt DATETIME DEFAULT GETDATE(), -- Thời gian tạo (mặc định là thời gian hiện tại)
-        UpdatedAt DATETIME DEFAULT GETDATE(), -- Thời gian cập nhật (mặc định là thời gian hiện tại)
-        Status INT DEFAULT 0 -- Trạng thái (mặc định là 0)
-      );
-    END
-    -- Tạo bảng Level nếu chưa tồn tại
-    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Level' AND xtype='U')
-    BEGIN
-      CREATE TABLE [Level] (
-        Id INT IDENTITY(1,1) PRIMARY KEY,
-        LevelName NVARCHAR(50) NOT NULL, -- Tên cấp độ (ví dụ: Mới bắt đầu, Trung bình, Khá, Giỏi)
-        CreatedAt DATETIME DEFAULT GETDATE(), -- Thời gian tạo (mặc định là thời gian hiện tại)
-        UpdatedAt DATETIME DEFAULT GETDATE(), -- Thời gian cập nhật (mặc định là thời gian hiện tại)
-        Status INT DEFAULT 1
-      );
-    END
-    -- Tạo bảng User nếu chưa tồn tại và cập nhật cấu trúc bảng nếu cần
-    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='User' AND xtype='U')
-    BEGIN
-      CREATE TABLE [User] (
-        Id INT IDENTITY(1,1) PRIMARY KEY,
-        LevelId INT NULL, -- Cấp độ liên kết với bảng Level
-        GoogleId NVARCHAR(MAX), -- ID Google
-        Name NVARCHAR(MAX) NOT NULL,
-        Username VARCHAR(50), -- Tên đăng nhập (điều chỉnh kích thước nếu cần)
-        Email VARCHAR(255) UNIQUE NOT NULL, -- Địa chỉ email (kích thước phù hợp)
-        Password NVARCHAR(255), -- Mật khẩu (có thể cần thêm mã hóa)
-        ConfirmationToken NVARCHAR(255) NULL, -- Token xác nhận, có thể không có giá trị
-        CreatedAt DATETIME DEFAULT GETDATE(), -- Thời gian tạo (mặc định là thời gian hiện tại)
-        UpdatedAt DATETIME DEFAULT GETDATE(), -- Thời gian cập nhật (mặc định là thời gian hiện tại)
-        Status TINYINT DEFAULT 1, -- Trạng thái (mặc định là 1)
-        CONSTRAINT FK_User_Level FOREIGN KEY (LevelId) REFERENCES [Level](Id) -- Khóa ngoại liên kết với bảng Level
-      );
-    END
-  `;
 
   try {
-    await pool.request().query(createTablesQuery);
-    console.log('Tables "Word" and "User" created or updated successfully.');
+    const request = pool.request();
+
+    // Tạo bảng Level nếu chưa tồn tại
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Level')
+      BEGIN
+        CREATE TABLE [Level] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          LevelName NVARCHAR(50) NOT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1
+        );
+      END
+    `);
+
+    // Tạo bảng LevelWord nếu chưa tồn tại
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'LevelWord')
+      BEGIN
+        CREATE TABLE [LevelWord] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          LevelWord NVARCHAR(10) NOT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1
+        );
+      END
+    `);
+
+    // Tạo bảng User nếu chưa tồn tại
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'User')
+      BEGIN
+        CREATE TABLE [User] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          LevelId INT NULL,
+          GoogleId NVARCHAR(MAX),
+          Name NVARCHAR(MAX) NOT NULL,
+          Username VARCHAR(50),
+          Email VARCHAR(255) UNIQUE NOT NULL,
+          Password NVARCHAR(255),
+          ConfirmationToken NVARCHAR(255) NULL,
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status TINYINT DEFAULT 1,
+          CONSTRAINT FK_User_Level FOREIGN KEY (LevelId) REFERENCES [Level](Id)
+        );
+      END
+    `);
+
+    // Tạo bảng Word nếu chưa tồn tại
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Word')
+      BEGIN
+        CREATE TABLE [Word] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          QueryURL NVARCHAR(MAX),
+          Word NVARCHAR(MAX) NOT NULL,
+          PartOfSpeech NVARCHAR(MAX),
+          LevelWordId INT NULL,
+          Definition NVARCHAR(MAX),
+          DefinitionVI NVARCHAR(MAX),
+          PhoneticUK NVARCHAR(MAX),
+          PhoneticUS NVARCHAR(MAX),
+          AudioUK NVARCHAR(MAX),
+          AudioUS NVARCHAR(MAX),
+          Example NVARCHAR(MAX),
+          ExampleVI NVARCHAR(MAX),
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 0,
+          CONSTRAINT FK_Word_LevelWord FOREIGN KEY (LevelWordId) REFERENCES [LevelWord](Id)
+        );
+      END
+    `);
+
+    // Tạo bảng LevelMapping nếu chưa tồn tại
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'LevelMapping')
+      BEGIN
+        CREATE TABLE [LevelMapping] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          LevelId INT NOT NULL,
+          LevelWordId INT NOT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1,
+          CONSTRAINT FK_LevelMapping_Level FOREIGN KEY (LevelId) REFERENCES [Level](Id),
+          CONSTRAINT FK_LevelMapping_LevelWord FOREIGN KEY (LevelWordId) REFERENCES [LevelWord](Id)
+        );
+      END
+    `);
+
+    // Tạo bảng FavoriteWords nếu chưa tồn tại
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'FavoriteWords')
+      BEGIN
+        CREATE TABLE [FavoriteWords] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          UserId INT NOT NULL,
+          WordId INT NOT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1,
+          CONSTRAINT FK_FavoriteWords_User FOREIGN KEY (UserId) REFERENCES [User](Id),
+          CONSTRAINT FK_FavoriteWords_Word FOREIGN KEY (WordId) REFERENCES [Word](Id)
+        );
+      END
+    `);
+
+    // Tạo bảng QuestionType để quản lý loại câu hỏi
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'QuestionType')
+      BEGIN
+        CREATE TABLE [QuestionType] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          TypeName NVARCHAR(50) NOT NULL, -- ví dụ: Nhiều lựa chọn, Đúng/Sai
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1
+        );
+      END
+    `);
+
+    // Thêm dữ liệu vào bảng QuestionType nếu chưa có
+    const questionTypes = [
+      { TypeName: 'Đúng/Sai' },
+    ];
+
+    for (const type of questionTypes) {
+      await request.query(`
+        IF NOT EXISTS (SELECT * FROM [QuestionType] WHERE TypeName = '${type.TypeName}')
+        BEGIN
+          INSERT INTO [QuestionType] (TypeName) VALUES ('${type.TypeName}');
+        END
+      `);
+    }
+
+    // Tạo bảng Question với cột TypeId liên kết với bảng QuestionType
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Question')
+      BEGIN
+         CREATE TABLE [Question] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          QuestionText NVARCHAR(MAX) NOT NULL,
+          LevelWordId INT NOT NULL, -- Liên kết với bảng LevelWord
+          TypeId INT NOT NULL, -- Liên kết với bảng QuestionType
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1,
+          CONSTRAINT FK_Question_LevelWord FOREIGN KEY (LevelWordId) REFERENCES [LevelWord](Id),
+          CONSTRAINT FK_Question_QuestionType FOREIGN KEY (TypeId) REFERENCES [QuestionType](Id)
+        );
+      END
+    `);
+
+    // Tạo bảng Answer với cột liên kết đến bảng Question
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Answer')
+      BEGIN
+        CREATE TABLE [Answer] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          QuestionId INT NOT NULL,
+          AnswerText NVARCHAR(MAX) NOT NULL,
+          IsCorrect BIT DEFAULT 0,
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1,
+          CONSTRAINT FK_Answer_Question FOREIGN KEY (QuestionId) REFERENCES [Question](Id)
+        );
+      END
+    `);
+
+    // Tạo bảng UserTestStats để lưu thông tin thống kê về các bài kiểm tra của người dùng
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserTestStats')
+      BEGIN
+        CREATE TABLE [UserTestStats] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          UserId INT NOT NULL,
+          TotalTests INT DEFAULT 0, -- Tổng số lần làm bài
+          TotalQuestions INT DEFAULT 0, -- Tổng số câu hỏi đã làm
+          CorrectAnswers INT DEFAULT 0, -- Số câu trả lời đúng
+          AverageScore FLOAT DEFAULT 0, -- Điểm trung bình
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1,
+          CONSTRAINT FK_UserTestStats_User FOREIGN KEY (UserId) REFERENCES [User](Id)
+        );
+      END
+    `);
+
+    // Tạo bảng UserAnswer
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserAnswer')
+      BEGIN
+        CREATE TABLE [UserAnswer] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          UserTestId INT NOT NULL,
+          QuestionId INT NOT NULL,
+          AnswerId INT NOT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1,
+          CONSTRAINT FK_UserAnswer_UserTest FOREIGN KEY (UserTestId) REFERENCES [UserTestStats](Id),
+          CONSTRAINT FK_UserAnswer_Question FOREIGN KEY (QuestionId) REFERENCES [Question](Id),
+          CONSTRAINT FK_UserAnswer_Answer FOREIGN KEY (AnswerId) REFERENCES [Answer](Id)
+        );
+      END
+    `);
+    // Tạo bảng WordGuessAnswer để lưu đáp án của người dùng cho trò chơi WordGuess
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'WordGuessAnswer')
+      BEGIN
+        CREATE TABLE [WordGuessAnswer] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          UserId INT NOT NULL, -- Liên kết đến User
+          WordId INT NOT NULL, -- Liên kết đến Word
+          Answer NVARCHAR(MAX) NULL, -- Đáp án người dùng đã nhập
+          IsCorrect BIT DEFAULT 0, -- Trạng thái đáp án (Đúng/Sai)
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1,
+          CONSTRAINT FK_WordGuessAnswer_User FOREIGN KEY (UserId) REFERENCES [User](Id),
+          CONSTRAINT FK_WordGuessAnswer_Word FOREIGN KEY (WordId) REFERENCES [Word](Id)
+        );
+      END
+    `);
+
+    console.log('Tables and data created or updated successfully.');
   } catch (err) {
     console.error('Error creating or updating tables:', err);
   }
 };
 
-module.exports = createTablesIfNotExists;
+module.exports = createTablesAndUpdateData;

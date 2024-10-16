@@ -15,10 +15,24 @@ const { setupSocket } = require('./src/Module/socket');
 const createTablesIfNotExists = require('./src/scripts/createTable');
 const { sendEmail } = require('./src/scripts/nodeMailer');
 // const { parseTxtFile, syncWordsWithDatabase } = require('./src/scripts/tranlate');
-
+// const { extractSentencesAndInsert } = require('./src/scripts/extractSentences');
+// const importCSVtoDatabase = require('./src/scripts/csv'); // Điều chỉnh đường dẫn nếu cần
 
 createTablesIfNotExists();
 
+// Đường dẫn file CSV mà bạn muốn import
+const inputFilePath = './src/data/advance_exvi.csv'; 
+
+// Gọi hàm importCSVtoDatabase để import dữ liệu
+// importCSVtoDatabase(inputFilePath)
+//   .then(() => {
+//     console.log('Dữ liệu đã được import thành công!');
+//   })
+//   .catch(err => {
+//     console.error('Lỗi khi import dữ liệu:', err);
+//   });
+// const inputFilePath = './src/data/academic.csv'; 
+// extractSentencesAndInsert(inputFilePath);
 
 // sendEmail();
 
@@ -61,7 +75,8 @@ app.use(passport.session());
 app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api', require('./src/routes/wordRoutes'));
 app.use('/account', require('./src/routes/userRoutes'));
-
+app.use('/test', require('./src/routes/testRoutes'));
+app.use('/games', require('./src/routes/gameRoutes'));
 // Cấu hình WebSocket
 setupSocket(server);
 

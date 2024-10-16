@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'; 
 import { useDispatch, useSelector } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -13,6 +13,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import RegisterPage from '../pages/RegisterPage';
 import LevelListViewPage from '../pages/LevelListViewPage';
 import HomePage from '../pages/HomePage';
+import FlashCardVocaPage from '../pages/FlashCardVocaPage';
+import FlashCardFavPage from '../pages/FlashCardFavPage';
+import TestPage from '../pages/TestPage';
+import SuccessScreenPage from '../pages/SuccessScreenPage';
+import WordGuessPage from '../pages/WordGuessPage';
+import ChatBotPage from '../pages/ChatBotPage';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -80,8 +86,32 @@ const AppNavigator = () => {
     loadUser();
   }, [dispatch]);
 
-  // Logging the initial route for debugging
-  console.log('Initial route:', initialRoute);
+  // Cập nhật AsyncStorage khi thông tin người dùng trong Redux store thay đổi
+  const updateUserInStorage = async () => {
+    if (user) {
+      try {
+        console.log('Updating user in AsyncStorage...');
+        console.log('User to be updated:', user); // Log user to check current state
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+        console.log('User updated successfully in AsyncStorage'); // Log khi cập nhật thành công
+      } catch (error) {
+        console.error('Failed to update user in AsyncStorage:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    updateUserInStorage();
+  }, [user]);
+
+  // Theo dõi sự thay đổi của LevelId
+  useEffect(() => {
+    if (user && user.LevelId) {
+      console.log(`User LevelId đã thay đổi: ${user.LevelId}`);
+      // Gọi hàm cập nhật AsyncStorage nếu cần
+      updateUserInStorage();
+    }
+  }, [user?.LevelId]); // Theo dõi LevelId
 
   if (loading) {
     return (
@@ -106,8 +136,38 @@ const AppNavigator = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="FlashCardVoca"
+          component={FlashCardVocaPage}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="FlashCardFav"
+          component={FlashCardFavPage}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="CreateWord"
           component={CreateWordPage}
+        />
+        <Stack.Screen
+          name="Test"
+          component={TestPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
+          name="SuccessScreen"
+          component={SuccessScreenPage}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="WordGuess"
+          component={WordGuessPage}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ChatBot"
+          component={ChatBotPage}
+          options={{ headerTitle: '' }}
         />
         <Stack.Screen
           name="Login"

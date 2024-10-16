@@ -22,14 +22,11 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    console.log('Loading user from AsyncStorage...');
     const { params } = route;
     if (params?.login === 'success') {
       AsyncStorage.getItem('user').then(user => {
         if (user) {
-          console.log('User JSON:', user);
           const parsedUser = JSON.parse(user);
-          console.log('Parsed User:', parsedUser);
           if (parsedUser.LevelId === null) {
             navigation.reset({
               index: 0,
@@ -53,7 +50,6 @@ const Login = () => {
       const { success, user } = await login();
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
-        console.log('Login successful, user:', user);
         if (user.LevelId === null) {
           navigation.reset({
             index: 0,
@@ -86,7 +82,6 @@ const Login = () => {
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         dispatch(setUser(user));
-        console.log('Google login successful, user:', user);
         if (user.LevelId === null) {
           navigation.reset({
             index: 0,

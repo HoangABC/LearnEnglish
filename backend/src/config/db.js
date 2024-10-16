@@ -9,8 +9,10 @@ const config = {
     encrypt: false,
     trustedConnection: true,
     instanceName: 'SQLEXPRESS'
-  }
+  },
+  requestTimeout: 300000, 
 };
+
 
 const poolPromise = new sql.ConnectionPool(config)
   .connect()

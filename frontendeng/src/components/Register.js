@@ -3,11 +3,12 @@ import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
 import FlashMessage, { showMessage } from 'react-native-flash-message';
 import { useDispatch, useSelector } from 'react-redux';
 import { register } from '../redux/authSlice';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 const Register = () => {
   const dispatch = useDispatch();
   const { status, successMessage, error } = useSelector(state => state.auth);
-
+  const navigation = useNavigation();
   const [name, setName] = React.useState('');
   const [username, setUsername] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -23,6 +24,7 @@ const Register = () => {
     try {
       await dispatch(register({ name, username, email, password })).unwrap();
       showMessage({ message: 'Registration successful', type: 'success' });
+      navigation.navigate('Login');
     } catch (err) {
       showMessage({ message: err, type: 'danger' });
     }

@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Svg, { Circle, G } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
 import styles from '../styles/HomeStyles';
 import useWordActions from '../hooks/useWordActions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Home = () => {
+  const navigation = useNavigation(); 
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [progress, setProgress] = useState(0);
   const [timer, setTimer] = useState(null);
@@ -17,7 +19,6 @@ const Home = () => {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const { status, error, searchResults, handleSearchWord, clearSearchResults } = useWordActions();
-
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -124,6 +125,21 @@ const Home = () => {
     Keyboard.dismiss();
   };
 
+  const handleNavigateToFlashCard = () => {
+    navigation.navigate('FlashCardVoca');
+  };
+  const handleNavigateToFlashCardFav = () => {
+    navigation.navigate('FlashCardFav');
+  };
+  const handleNavigateToTest = () => {
+    navigation.navigate('Test');
+  };
+  const handleNavigateToWordGuess = () => {
+    navigation.navigate('WordGuess');
+  };
+  const handleNavigateToChatBot = () => {
+    navigation.navigate('ChatBot');
+  };
   const radius = 20;
   const strokeWidth = 6;
   const circumference = 2 * Math.PI * radius;
@@ -189,7 +205,7 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             style={styles.scrollView}
           >
-            <TouchableOpacity style={styles.card}>
+            <TouchableOpacity style={styles.card} onPress={handleNavigateToFlashCard}>
               <Text style={styles.cardText}>HỌC TỪ VỰNG</Text>
               <Image
                 source={require('../assets/images/Study_Voca.png')}
@@ -199,9 +215,41 @@ const Home = () => {
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.card, styles.cardGreen]}>
-              <Text style={styles.cardText}>HỌC NGỮ PHÁP</Text>
-              <Text style={styles.cardSubText}>QUA VÍ DỤ</Text>
+            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToFlashCardFav}>
+              <Text style={styles.cardText}>TỪ VỰNG CỦA TÔI</Text>
+              <Image
+                source={require('../assets/images/Study_Fav.png')}
+                style={styles.cardImage}
+              />
+              <Text style={styles.cardSubText}>THÔNG QUA FLASHCARD</Text>
+              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToTest}>
+              <Text style={styles.cardText}>KIỂM TRA TỪ VỰNG</Text>
+              <Image
+                source={require('../assets/images/Study_Fav.png')}
+                style={styles.cardImage}
+              />
+              <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM</Text>
+              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToWordGuess}>
+              <Text style={styles.cardText}>GIẢI TRÍ</Text>
+              <Image
+                source={require('../assets/images/Study_Fav.png')}
+                style={styles.cardImage}
+              />
+              <Text style={styles.cardSubText}>THÔNG QUA WORD GUESS</Text>
+              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToChatBot}>
+              <Text style={styles.cardText}>GIẢI ĐÁP</Text>
+              <Image
+                source={require('../assets/images/Study_Fav.png')}
+                style={styles.cardImage}
+              />
+              <Text style={styles.cardSubText}>THÔNG QUA CHAT BOT</Text>
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
           </ScrollView>
