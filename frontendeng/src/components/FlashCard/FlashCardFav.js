@@ -158,28 +158,34 @@ const FlashCardFav = () => {
           >
             <Icon name='close' size={24} color='red' />
           </TouchableOpacity>
-                   <View style={styles.soundIconContainer}>
-            {/* Nút phát âm thanh giọng US */}
-            <TouchableOpacity  
-              style={styles.soundIcon}
-              onPress={() => playSound(item.AudioUS)}
-            >
-              <Icon name="volume-up" size={24} color="white" />
-              <Text style={styles.phoneticText}>US</Text>
-            </TouchableOpacity>
-
-            {/* Nút phát âm thanh giọng UK */}
-            <TouchableOpacity 
+          <Text style={styles.word}>{item.Word}</Text>
+        
+        {/* Phần UK và US, mỗi phần một hàng */}
+        <View style={styles.phoneticContainer}>
+          {/* UK Section */}
+          <View style={styles.phoneticItem}>
+            <Text style={styles.phoneticText}>UK</Text>
+            <TouchableOpacity
               style={styles.soundIcon}
               onPress={() => playSound(item.AudioUK)}
             >
               <Icon name="volume-up" size={24} color="white" />
-              <Text style={styles.phoneticText}>UK</Text>
             </TouchableOpacity>
+            <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
           </View>
-          <Text style={styles.word}>{item.Word}</Text>
-          <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
-          <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
+
+          {/* US Section */}
+          <View style={styles.phoneticItem}>
+            <Text style={styles.phoneticText}>US</Text>
+            <TouchableOpacity
+              style={styles.soundIcon}
+              onPress={() => playSound(item.AudioUS)}
+            >
+              <Icon name="volume-up" size={24} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
+          </View>
+        </View>
         </LinearGradient>
 
         <View style={styles.cardBack}>
@@ -328,11 +334,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'red',
   },
   flipCardContainer: {
-    marginStart: 0.8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: width * 0.9,
-    marginTop: '10%',
+    justifyContent: 'center', // Căn giữa theo chiều dọc
+    alignItems: 'center', // Căn giữa theo chiều ngang
+    width: width * 0.9, 
+    height: '100%', // Đảm bảo chiều cao đầy đủ để căn giữa
   },
   flipCard: {
     marginStart:9,
@@ -412,7 +417,8 @@ const styles = StyleSheet.create({
   },
   flashCardContainer: {
     flex: 1,
-    width: '100%',
+    justifyContent: 'center', // Căn giữa theo chiều dọc
+    alignItems: 'center', // Căn giữa theo chiều ngang
     padding: 20,
   },
   container: {
@@ -435,15 +441,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 10, // Khoảng cách trên dưới giữa các nút
   },
-  soundIcon: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginHorizontal: 10, // Khoảng cách giữa các nút
+  phoneticContainer: {
+    flexDirection: 'column', 
+    justifyContent: 'flex-start', 
+    alignItems: 'center',  
+    marginBottom: 10,
+    width:'100%'
+  },
+  phoneticItem: {
+    flexDirection: 'row',  
+    alignItems: 'center',  
+    justifyContent: 'center',
+    marginBottom: 10,  // Đặt khoảng cách giữa UK và US
   },
   phoneticText: {
+    fontSize: 16,
     color: 'white',
-    marginLeft: 5, // Khoảng cách giữa biểu tượng và chữ "US" hoặc "UK"
-  }
+    marginRight: 5,
+  },
+  soundIcon: {
+    marginHorizontal: 10,
+    alignItems: 'center',
+  },
+  phonetic: {
+    fontSize: 20,
+    color: 'white',
+    width:120
+  },
 });
 
 export default FlashCardFav;

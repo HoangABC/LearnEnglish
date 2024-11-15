@@ -19,6 +19,10 @@ import TestPage from '../pages/TestPage';
 import SuccessScreenPage from '../pages/SuccessScreenPage';
 import WordGuessPage from '../pages/WordGuessPage';
 import ChatBotPage from '../pages/ChatBotPage';
+import LevelWordGuessPage from '../pages/LevelWordGuessPage';
+import WordDetailPage from '../pages/WordDetailPage';
+import ListenPage from '../pages/ListenPage';
+import SettingsPage from '../pages/SettingsPage';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -154,6 +158,11 @@ const AppNavigator = () => {
           component={TestPage}
           options={{ headerTitle: '' }}
         />
+         <Stack.Screen
+          name="Listen"
+          component={ListenPage}
+          options={{ headerTitle: '' }}
+        />
         <Stack.Screen
           name="SuccessScreen"
           component={SuccessScreenPage}
@@ -164,9 +173,24 @@ const AppNavigator = () => {
           component={WordGuessPage}
           options={{ headerShown: false }}
         />
+          <Stack.Screen
+          name="LevelWordGuess"
+          component={LevelWordGuessPage}
+          options={{ headerTitle: '' }}
+        />
         <Stack.Screen
           name="ChatBot"
           component={ChatBotPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={SettingsPage}
+          options={{ headerTitle: '' }}
+        />
+         <Stack.Screen
+          name="WordDetail"
+          component={WordDetailPage}
           options={{ headerTitle: '' }}
         />
         <Stack.Screen

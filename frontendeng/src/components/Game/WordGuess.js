@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import useGame from '../../hooks/useGame';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Appbar } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute  } from '@react-navigation/native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
 const WordGuess = () => {
@@ -25,14 +25,27 @@ const WordGuess = () => {
     const [showConfetti, setShowConfetti] = useState(false);
     const [correctWord, setCorrectWord] = useState('');
     const [isUpdatingColors, setIsUpdatingColors] = useState(false);
+    const route = useRoute();
+    const { selectedLevel } = route.params;
+    const [isResetting, setIsResetting] = useState(false);
 
+    useEffect(() => {
+        fetchUserId();
+    }, []);
+    
     const fetchUserId = async () => {
         try {
             const userJson = await AsyncStorage.getItem('user');
             if (userJson) {
                 const user = JSON.parse(userJson);
                 setUserId(user.Id);
-                fetchWordGuess(user.Id);
+    
+                // Đợi fetchWordGuess hoàn thành
+                const fetchedWord = await fetchWordGuess(user.Id); 
+                if (fetchedWord && fetchedWord.original) {
+                    setCorrectWord(fetchedWord.original.toUpperCase());
+                    setWordId(fetchedWord.wordId);
+                }
             } else {
                 console.error("User not found in AsyncStorage");
             }
@@ -40,29 +53,68 @@ const WordGuess = () => {
             console.error("Error fetching userId from AsyncStorage:", error);
         }
     };
-
+    
+    
     useEffect(() => {
-        fetchUserId();
-    }, []);
-
-    useEffect(() => {
-        if (wordForGuess) {
+        if (wordForGuess && wordForGuess.original) {
             setWordId(wordForGuess.wordId);
+            setCorrectWord(wordForGuess.original.toUpperCase()); 
+            console.log('Fetched word for guessing:', wordForGuess); 
         }
+        
     }, [wordForGuess]);
 
-    const handlePlayAgain = () => {
-        setUserInput(Array.from({ length: 6 }, () => Array(5).fill('')));
-        setLockedRows(Array(6).fill(false));
-        setGameOver(false);
-        setIsValidWord(true);
-        setCanInput(true);
-        setCurrentRow(0);
-        setCellColors(Array.from({ length: 6 }, () => Array(5).fill('#FFFFFF')));
-        if (userId) {
-            fetchWordGuess(userId);
+    useEffect(() => {
+        // Kiểm tra mức độ khó và chỉ đổi màu bàn phím sau khi correctWord đã được fetch
+        if (correctWord && correctWord.length > 0 && selectedLevel && !isResetting) {
+            changeKeyboardColorsBasedOnLevel(selectedLevel);
+        }
+    }, [correctWord, selectedLevel, isResetting]);
+    
+    const changeKeyboardColorsBasedOnLevel = (level) => {
+        let incorrectLetterCount = 0;
+    
+        if (level === 'easy') {
+            incorrectLetterCount = 3;
+        } else if (level === 'normal') {
+            incorrectLetterCount = 2;
+        } else if (level === 'hard') {
+            return; // Hard thì không cần đổi màu các ký tự không có trong correctWord
+        }
+    
+        // Chỉ gọi getRandomIncorrectLetters nếu correctWord đã có
+        if (correctWord && correctWord.length > 0) {
+            const incorrectLetters = getRandomIncorrectLetters(incorrectLetterCount);
+    
+            // Đổi màu bàn phím cho các ký tự không có trong correctWord
+            const newKeyboardColors = { ...keyboardColors };
+            incorrectLetters.forEach((char) => {
+                newKeyboardColors[char] = { backgroundColor: '#FF0000', textColor: '#FFFFFF' }; // Màu nền đỏ
+            });
+            setKeyboardColors(newKeyboardColors);
         }
     };
+    
+    const getRandomIncorrectLetters = (count) => {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const correctLetters = correctWord.split('');
+    
+        // Lọc ra các ký tự không có trong correctWord
+        const incorrectLetters = letters.filter((letter) => !correctLetters.includes(letter));
+    
+        // Chọn ngẫu nhiên 'count' ký tự không có trong correctWord
+        const selectedIncorrectLetters = [];
+        while (selectedIncorrectLetters.length < count) {
+            const randomIndex = Math.floor(Math.random() * incorrectLetters.length);
+            const randomLetter = incorrectLetters[randomIndex];
+            if (!selectedIncorrectLetters.includes(randomLetter)) {
+                selectedIncorrectLetters.push(randomLetter);
+            }
+        }
+    
+        return selectedIncorrectLetters;
+    };
+    
 
     const handleLetterPress = (letter) => {
         if (!gameOver && canInput && !lockedRows[currentRow]) {
@@ -184,7 +236,6 @@ const handleRemovePress = () => {
 
     const updateColorsForRow = async (answer, correctWord) => {
         setIsUpdatingColors(true); // Đang cập nhật màu sắc
-        const newColors = [...cellColors];
         const answerChars = answer.split('');
         const correctChars = correctWord.split('');
         const rowColors = Array(5).fill('#000000');
@@ -213,16 +264,27 @@ const handleRemovePress = () => {
             }
         });
     
+        // Cập nhật màu cho từng ô nhập liệu và bàn phím
         for (let index = 0; index < rowColors.length; index++) {
+            // Cập nhật màu cho ô nhập liệu trước
             await new Promise((resolve) => {
                 setTimeout(() => {
-                    animateCellColor(currentRow, index, rowColors[index]);
+                    animateCellColor(currentRow, index, rowColors[index]); // Cập nhật ô màu
                     resolve();
-                }, 300);
+                }, 500); // Thời gian trễ cho ô nhập liệu
+            });
+    
+            // Sau khi ô nhập liệu đã được cập nhật, cập nhật màu cho bàn phím với thời gian trễ thêm 0.5 giây
+            await new Promise((resolve) => {
+                setTimeout(() => {
+                    setKeyboardColors((prev) => ({
+                        ...prev,
+                        [answerChars[index]]: newKeyboardColors[answerChars[index]], // Cập nhật màu cho bàn phím
+                    }));
+                    resolve();
+                }, 500); // Thời gian trễ cho bàn phím
             });
         }
-    
-        setKeyboardColors(newKeyboardColors);
     
         if (currentRow === 5 && checkIfAllRowsIncorrect()) {
             setModalVisible(true);
@@ -230,6 +292,7 @@ const handleRemovePress = () => {
     
         setIsUpdatingColors(false); // Đã cập nhật xong
     };
+    
     
     
     const validateAndSubmitGuess = async (answer) => {
@@ -278,29 +341,49 @@ const handleRemovePress = () => {
         }
     };
     
+    const handleNext = async () => {
+        // Bắt đầu reset màu
+        setIsResetting(true);
+        
+        // Xóa correctWord trước khi fetch từ mới
+        setCorrectWord('');
     
-    const handleNext = () => {
         setUserInput(Array.from({ length: 6 }, () => Array(5).fill('')));
-        setCellColors(Array.from({ length: 6 }, () => Array(5).fill('#FFFFFF'))); 
-        setCurrentRow(0); 
-        setCanInput(true); 
-        setLockedRows(Array(6).fill(false)); 
-        setModalVisible(false); 
-        setKeyboardColors({}); 
-        setShowConfetti(false); // Ẩn confetti khi chơi lại
+        setCellColors(Array.from({ length: 6 }, () => Array(5).fill('#FFFFFF')));
+        setCurrentRow(0);
+        setCanInput(true);
+        setLockedRows(Array(6).fill(false));
+        setModalVisible(false);
+        setShowConfetti(false);
+    
+        // Reset lại màu của bàn phím
+        setKeyboardColors({}); // Xóa hết màu hiện tại
+    
         if (userId) {
-            fetchWordGuess(userId); 
+            const fetchedWord = await fetchWordGuess(userId);
+            if (fetchedWord && fetchedWord.original) {
+                setCorrectWord(fetchedWord.original.toUpperCase());
+                setWordId(fetchedWord.wordId);
+    
+                // Sau khi fetch từ mới, gọi hàm getRandomIncorrectLetters dựa trên từ mới
+                changeKeyboardColorsBasedOnLevel(selectedLevel); 
+            }
         }
+    
+        // Sau khi reset xong, đặt lại trạng thái
+        setTimeout(() => {
+            setIsResetting(false);
+        }, 100); // Có thể đặt delay nhỏ nếu cần
     };
     
-
+     
     const isCurrentRowValid = currentRow >= 0 && currentRow < userInput.length && userInput[currentRow].join('').length === 5;
 
 
     return (  
         <View style={styles.container}>
             <Appbar.Header style={styles.header}>
-                <Appbar.BackAction onPress={() => navigation.goBack()} />
+                <Appbar.BackAction onPress={() => navigation.navigate('Home')} />
                 <Appbar.Content
                     title={(
                     <View style={styles.progressContainer}>

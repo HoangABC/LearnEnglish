@@ -4,12 +4,14 @@ import {
   searchWord, 
   fetchRandomWordsByLevel, 
   fetchFavoriteWords, 
+  getWord, 
   resetError, 
   resetSearchResults, 
   resetRandomWords, 
-  toggleFavoriteWord 
+  toggleFavoriteWord, 
+  fetchMostFavoritedWordsToday // Add the new action here
 } from '../redux/wordSlice';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Thay đổi theo thư viện bạn sử dụng
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const useWordActions = () => {
   const dispatch = useDispatch();
@@ -18,6 +20,8 @@ const useWordActions = () => {
   const searchResults = useSelector((state) => state.words.searchResults);
   const randomWords = useSelector((state) => state.words.randomWords);
   const favoriteWords = useSelector((state) => state.words.favoriteWords);
+  const wordDetail = useSelector((state) => state.words.wordDetail);
+  const mostFavoritedWords = useSelector((state) => state.words.mostFavoritedWords); // Add mostFavoritedWords to selector
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,6 +34,8 @@ const useWordActions = () => {
         if (!randomWords.length) {
           await dispatch(fetchRandomWordsByLevel(userObj.LevelId));
         }
+        // Fetch most favorited words today for a specific level
+        await dispatch(fetchMostFavoritedWordsToday(userObj.LevelId)); // Pass levelId as needed
       }
     };
     fetchData();
@@ -51,6 +57,10 @@ const useWordActions = () => {
     await dispatch(toggleFavoriteWord({ userId, wordId }));
   };
 
+  const handleGetWord = async (wordId) => {
+    await dispatch(getWord(wordId));
+  };
+
   const clearError = () => {
     dispatch(resetError());
   };
@@ -69,10 +79,13 @@ const useWordActions = () => {
     searchResults,
     randomWords,
     favoriteWords,
+    wordDetail,
+    mostFavoritedWords, // Return mostFavoritedWords so you can access it in your component
     handleSearchWord,
     handleFetchRandomWordsByLevel,
     handleFetchFavoriteWords,
     handleToggleFavoriteWord,
+    handleGetWord,
     clearError,
     clearSearchResults,
     clearRandomWords,

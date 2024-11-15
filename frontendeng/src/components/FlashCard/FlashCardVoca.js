@@ -27,7 +27,9 @@ const FlashCardVoca = ({ route }) => {
 
   const dataFetched = useRef(false);
   const wordsArrayRef = useRef([]);
-
+  const [autoPlay, setAutoPlay] = useState(false); 
+  const [soundRegion, setSoundRegion] = useState('UK'); 
+  
   useEffect(() => {
     const fetchUserId = async () => {
       try {
@@ -56,6 +58,24 @@ const FlashCardVoca = ({ route }) => {
       fetchWords();
     }
   }, [userId]);
+
+  useEffect(() => {
+    const fetchAutoPlaySettings = async () => {
+      try {
+        const autoPlaySound = await AsyncStorage.getItem('autoPlaySound');
+        if (autoPlaySound) {
+          const { isEnabled, region } = JSON.parse(autoPlaySound);
+          setAutoPlay(isEnabled);
+          setSoundRegion(region); // region là US hoặc UK
+        }
+      } catch (error) {
+        console.error('Failed to load autoPlaySound settings:', error);
+      }
+    };
+  
+    fetchAutoPlaySettings();
+  }, []);
+  
 
   const fetchWordsFromStorage = useCallback(async () => {
     try {
@@ -184,45 +204,50 @@ const FlashCardVoca = ({ route }) => {
         flipHorizontal
         flipVertical={false}
       >
-        <LinearGradient
-          colors={['#353A5F', '#9EBAF3']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.cardFront}
+      <LinearGradient 
+        colors={['#353A5F', '#9EBAF3']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.cardFront}
+      >
+        <TouchableOpacity
+          style={styles.favoriteIcon}
+          onPress={() => handleToggleFavorite(item.Id)}
         >
-          <TouchableOpacity
-            style={styles.favoriteIcon}
-            onPress={() => handleToggleFavorite(item.Id)}
-          >
-            <Icon
-              name={item.isFavorite ? 'star' : 'star-border'}
-              size={24}
-              color={item.isFavorite ? 'yellow' : 'white'}
-            />
-          </TouchableOpacity>
-          
-          <Text style={styles.word}>{item.Word}</Text>
-          <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
-          <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
-          <View style={styles.soundIconContainer}>
-            <TouchableOpacity  
-              style={styles.soundIcon}
-              onPress={() => playSound(item.AudioUS)}
-            >
-              <Icon name="volume-up" size={24} color="white" />
-              <Text style={styles.phoneticText}>US</Text>
-            </TouchableOpacity>
+          <Icon
+            name={item.isFavorite ? 'star' : 'star-border'}
+            size={24}
+            color={item.isFavorite ? 'yellow' : 'white'}
+          />
+        </TouchableOpacity>
 
-            <TouchableOpacity 
+        <Text style={styles.word}>{item.Word}</Text>
+
+        <View style={styles.phoneticContainer}>
+
+          <View style={styles.phoneticItem}>
+            <Text style={styles.phoneticText}>UK</Text>
+            <TouchableOpacity
               style={styles.soundIcon}
               onPress={() => playSound(item.AudioUK)}
             >
               <Icon name="volume-up" size={24} color="white" />
-              <Text style={styles.phoneticText}>UK</Text>
             </TouchableOpacity>
+            <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
           </View>
-        </LinearGradient>
-  
+
+          <View style={styles.phoneticItem}>
+            <Text style={styles.phoneticText}>US</Text>
+            <TouchableOpacity
+              style={styles.soundIcon}
+              onPress={() => playSound(item.AudioUS)}
+            >
+              <Icon name="volume-up" size={24} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
+          </View>
+        </View>
+      </LinearGradient>
         <View style={styles.cardBack}>
           <View style={styles.tes}>
             <Text style={styles.title}>Định nghĩa:</Text>
@@ -250,17 +275,27 @@ const FlashCardVoca = ({ route }) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const currentIndex = Math.round(offsetX / (width * 0.9));
     setCurrentCardIndex(currentIndex);
+  
+    const currentWord = wordsArray[currentIndex];
+  
+    // Nếu tự động phát âm thanh được bật và có từ
+    if (autoPlay && currentWord) {
+      const soundUrl = soundRegion === 'US' ? currentWord.AudioUS : currentWord.AudioUK;
+      if (soundUrl) {
+        playSound(soundUrl);
+      }
+    }
   };
 
-const playSound = (audioUrl) => {
+
+  const playSound = (audioUrl) => {
     if (!audioUrl) return;
-    
-    // Thay đổi soundUrl và reset WebView
+  
+    // Đổi soundUrl và reset WebView
     setSoundUrl(audioUrl);
-    
-    // Tạo mới key để làm mới WebView
     setWebviewKey(prevKey => prevKey + 1);
-};
+  };
+
 const wordsArrayLength = favoriteWords.length;
   return (
     <ImageBackground
@@ -296,21 +331,21 @@ const wordsArrayLength = favoriteWords.length;
         </TouchableOpacity>
   
         <View style={styles.flashCardContainer}>
-       
-            <FlatList
-              data={wordsArray}
-              renderItem={renderItem}
-              keyExtractor={(item) => item.Id.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              pagingEnabled
-              onScroll={handleScroll}
-            />
-         
-          
+          <FlatList
+            data={wordsArray}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.Id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            onScroll={handleScroll}
+            contentContainerStyle={styles.flatListContentContainer} 
+            snapToInterval={width * 0.9} 
+            decelerationRate="fast" 
+            snapToAlignment="center" 
+          />
         </View>
-  
-        {/* Chỉ hiển thị WebView khi có soundUrl hợp lệ */}
+
         {soundUrl && (
           <View style={{ height: 0 }}>
             <WebView
@@ -374,11 +409,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'red',
   },
   flipCardContainer: {
-    marginStart: 0.8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: width * 0.9,
-    marginTop: '10%',
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    width: width * 0.9, 
+    height: '100%', 
   },
   flipCard: {
     marginStart:9,
@@ -389,7 +423,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 15,
     justifyContent: 'center',
-    alignItems: 'center',
     height: 500,
     width: '100%',
     overflow: 'hidden',
@@ -399,7 +432,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 15,
     justifyContent: 'center',
-    
     height: 500,
     width: '100%',
     overflow: 'hidden',
@@ -418,6 +450,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
     flexShrink: 1,
+    width:'100%',
   },
   definition: {
     fontSize: 16,
@@ -451,7 +484,8 @@ const styles = StyleSheet.create({
   },
   flashCardContainer: {
     flex: 1,
-    width: '100%',
+    justifyContent: 'center', 
+    alignItems: 'center', 
     padding: 20,
   },
   container: {
@@ -485,20 +519,39 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   soundIconContainer: {
-    flexDirection: 'row', // Xếp hàng ngang
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10, // Khoảng cách trên dưới giữa các nút
+    marginTop: 10, 
+    width:'100%',
   },
-  soundIcon: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginHorizontal: 10, // Khoảng cách giữa các nút
+  phoneticContainer: {
+    flexDirection: 'column', 
+    justifyContent: 'flex-start', 
+    alignItems: 'center',  
+    marginBottom: 10,
+    width:'100%'
+  },
+  phoneticItem: {
+    flexDirection: 'row',  
+    alignItems: 'center',  
+    justifyContent: 'center',
+    marginBottom: 10,  
   },
   phoneticText: {
+    fontSize: 16,
     color: 'white',
-    marginLeft: 5, // Khoảng cách giữa biểu tượng và chữ "US" hoặc "UK"
-  }
+    marginRight: 5,
+  },
+  soundIcon: {
+    marginHorizontal: 10,
+    alignItems: 'center',
+  },
+  phonetic: {
+    fontSize: 20,
+    color: 'white',
+    width:100
+  },
 
 });
 

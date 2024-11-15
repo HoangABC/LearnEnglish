@@ -1,5 +1,5 @@
 import axios from 'axios';
-const BASE_URL = `http://26.169.114.72:3000`;
+const BASE_URL = `http://192.168.1.2:3000`;
 
 
 const apiClient = axios.create({
@@ -27,4 +27,8 @@ export const api = {
   submitQuiz: (userId, answers) => apiClient.post('/test/submit', { userId, answers }),
   fetchWordGuess: (userId) => apiClient.get('/games/random-word-for-guess', { params: { userId } }),
   submitWordGuess: (userId, wordId, answer) => apiClient.post('/games/submit-answer', { userId, wordId, answer }),
+  getWord: (id) => apiClient.get('/api/word-detail', { params: { id } }),
+  fetchListeningPractice: (userId) => apiClient.get('/listen/getListeningPractice', { params: { userId } }),
+  submitListeningPractice: (userId, answer) => apiClient.post('/listen/submitListeningPractice', { userId, answer }),
+  fetchMostFavoritedWordsToday: (levelId) => apiClient.get('/api/most-favorited-words-today', { params: { levelId } }),
 };

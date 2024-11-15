@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   },
   fixedView: {
     position: 'absolute',
-    top: 140,
+    top: 120,
     bottom: 0,
     left: 0,
     right: 0,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     flexDirection: 'row',
-    padding:'10%'
+    padding:'5%'
   },
   card: {
     width: 200,
@@ -131,34 +131,187 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 120,
   },
-  timerButton: {
-    position: 'absolute',
-    bottom: 60, // Adjust based on button position
-    right: 16,
-  },
-  fireIcon: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Overlay with dim background
   },
   modalContainer: {
-    flex: 1,
+    height: '50%',
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  wordText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  languageToggle: {
+    flexDirection: 'row',
+  },
+  languageButton: {
+    marginLeft: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  phoneticSection: {
+    flexDirection: 'column',
+    marginVertical: 10,
+  },
+  phoneticRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  phoneticText: {
+    fontSize: 16,
+    marginRight: 5,
+  },
+
+  definitionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  definitionText: {
+    fontSize: 16,
+  },
+  footerSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  fullVersionButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 8,
+  },
+  fullVersionText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  searchButton: {
+    backgroundColor: 'lightgray',
+    padding: 10,
+    borderRadius: 8,
+  },
+  searchButtonText: {
+    color: 'black',
+    fontWeight: 'bold',
+  },
+  partOfSpeechContainer: {
+    marginVertical: 10,
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'lightgray'
+  },
+  partOfSpeechType: {
+    fontWeight: 'bold',
+    marginBottom: 5,
+    fontSize: 16
+  },
+  popularWordContainer: {
+    marginTop: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  backImage: {
+    width: '100%',
+    height: 350,
+    resizeMode: 'cover',
+    position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
-    width: 300,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    elevation: 4,
+  popularWordText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#fff',
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'transparent',
   },
-  timeOption: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+  transparentBox: {
+    width: 429.8, 
+    height: 300, 
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', 
+    borderRadius: 10,
+    borderWidth: 1, 
+    borderColor: '#fff', 
+    padding: 20, 
+    marginRight: 10, 
+    top: 10,
+    flexDirection: 'column', 
+    justifyContent: 'flex-start', 
+    position: 'relative', 
   },
-  timeText: {
-    fontSize: 18,
+  wordText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+    textAlign: 'left', 
+  },
+  phoneticContainer: {
+    flexDirection: 'column', 
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  phoneticText: {
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'left',
+  },
+  definitionText: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 20,
+    textAlign: 'left', 
+    flex: 1, 
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#fff',
+    width: '100%',
+    marginTop: 10, 
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10, 
+  },
+  saveCount: {
+    fontSize: 14,
+    color: '#fff',
+    textAlign: 'center', 
+  },
+  saveButton: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+    backgroundColor: '#007bff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    textAlign: 'center', 
+  },
+  flatListContainer: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 10, 
   },
 });
 

@@ -1,19 +1,18 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { api } from '../apis/api';
-import debounce from 'lodash/debounce';
+import { api } from '../apis/api'; // Ensure apiClient has fetchMostFavoritedWordsToday
 
-// Hàm xử lý lỗi
+// Error handler
 const handleError = (error, defaultMessage) => {
   if (error.response) {
     return error.response.data.message || defaultMessage;
   } else if (error.request) {
-    return 'Không có phản hồi từ máy chủ';
+    return 'No response from server';
   } else {
-    return 'Lỗi: ' + error.message;
+    return 'Error: ' + error.message;
   }
 };
 
-// Thunk để tìm kiếm từ
+// Thunk for searching a word
 export const searchWord = createAsyncThunk(
   'words/searchWord',
   async (keyword, { rejectWithValue }) => {
@@ -21,32 +20,42 @@ export const searchWord = createAsyncThunk(
       const response = await api.searchWord(keyword);
       const results = response.data;
       if (results.length === 0) {
-        return rejectWithValue('Không có kết quả tìm kiếm');
+        return rejectWithValue('No search results');
       }
       return results;
     } catch (error) {
-      return rejectWithValue(handleError(error, 'Có lỗi xảy ra khi tìm kiếm từ'));
+      return rejectWithValue(handleError(error, 'An error occurred while searching for the word'));
     }
   }
 );
 
-// Thunk để lấy từ ngẫu nhiên theo level
+// Thunk for fetching random words by level
 export const fetchRandomWordsByLevel = createAsyncThunk(
   'words/fetchRandomWordsByLevel',
   async (levelId, { rejectWithValue }) => {
-    console.log('fetchRandomWordsByLevel API called with levelId:', levelId); // Log API call
     try {
       const response = await api.fetchRandomWordsByLevel(levelId);
-      console.log(response)
       return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      return rejectWithValue(handleError(error, 'Có lỗi xảy ra khi lấy từ ngẫu nhiên'));
+      return rejectWithValue(handleError(error, 'An error occurred while fetching random words'));
     }
   }
 );
 
+// Thunk for fetching word by ID
+export const getWord = createAsyncThunk(
+  'words/getWord',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await api.getWord(id);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(handleError(error, 'An error occurred while fetching the word by ID'));
+    }
+  }
+);
 
-// Thunk để thay đổi trạng thái yêu thích của từ
+// Thunk for toggling favorite word
 export const toggleFavoriteWord = createAsyncThunk(
   'words/toggleFavoriteWord',
   async ({ userId, wordId }, { rejectWithValue }) => {
@@ -54,12 +63,12 @@ export const toggleFavoriteWord = createAsyncThunk(
       const response = await api.toggleFavoriteWord(userId, wordId);
       return response.data;
     } catch (error) {
-      return rejectWithValue(handleError(error, 'Có lỗi xảy ra khi thay đổi trạng thái yêu thích'));
+      return rejectWithValue(handleError(error, 'An error occurred while toggling the favorite word'));
     }
   }
 );
 
-// Thunk để lấy danh sách từ yêu thích
+// Thunk for fetching favorite words
 export const fetchFavoriteWords = createAsyncThunk(
   'words/fetchFavoriteWords',
   async (userId, { rejectWithValue }) => {
@@ -67,7 +76,20 @@ export const fetchFavoriteWords = createAsyncThunk(
       const response = await api.fetchFavoriteWords(userId);
       return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      return rejectWithValue(handleError(error, 'Có lỗi xảy ra khi lấy danh sách từ yêu thích'));
+      return rejectWithValue(handleError(error, 'An error occurred while fetching favorite words'));
+    }
+  }
+);
+
+// Thunk for fetching most favorited words today
+export const fetchMostFavoritedWordsToday = createAsyncThunk(
+  'words/fetchMostFavoritedWordsToday',
+  async (levelId, { rejectWithValue }) => {
+    try {
+      const response = await api.fetchMostFavoritedWordsToday(levelId);
+      return response.data; // Expecting an array of most favorited words
+    } catch (error) {
+      return rejectWithValue(handleError(error, 'An error occurred while fetching most favorited words today'));
     }
   }
 );
@@ -76,6 +98,8 @@ const initialState = {
   searchResults: [],
   randomWords: [],
   favoriteWords: [],
+  wordDetail: null,
+  mostFavoritedWords: [], 
   error: null,
   status: 'idle',
   dataLoaded: false,
@@ -100,6 +124,9 @@ const wordSlice = createSlice({
     setDataLoaded: (state, action) => {
       state.dataLoaded = action.payload;
     },
+    resetMostFavoritedWords: (state) => {
+      state.mostFavoritedWords = [];
+    },
   },
   extraReducers: (builder) => {
     const handlePending = (state) => {
@@ -122,12 +149,21 @@ const wordSlice = createSlice({
         state.dataLoaded = true;
       })
       .addCase(searchWord.rejected, handleRejected)
+
       .addCase(fetchRandomWordsByLevel.pending, handlePending)
       .addCase(fetchRandomWordsByLevel.fulfilled, (state, action) => {
         handleFulfilled(state, action);
         state.randomWords = action.payload;
       })
       .addCase(fetchRandomWordsByLevel.rejected, handleRejected)
+
+      .addCase(getWord.pending, handlePending)
+      .addCase(getWord.fulfilled, (state, action) => {
+        handleFulfilled(state, action);
+        state.wordDetail = action.payload;
+      })
+      .addCase(getWord.rejected, handleRejected)
+
       .addCase(toggleFavoriteWord.pending, handlePending)
       .addCase(toggleFavoriteWord.fulfilled, (state, action) => {
         handleFulfilled(state, action);
@@ -139,15 +175,32 @@ const wordSlice = createSlice({
         }
       })
       .addCase(toggleFavoriteWord.rejected, handleRejected)
+
       .addCase(fetchFavoriteWords.pending, handlePending)
       .addCase(fetchFavoriteWords.fulfilled, (state, action) => {
         handleFulfilled(state, action);
         state.favoriteWords = action.payload;
       })
-      .addCase(fetchFavoriteWords.rejected, handleRejected);
+      .addCase(fetchFavoriteWords.rejected, handleRejected)
+
+      // Handling most favorited words today
+      .addCase(fetchMostFavoritedWordsToday.pending, handlePending)
+      .addCase(fetchMostFavoritedWordsToday.fulfilled, (state, action) => {
+        handleFulfilled(state, action);
+        state.mostFavoritedWords = action.payload; // Store most favorited words
+        console.log("Fetched most favorited words today:", action.payload);
+      })
+      .addCase(fetchMostFavoritedWordsToday.rejected, handleRejected);
   },
 });
 
-export const { resetError, resetSearchResults, resetRandomWords, resetFavoriteWords, setDataLoaded } = wordSlice.actions;
+export const {
+  resetError,
+  resetSearchResults,
+  resetRandomWords,
+  resetFavoriteWords,
+  setDataLoaded,
+  resetMostFavoritedWords,
+} = wordSlice.actions;
 
 export default wordSlice.reducer;

@@ -1,108 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image,ImageBackground, FlatList } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import Svg, { Circle, G } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import styles from '../styles/HomeStyles';
 import useWordActions from '../hooks/useWordActions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const itemWidth = 443.2; 
+
+
 const Home = () => {
   const navigation = useNavigation(); 
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [timer, setTimer] = useState(null);
-  const [duration, setDuration] = useState(5);
-  const [userId, setUserId] = useState(null);
-  const [remainingTime, setRemainingTime] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-
-  const { status, error, searchResults, handleSearchWord, clearSearchResults } = useWordActions();
-
+  const [showWordDetail, setShowWordDetail] = useState(false); // Trạng thái để quản lý WordDetail
+  const [selectedWord, setSelectedWord] = useState({}); // Initialize as empty object
+  const [userId, setUserId] = useState(null); // Correct initialization
+  const { mostFavoritedWords, searchResults, handleSearchWord, clearSearchResults,  handleToggleFavoriteWord } = useWordActions();
+  const [wordsArray, setWordsArray] = useState([]);
+  
   useEffect(() => {
     const loadUserData = async () => {
       try {
         const user = await AsyncStorage.getItem('user');
+        console.log('Loaded user:', user);
         if (user) {
-          const { id } = JSON.parse(user);
-          setUserId(id);
-
-          const savedStartTime = await AsyncStorage.getItem(`startTime_${id}`);
-          const savedDuration = await AsyncStorage.getItem(`duration_${id}`);
-          const savedRemainingTime = await AsyncStorage.getItem(`remainingTime_${id}`);
-          const savedProgress = await AsyncStorage.getItem(`progress_${id}`);
-
-          if (savedStartTime && savedDuration && savedRemainingTime && savedProgress) {
-            const startTime = parseInt(savedStartTime);
-            const duration = parseInt(savedDuration);
-            const savedRemaining = parseFloat(savedRemainingTime);
-            const elapsedTime = (Date.now() - startTime) / 1000 / 60;
-
-            const remaining = savedRemaining - elapsedTime;
-            setRemainingTime(remaining);
-
-            if (remaining > 0) {
-              setProgress(parseFloat(savedProgress));
-              startTimer(remaining, startTime);
-            } else {
-              setProgress(1);
-            }
-          } else {
-            startTimer(duration, Date.now());
-          }
+          const { Id } = JSON.parse(user); // Extract Id with capital "I"
+          console.log('Loaded userId:', Id);
+          setUserId(Id);
+        } else {
+          console.error('User not found in AsyncStorage');
         }
       } catch (error) {
-        console.error("Failed to load user data", error);
+        console.error('Failed to load user data:', error);
       }
     };
-
+  
     loadUserData();
   }, []);
-
-  useEffect(() => {
-    if (progress > 0 && userId) {
-      AsyncStorage.setItem(`progress_${userId}`, progress.toString());
-      AsyncStorage.setItem(`remainingTime_${userId}`, remainingTime?.toString() ?? '0');
-    }
-  }, [progress, remainingTime, userId]);
-
-  const startTimer = (time, startTime) => {
-    const durationInMillis = time * 60 * 1000;
-    if (userId) {
-      AsyncStorage.setItem(`startTime_${userId}`, startTime.toString());
-      AsyncStorage.setItem(`duration_${userId}`, time.toString());
-    }
-
-    if (timer) clearInterval(timer);
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / durationInMillis, 1);
-      const newRemainingTime = time - elapsed / 1000 / 60;
-
-      setProgress(progress);
-      setRemainingTime(newRemainingTime);
-
-      if (progress >= 1) {
-        clearInterval(interval);
-      }
-    }, 1000);
-
-    setTimer(interval);
-  };
-
-  const handleSelectTime = (time) => {
-    setShowTimePicker(false);
-    setDuration(time);
-
-    const newRemainingTime = remainingTime + (time - duration);
-    setRemainingTime(newRemainingTime);
-    const newStartTime = Date.now() - ((duration - newRemainingTime) * 60 * 1000);
-
-    startTimer(newRemainingTime, newStartTime);
-  };
+  
 
   const handleSearch = (text) => {
     handleSearchWord(text);
@@ -117,13 +53,61 @@ const Home = () => {
   const handleDropdownItemPress = (item) => {
     setKeyword(item.Word);
     setShowDropdown(false);
+    navigation.navigate('WordDetail', { wordId: item.Id }); 
   };
+
 
   const handlePressOutside = () => {
     setShowDropdown(false);
     setKeyword('');
     Keyboard.dismiss();
   };
+  const renderItem = ({ item }) => (
+    <View style={styles.transparentBox}>
+      <Text style={styles.wordText}>{item.Word}</Text>
+      <View style={styles.phoneticContainer}>
+        <Text style={styles.phoneticText}>UK: {item.PhoneticUK}</Text>
+        <Text style={styles.phoneticText}>US: {item.PhoneticUS}</Text>
+      </View>
+      <Text style={styles.definitionText}>{item.Definition}</Text>
+  
+      <View style={styles.divider} />
+  
+      <View style={styles.footer}>
+        <Text style={styles.saveCount}>{item.FavoriteCount} lượt lưu</Text>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={() => handleToggleFavorite(item.Id)}
+        >
+          <Text style={styles.saveButtonText}>
+            {item.isFavorite ? "ĐÃ LƯU" : "LƯU TỪ"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+  
+  const handleToggleFavorite = useCallback(async (wordId) => {
+    console.log('userId:', userId);
+    if (!userId) {
+      console.error('User not found');
+      return;
+    }
+  
+    const updatedWords = mostFavoritedWords.map(word =>
+      word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
+    );
+  
+    try {
+      await handleToggleFavoriteWord(userId, wordId); // Gửi yêu cầu đến API với userId
+      // Cập nhật danh sách mostFavoritedWords tại chỗ
+      setWordsArray(updatedWords);
+    } catch (error) {
+      console.error('Failed to update favorite status:', error);
+    }
+  }, [mostFavoritedWords, handleToggleFavoriteWord, userId]);
+  
+  
 
   const handleNavigateToFlashCard = () => {
     navigation.navigate('FlashCardVoca');
@@ -134,18 +118,26 @@ const Home = () => {
   const handleNavigateToTest = () => {
     navigation.navigate('Test');
   };
-  const handleNavigateToWordGuess = () => {
-    navigation.navigate('WordGuess');
+  const handleNavigateToLevelWordGuess = () => {
+    navigation.navigate('LevelWordGuess');
+  };
+  const handleNavigateToListen = () => {
+    navigation.navigate('Listen');
   };
   const handleNavigateToChatBot = () => {
     navigation.navigate('ChatBot');
   };
-  const radius = 20;
-  const strokeWidth = 6;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (circumference * progress);
+  const handleNavigateToSettings = () => {
+    navigation.navigate('Settings');
+  };
 
-  const limitedSearchResults = searchResults.slice(0, 10);
+  // Lọc các kết quả tìm kiếm để loại bỏ từ trùng lặp
+  const uniqueSearchResults = searchResults.filter(
+    (item, index, self) =>
+      index === self.findIndex((t) => t.Word === item.Word)
+  );
+
+  const limitedSearchResults = uniqueSearchResults.slice(0, 10);
 
   return (
     <TouchableWithoutFeedback onPress={handlePressOutside}>
@@ -157,10 +149,10 @@ const Home = () => {
         <View style={styles.header2}>
           <View style={styles.headerContent}>
             <Text style={styles.dictionaryText}>Từ điển</Text>
-            <View style={styles.settingsContainer}>
+            <TouchableOpacity style={styles.settingsContainer} onPress={handleNavigateToSettings}>
               <Text style={styles.settingsText}>Cài đặt</Text>
               <Icon name="settings" size={24} color="gray" style={styles.settingsIcon} />
-            </View>
+            </TouchableOpacity>
           </View>
           <View style={styles.searchContainer}>
             <Icon name="search" size={20} color="blue" style={styles.searchIcon} />
@@ -180,20 +172,19 @@ const Home = () => {
                 keyboardShouldPersistTaps="handled"
               >
                 {limitedSearchResults.length > 0 ? (
-                    limitedSearchResults.map((item) => (
-                      <TouchableOpacity
-                        key={item.Id}
-                        style={styles.dropdownItem}
-                        onPress={() => handleDropdownItemPress(item)}
-                      >
-                        <Text>{item.Word}</Text>
-                        <Text>{item.DefinitionVI ? item.DefinitionVI.split(';')[0] : 'No definition available'}</Text>
-                      </TouchableOpacity>
-                    ))
-                  ) : (
-                    <Text style={styles.noResultsText}>Không có kết quả nào.</Text>
-                  )}
-
+                  limitedSearchResults.map((item) => (
+                    <TouchableOpacity
+                      key={item.Id} // Đảm bảo mỗi phần tử có thuộc tính key duy nhất
+                      style={styles.dropdownItem}
+                      onPress={() => handleDropdownItemPress(item)}
+                    >
+                      <Text>{item.Word}</Text>
+                      <Text>{item.DefinitionVI ? item.DefinitionVI.split(';')[0] : 'No definition available'}</Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={styles.noResultsText}>Không có kết quả nào.</Text>
+                )}
               </ScrollView>
             </View>
           )}
@@ -225,6 +216,16 @@ const Home = () => {
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
 
+            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToListen}>
+              <Text style={styles.cardText}>KIỂM TRA NGHE</Text>
+              <Image
+                source={require('../assets/images/Study_Fav.png')}
+                style={styles.cardImage}
+              />
+              <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM</Text>
+              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
+            </TouchableOpacity>
+
             <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToTest}>
               <Text style={styles.cardText}>KIỂM TRA TỪ VỰNG</Text>
               <Image
@@ -234,7 +235,7 @@ const Home = () => {
               <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM</Text>
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToWordGuess}>
+            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToLevelWordGuess}>
               <Text style={styles.cardText}>GIẢI TRÍ</Text>
               <Image
                 source={require('../assets/images/Study_Fav.png')}
@@ -253,56 +254,29 @@ const Home = () => {
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
           </ScrollView>
-      
-          <TouchableOpacity 
-            style={styles.timerButton} 
-            onPress={() => setShowTimePicker(true)}
-          >
-            <Svg width={radius * 2 + strokeWidth} height={radius * 2 + strokeWidth}>
-              <G rotation="-90" origin={`${radius + strokeWidth / 2}, ${radius + strokeWidth / 2}`}>
-                <Circle
-                  cx={radius + strokeWidth / 2}
-                  cy={radius + strokeWidth / 2}
-                  r={radius}
-                  stroke="#e6e6e6"
-                  strokeWidth={strokeWidth}
-                  fill="none"
-                />
-                <Circle
-                  cx={radius + strokeWidth / 2}
-                  cy={radius + strokeWidth / 2}
-                  r={radius}
-                  stroke="blue"
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  fill="none"
-                  strokeLinecap="round"
-                />
-              </G>
-              <Icon name="local-fire-department" size={25} color="red" style={styles.fireIcon} />
-            </Svg>
-          </TouchableOpacity>
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={showTimePicker}
-          >
-            <TouchableWithoutFeedback onPress={() => setShowTimePicker(false)}>
-              <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                  {[5, 10, 15].map((time) => (
-                    <TouchableOpacity key={time} style={styles.timeOption} onPress={() => handleSelectTime(time)}>
-                      <Text style={styles.timeText}>{time} phút</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </Modal>
+          <View style={styles.popularWordContainer}>
+            <ImageBackground source={require('../assets/images/background.jpg')} style={styles.backImage}>
+              <Text style={styles.popularWordText}>ĐANG ĐƯỢC LƯU NHIỀU NHẤT HÔM NAY</Text>
+              <FlatList
+                data={mostFavoritedWords}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.Id.toString()}
+                horizontal
+                contentContainerStyle={styles.flatListContainer}
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={itemWidth} 
+                decelerationRate="fast"
+                snapToAlignment="center"
+                pagingEnabled
+                getItemLayout={(data, index) => ({
+                  length: itemWidth, 
+                  offset: itemWidth * index, 
+                  index, 
+                })}
+              />
+            </ImageBackground>
           </View>
-        
-
+          </View>
         </View>
       </View>
     </TouchableWithoutFeedback>

@@ -12,6 +12,8 @@ router.get('/words/status1', wordController.getWordsByStatus1);
 // Route để lấy từ với trạng thái 0
 router.get('/words/status0', wordController.getWordsByStatus0);
 
+router.get('/word-detail', wordController.getWordById);
+
 // Route để cập nhật trạng thái của từ
 router.put('/update-word-status', wordController.updateWordStatus);
 
@@ -31,5 +33,8 @@ router.get('/favorite-words', wordController.getFavoriteWords);
 router.get('/random-word-for-guess', wordController.getRandomWordForGuess);
 
 router.post('/submit-answer', wordController.submitWordGuessAnswer);
+
+// Route để lấy từ yêu thích nhiều nhất trong ngày
+router.get('/most-favorited-words-today', wordController.getMostFavoritedWordsToday);
 
 module.exports = router;

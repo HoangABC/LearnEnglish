@@ -3,12 +3,12 @@ import { View, TextInput, Text, FlatList, TouchableOpacity, ActivityIndicator, S
 import axios from 'axios';
 import ChatBubble from './ChatBubble'; // Assuming you have a ChatBubble component
 
-const ChatBot = () => {
+const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
   const [chat, setChat] = useState([]); // Chat log
   const [userInput, setUserInput] = useState(''); // User input
   const [loading, setLoading] = useState(false); // Loading state
   const [error, setError] = useState(null); // Error state
-  const API_KEY = 'AIzaSyCcghcmfHSTa1_J40ZjbhAgtXbebeYFgrc'; // Replace with your API Key
+  const API_KEY = 'AIzaSyA1qeItcA-tL9ZoxbihSC46LO-6vXphJAA'; // Replace with your API Key
   const flatListRef = useRef(null); // Create a reference for FlatList
 
   // Function to handle user input
@@ -21,25 +21,42 @@ const ChatBot = () => {
     setLoading(true); // Show loading spinner
 
     try {
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
-        {
-          contents: updatedChat.map(chatItem => ({
-            role: chatItem.role,
-            parts: chatItem.parts.map(part => ({ text: part.text }))
-          }))
-        }
-      );
+      const response = await makeApiCall(updatedChat, 0); // Call API with retry mechanism
       const modelResponse = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || ''; 
       if (modelResponse) {
         const newChat = [...updatedChat, { role: 'model', parts: [{ text: modelResponse }] }];
         setChat(newChat);
       }
     } catch (error) {
-      console.error('Error calling Gemini Pro API:', error);
+      console.error('Error calling Gemini API:', error);
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false); // Hide loading spinner
+    }
+  };
+
+  // Function to handle retry logic for API call
+  const makeApiCall = async (updatedChat, retryCount) => {
+    try {
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
+        {
+          sessionId, // Include session ID for tracking
+          contents: updatedChat.map(chatItem => ({
+            role: chatItem.role,
+            parts: chatItem.parts.map(part => ({ text: part.text }))
+          }))
+        }
+      );
+      return response;
+    } catch (error) {
+      if (error.response?.status === 429 && retryCount < 3) {
+        // Wait for 1 second and retry up to 3 times
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return makeApiCall(updatedChat, retryCount + 1);
+      } else {
+        throw error; // Re-throw error if not 429 or retry limit exceeded
+      }
     }
   };
 

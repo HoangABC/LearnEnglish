@@ -234,6 +234,25 @@ const createTablesAndUpdateData = async () => {
       END
     `);
 
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ListeningPractice')
+      BEGIN
+        CREATE TABLE [ListeningPractice] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          UserId INT NOT NULL, -- Liên kết đến bảng User
+          WordId INT NOT NULL, -- Liên kết đến bảng Word
+          Audio NVARCHAR(MAX) NULL, 
+          Answer NVARCHAR(MAX) NULL, -- Đáp án người dùng đã nhập
+          IsCorrect BIT DEFAULT 0, -- Trạng thái đáp án (Đúng/Sai)
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          UpdatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1,
+          CONSTRAINT FK_ListeningPractice_User FOREIGN KEY (UserId) REFERENCES [User](Id),
+          CONSTRAINT FK_ListeningPractice_Word FOREIGN KEY (WordId) REFERENCES [Word](Id)
+        );
+      END
+    `);
+
     console.log('Tables and data created or updated successfully.');
   } catch (err) {
     console.error('Error creating or updating tables:', err);

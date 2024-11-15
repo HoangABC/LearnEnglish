@@ -237,18 +237,17 @@ const getRandomWordByLevel = async (req, res) => {
       ORDER BY NEWID() -- Sắp xếp ngẫu nhiên
     `;
 
-    console.log('Executing random words query:', randomWordsQuery); // Kiểm tra câu truy vấn
 
     const randomWordsResult = await pool.request().query(randomWordsQuery);
 
-    console.log('Random words found:', randomWordsResult.recordset); // Kiểm tra từ ngẫu nhiên tìm được
+    console.log('Random words found:', randomWordsResult.recordset); 
 
     if (randomWordsResult.recordset.length === 0) {
-      console.log('No words found for the given LevelId'); // Ghi log khi không tìm thấy từ nào
+      console.log('No words found for the given LevelId');
       return res.status(404).json({ message: 'No words found for the given LevelId.' });
     }
 
-    res.status(200).json(randomWordsResult.recordset); // Trả về mảng các từ ngẫu nhiên
+    res.status(200).json(randomWordsResult.recordset); 
   } catch (err) {
     console.error('Error fetching random word by level:', err.message);
     res.status(500).json({ error: err.message });
@@ -267,7 +266,6 @@ const toggleFavoriteWord = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Kiểm tra xem từ đã có trong danh sách yêu thích của người dùng chưa
     const checkFavoriteQuery = `
       SELECT * FROM FavoriteWords 
       WHERE UserId = @userId AND WordId = @wordId
@@ -278,10 +276,10 @@ const toggleFavoriteWord = async (req, res) => {
       .query(checkFavoriteQuery);
 
     if (checkFavoriteResult.recordset.length > 0) {
-      // Nếu đã có, kiểm tra trạng thái hiện tại
+
       const currentStatus = checkFavoriteResult.recordset[0].Status;
       
-      // Cập nhật trạng thái
+
       const newStatus = currentStatus === 1 ? 0 : 1;
       await pool.request()
         .input('userId', sql.Int, userId)
@@ -296,7 +294,7 @@ const toggleFavoriteWord = async (req, res) => {
       const message = newStatus === 1 ? 'Word added to favorites.' : 'Word removed from favorites.';
       return res.status(200).json({ message });
     } else {
-      // Nếu chưa có, thì thêm vào danh sách yêu thích với trạng thái 1 (yêu thích)
+ 
       await pool.request()
         .input('userId', sql.Int, userId)
         .input('wordId', sql.Int, wordId)
@@ -323,7 +321,6 @@ const getFavoriteWords = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Truy vấn lấy các từ yêu thích của người dùng, bao gồm DefinitionVI và ExampleVI
     const result = await pool.request()
       .input('userId', sql.Int, userId)
       .query(`
@@ -459,6 +456,152 @@ const submitWordGuessAnswer = async (req, res) => {
   }
 };
 
+const getWordById = async (req, res) => {
+  try {
+    const { id } = req.query; // Lấy id từ query
+
+    if (!id) {
+      return res.status(400).json({ message: 'Word ID is required.' });
+    }
+
+    const pool = await poolPromise;
+
+    // Lấy từ theo ID
+    const wordByIdResult = await pool.request()
+      .input('id', sql.Int, id)
+      .query('SELECT * FROM Word WHERE Id = @id');
+
+    if (wordByIdResult.recordset.length === 0) {
+      return res.status(404).json({ message: 'Word not found.' });
+    }
+
+    const word = wordByIdResult.recordset[0].Word;
+
+    // Tìm tất cả các từ trùng khớp với từ theo ID, loại bỏ các cột không cần thiết
+    const duplicateWordsResult = await pool.request()
+      .input('word', sql.NVarChar, word)
+      .query('SELECT Id, Word, PartOfSpeech, Definition, DefinitionVI, Example, ExampleVI, CreatedAt, UpdatedAt, Status FROM Word WHERE Word = @word');
+
+    // Kết hợp cả từ theo ID và các từ trùng khớp
+    const combinedResults = [wordByIdResult.recordset[0], ...duplicateWordsResult.recordset];
+
+    // Loại bỏ các từ bị trùng lặp
+    const uniqueResults = combinedResults.filter(
+      (item, index, self) => index === self.findIndex((w) => w.Id === item.Id)
+    );
+
+    res.status(200).json(uniqueResults);
+  } catch (err) {
+    console.error('Error fetching word by ID:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getMostFavoritedWordsToday = async (req, res) => { 
+  try {
+    const { levelId } = req.query;
+
+    if (!levelId) {
+      return res.status(400).json({ message: 'LevelId is required' });
+    }
+
+    const pool = await poolPromise;
+
+    // Lấy tất cả các LevelWordId từ bảng LevelMapping với LevelId cụ thể
+    const levelMappingResult = await pool.request()
+      .input('levelId', sql.Int, levelId)
+      .query(`
+        SELECT LevelWordId 
+        FROM LevelMapping 
+        WHERE LevelId = @levelId AND Status = 1
+      `);
+
+    const levelWordIds = levelMappingResult.recordset.map(row => row.LevelWordId);
+
+    if (levelWordIds.length === 0) {
+      return res.status(404).json({ message: 'No LevelWordIds found for this level.' });
+    }
+
+    // Lấy tất cả các WordId từ bảng Word với LevelWordId tương ứng
+    const levelWordsResult = await pool.request()
+      .input('levelWordIds', sql.Int, levelWordIds)
+      .query(`
+        SELECT Id 
+        FROM Word 
+        WHERE LevelWordId IN (${levelWordIds.join(',')}) AND Status = 1 
+          AND Word NOT LIKE '%[0-9]%'  
+      `);
+
+    const wordIds = levelWordsResult.recordset.map(row => row.Id);
+
+    if (wordIds.length === 0) {
+      return res.status(404).json({ message: 'No words found for this level.' });
+    }
+
+    // Truy vấn từ yêu thích trong ngày hiện tại
+    const mostFavoritedWordsQuery = `
+      SELECT w.Id, w.Word, COUNT(fw.WordId) AS FavoriteCount, 
+             w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
+      FROM Word w
+      INNER JOIN FavoriteWords fw ON w.Id = fw.WordId
+      WHERE fw.WordId IN (${wordIds.join(',')}) 
+        AND fw.Status = 1
+        AND CAST(fw.CreatedAt AS DATE) = CAST(GETDATE() AS DATE)  
+        AND w.Word NOT LIKE '%[0-9]%'  
+      GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
+      ORDER BY FavoriteCount DESC  
+    `;
+
+    const mostFavoritedWordsResult = await pool.request().query(mostFavoritedWordsQuery);
+
+    if (mostFavoritedWordsResult.recordset.length === 0) {
+      // Nếu không có từ yêu thích trong ngày, lấy 10 từ ngẫu nhiên theo levelId
+      const randomWordsQuery = `
+        SELECT TOP 10 w.Id, w.Word, ISNULL(COUNT(fw.WordId), 0) AS FavoriteCount,
+               w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
+        FROM Word w
+        LEFT JOIN FavoriteWords fw ON w.Id = fw.WordId AND fw.Status = 1
+        WHERE w.Status = 1
+          AND w.Word NOT LIKE '%[0-9]%'  
+          AND w.LevelWordId IN (${levelWordIds.join(',')})  -- Lọc theo LevelWordId
+        GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
+        ORDER BY NEWID();  
+      `;
+      const randomWordsResult = await pool.request().query(randomWordsQuery);
+      return res.status(200).json(randomWordsResult.recordset);
+    }
+
+    // Nếu có từ yêu thích trong ngày
+    const favoritedWords = mostFavoritedWordsResult.recordset;
+
+    // Tính số lượng từ cần bổ sung (10 - số từ yêu thích)
+    const remainingCount = 10 - favoritedWords.length;
+
+    let finalWords = favoritedWords;
+
+    if (remainingCount > 0) {
+      // Lấy thêm từ ngẫu nhiên nếu còn thiếu
+      const randomWordsQuery = `
+        SELECT TOP ${remainingCount} w.Id, w.Word, ISNULL(COUNT(fw.WordId), 0) AS FavoriteCount,
+               w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
+        FROM Word w
+        LEFT JOIN FavoriteWords fw ON w.Id = fw.WordId AND fw.Status = 1
+        WHERE w.Status = 1
+          AND w.Word NOT LIKE '%[0-9]%'  
+          AND w.LevelWordId IN (${levelWordIds.join(',')})  -- Lọc theo LevelWordId
+        GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
+        ORDER BY NEWID();  
+      `;
+      const randomWordsResult = await pool.request().query(randomWordsQuery);
+      finalWords = finalWords.concat(randomWordsResult.recordset);
+    }
+
+    res.status(200).json(finalWords);
+  } catch (err) {
+    console.error('Error fetching most favorited words today:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
 
 module.exports = {
   addWord,
@@ -471,4 +614,6 @@ module.exports = {
   getFavoriteWords,
   getRandomWordForGuess,
   submitWordGuessAnswer,
+  getWordById,
+  getMostFavoritedWordsToday,
 };
