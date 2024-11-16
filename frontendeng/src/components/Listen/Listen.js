@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
 import useListen from '../../hooks/useListen';
 import { WebView } from 'react-native-webview'; 
+import Sound from 'react-native-sound'; 
 
 const Listen = () => {
   const { listeningPracticeData, error, fetchPractice, submitPractice } = useListen();
@@ -14,6 +15,7 @@ const Listen = () => {
   const [webviewKey, setWebviewKey] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [inputValue, setInputValue] = useState('');
 
   const fetchUserId = async () => {
     try {
@@ -39,6 +41,24 @@ const Listen = () => {
     }
   }, [userId]);
 
+  // Function to play the local sound
+  const SoundCorrect = (filePath) => {
+    const sound = new Sound(require('../../assets/audios/correct.mp3'), (error) => {
+      if (error) {
+        console.error('Error loading sound:', error);
+        return;
+      }
+      sound.play((success) => {
+        if (success) {
+          console.log('Successfully played sound');
+        } else {
+          console.error('Playback failed');
+        }
+      });
+    });
+    
+  };
+
   const playSound = (audioUrl) => {
     if (!audioUrl) return;
     setSoundUrl(audioUrl);
@@ -61,13 +81,20 @@ const Listen = () => {
   const handleSubmit = () => {
     const currentAnswer = answers[listeningPracticeData.questionId];
     
-    if (currentAnswer === listeningPracticeData.word) {
+    const normalizedAnswer = listeningPracticeData.inputType === 'fill-in-the-blank'
+      ? currentAnswer.trim().toLowerCase()
+      : currentAnswer;
+  
+    const correctAnswer = listeningPracticeData.word.trim().toLowerCase(); // Normalize the correct word as well
+    
+    if (normalizedAnswer === correctAnswer) {
+      SoundCorrect('../../assets/audios/correct.mp3');  // Play the local sound
       setModalMessage('You are correct! Press OK to continue.');
     } else {
       setModalMessage(`Incorrect. The correct word is: ${listeningPracticeData.word}. Press OK to continue.`);
     }
     setModalVisible(true);
-  
+    
     if (userId) {
       submitPractice(userId, currentAnswer);
     } else {
@@ -96,8 +123,8 @@ const Listen = () => {
             <Slider
               style={styles.slider}
               minimumValue={0}
-              maximumValue={100} // Duration is no longer needed here since WebView does not provide current position tracking like Sound
-              value={isPlaying ? 50 : 0} // This is a placeholder, as WebView doesn't provide precise tracking
+              maximumValue={100}
+              value={isPlaying ? 50 : 0}
               minimumTrackTintColor="#1E90FF"
               maximumTrackTintColor="#d3d3d3"
               thumbTintColor="#1E90FF"
@@ -123,7 +150,11 @@ const Listen = () => {
           <TextInput
             style={styles.textInput}
             placeholder="Type your answer"
-            onChangeText={(text) => handleAnswerSelection(listeningPracticeData.questionId, text)}
+            value={inputValue}
+            onChangeText={(text) => {
+              setInputValue(text);
+              handleAnswerSelection(listeningPracticeData.questionId, text);
+            }}
           />
         ) : (
           listeningPracticeData.choices.map((option, index) => (
@@ -153,7 +184,8 @@ const Listen = () => {
             <Text style={styles.modalText}>{modalMessage}</Text>
             <TouchableOpacity onPress={() => {
               setModalVisible(false);
-              fetchPractice(userId);
+              setInputValue('');
+              fetchPractice(userId);  
             }}>
               <Text style={styles.modalButton}>OK</Text>
             </TouchableOpacity>
@@ -207,7 +239,7 @@ const styles = StyleSheet.create({
   optionText: {
     textAlign: 'center',
     fontSize: 16,
-    width:'100%',
+    width: '100%',
   },
   textInput: {
     borderColor: '#ccc',
@@ -246,12 +278,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalText: {
-    fontSize: 18,
+    fontSize: 16,
     marginBottom: 20,
+    textAlign:'center',
   },
   modalButton: {
     color: '#1E90FF',
-    fontSize: 16,
+    width:200,
+    textAlign:'center',
   },
 });
 

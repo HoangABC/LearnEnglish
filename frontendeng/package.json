@@ -30,6 +30,7 @@
     "react-native-chart-kit": "^6.12.0",
     "react-native-confetti-cannon": "^1.5.2",
     "react-native-dotenv": "^3.4.11",
+    "react-native-fast-image": "^8.6.3",
     "react-native-flash-message": "^0.4.2",
     "react-native-flip-card": "^3.5.7",
     "react-native-gesture-handler": "^2.18.1",
