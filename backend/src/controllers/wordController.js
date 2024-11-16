@@ -538,19 +538,21 @@ const getMostFavoritedWordsToday = async (req, res) => {
       return res.status(404).json({ message: 'No words found for this level.' });
     }
 
-    // Truy vấn từ yêu thích trong ngày hiện tại
+    // Truy vấn từ yêu thích trong ngày hiện tại, bao gồm Status
     const mostFavoritedWordsQuery = `
-      SELECT w.Id, w.Word, COUNT(fw.WordId) AS FavoriteCount, 
-             w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
-      FROM Word w
-      INNER JOIN FavoriteWords fw ON w.Id = fw.WordId
-      WHERE fw.WordId IN (${wordIds.join(',')}) 
-        AND fw.Status = 1
-        AND CAST(fw.CreatedAt AS DATE) = CAST(GETDATE() AS DATE)  
-        AND w.Word NOT LIKE '%[0-9]%'  
-      GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
-      ORDER BY FavoriteCount DESC  
-    `;
+    SELECT w.Id, w.Word, COUNT(fw.WordId) AS FavoriteCount, 
+           w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS,
+           fw.Status AS FavoriteStatus 
+    FROM Word w
+    INNER JOIN FavoriteWords fw ON w.Id = fw.WordId
+    WHERE fw.WordId IN (${wordIds.join(',')}) 
+      AND fw.Status = 1
+      AND CAST(fw.CreatedAt AS DATE) = CAST(GETDATE() AS DATE)  
+      AND w.Word NOT LIKE '%[0-9]%'  
+    GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS, fw.Status 
+    ORDER BY FavoriteCount DESC  
+  `;
+  
 
     const mostFavoritedWordsResult = await pool.request().query(mostFavoritedWordsQuery);
 
@@ -602,6 +604,7 @@ const getMostFavoritedWordsToday = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 module.exports = {
   addWord,

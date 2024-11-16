@@ -46,14 +46,13 @@ const FlashCardFav = () => {
     fetchUserId();
   }, []);
 
-  // Fetch favorite words when userId changes
+
   useEffect(() => {
     if (userId) {
       handleFetchFavoriteWords(userId);
     }
-  }, [userId]); // Removed handleFetchFavoriteWords from dependencies
+  }, [userId]);
 
-  // Process example texts when favoriteWords change
   useEffect(() => {
     if (favoriteWords.length) {
       const processedTexts = favoriteWords.map(word => {
@@ -452,7 +451,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',  
     alignItems: 'center',  
     justifyContent: 'center',
-    marginBottom: 10,  // Đặt khoảng cách giữa UK và US
+    marginBottom: 10,  
   },
   phoneticText: {
     fontSize: 16,

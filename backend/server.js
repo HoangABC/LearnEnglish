@@ -118,7 +118,7 @@ const { sendEmail } = require('./src/scripts/nodeMailer');
 createTablesIfNotExists();
 
 // Hardcode Wi-Fi IP address
-const localIP = '192.168.1.2';
+const localIP = '192.168.1.9';
 console.log('IP:', localIP);
 
 // Cấu hình CORS và các middleware khác

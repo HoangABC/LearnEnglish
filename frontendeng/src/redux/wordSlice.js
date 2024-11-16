@@ -187,8 +187,8 @@ const wordSlice = createSlice({
       .addCase(fetchMostFavoritedWordsToday.pending, handlePending)
       .addCase(fetchMostFavoritedWordsToday.fulfilled, (state, action) => {
         handleFulfilled(state, action);
-        state.mostFavoritedWords = action.payload; // Store most favorited words
-        console.log("Fetched most favorited words today:", action.payload);
+        state.mostFavoritedWords = action.payload;
+       
       })
       .addCase(fetchMostFavoritedWordsToday.rejected, handleRejected);
   },

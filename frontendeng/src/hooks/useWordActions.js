@@ -34,12 +34,16 @@ const useWordActions = () => {
         if (!randomWords.length) {
           await dispatch(fetchRandomWordsByLevel(userObj.LevelId));
         }
-        // Fetch most favorited words today for a specific level
-        await dispatch(fetchMostFavoritedWordsToday(userObj.LevelId)); // Pass levelId as needed
+        // Fetch most favorited words today for a specific level only once
+        if (!mostFavoritedWords.length) {
+          await dispatch(fetchMostFavoritedWordsToday(userObj.LevelId));
+        }
       }
     };
+  
     fetchData();
-  }, [dispatch, favoriteWords.length, randomWords.length]);
+  }, [dispatch, favoriteWords.length, randomWords.length, mostFavoritedWords.length]);  
+  
 
   const handleSearchWord = async (keyword) => {
     await dispatch(searchWord(keyword));

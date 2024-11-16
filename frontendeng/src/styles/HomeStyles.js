@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   popularWordText: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
     position: 'absolute',
@@ -245,24 +245,55 @@ const styles = StyleSheet.create({
   },
   transparentBox: {
     width: 429.8, 
-    height: 300, 
+    height: 297, 
     backgroundColor: 'rgba(0, 0, 0, 0.3)', 
     borderRadius: 10,
     borderWidth: 1, 
     borderColor: '#fff', 
     padding: 20, 
-    marginRight: 10, 
-    top: 10,
+    marginRight: 20, 
+    marginLeft:20,
+    top: 19,
     flexDirection: 'column', 
     justifyContent: 'flex-start', 
     position: 'relative', 
   },
+  wordContainer: {
+    flexDirection: 'row', 
+    justifyContent: 'space-between',  
+    alignItems: 'center',  
+    width: '100%',  
+  },
   wordText: {
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
-    textAlign: 'left', 
+    color: 'white',
+    flex: 1,  
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',  
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 14,
+    textAlign:'center',
+    width:70,
+  },
+  detailButton:{
+    backgroundColor: '#4CAF50',  
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  ButtonDetail:{
+    color: 'white',
+    textAlign:'center',
+    justifyContent:'center',
+    fontSize: 14,
+    width:100
   },
   phoneticContainer: {
     flexDirection: 'column', 
@@ -312,6 +343,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingHorizontal: 10, 
+  },
+  phoneticItem: {
+    flexDirection: 'row',  
+  },
+  phonetic: {
+    fontSize: 20,
+    color: '#eee',
+    flexShrink: 1,
+    width:'110%',
+  },
+  soundIcon: {
+    marginHorizontal: 10,
   },
 });
 

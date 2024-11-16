@@ -1,24 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image,ImageBackground, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image, ImageBackground, FlatList } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import styles from '../styles/HomeStyles';
 import useWordActions from '../hooks/useWordActions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const itemWidth = 443.2; 
-
+import { WebView } from 'react-native-webview';
 
 const Home = () => {
-  const navigation = useNavigation(); 
+  const navigation = useNavigation();
   const [keyword, setKeyword] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [showWordDetail, setShowWordDetail] = useState(false); // Trạng thái để quản lý WordDetail
   const [selectedWord, setSelectedWord] = useState({}); // Initialize as empty object
   const [userId, setUserId] = useState(null); // Correct initialization
-  const { mostFavoritedWords, searchResults, handleSearchWord, clearSearchResults,  handleToggleFavoriteWord } = useWordActions();
-  const [wordsArray, setWordsArray] = useState([]);
-  
+  const { mostFavoritedWords, searchResults, handleSearchWord, clearSearchResults, handleToggleFavoriteWord } = useWordActions();
+  const [webviewKey, setWebviewKey] = useState(0);
+  const [soundUrl, setSoundUrl] = useState(null);
+
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -35,11 +34,12 @@ const Home = () => {
         console.error('Failed to load user data:', error);
       }
     };
-  
+
     loadUserData();
   }, []);
-  
 
+
+  
   const handleSearch = (text) => {
     handleSearchWord(text);
     setShowDropdown(true);
@@ -53,21 +53,101 @@ const Home = () => {
   const handleDropdownItemPress = (item) => {
     setKeyword(item.Word);
     setShowDropdown(false);
-    navigation.navigate('WordDetail', { wordId: item.Id }); 
+    navigation.navigate('WordDetail', { wordId: item.Id });
   };
-
 
   const handlePressOutside = () => {
     setShowDropdown(false);
     setKeyword('');
     Keyboard.dismiss();
   };
+
+  const handleToggleFavorite = useCallback(async (wordId) => {
+    console.log('userId:', userId);
+    if (!userId) {
+      console.error('User not found');
+      return;
+    }
+  
+    try {
+      // Update the favorite status locally
+      const updatedWords = mostFavoritedWords.map(word =>
+        word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
+      );
+  
+      // Send request to API with userId
+      await handleToggleFavoriteWord(userId, wordId);
+  
+      // Update local words array
+      setWordsArray(updatedWords);
+  
+      // Get previous data from AsyncStorage
+      const previousWords = await AsyncStorage.getItem(`wordsArray_${userId}`);
+      let wordsToStore = [];
+  
+      if (previousWords) {
+        wordsToStore = JSON.parse(previousWords);
+      }
+  
+      // Update the words list in AsyncStorage
+      const updatedWordsToStore = wordsToStore.map(word =>
+        word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
+      );
+  
+      // Add the word if it's not already in the list
+      if (!updatedWordsToStore.some(word => word.Id === wordId)) {
+        const newWord = updatedWords.find(word => word.Id === wordId);
+        updatedWordsToStore.push(newWord);
+      }
+  
+      // Store the updated words array back into AsyncStorage
+      await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(updatedWordsToStore));
+  
+      // Check the data stored in AsyncStorage after update
+      const storedWords = await AsyncStorage.getItem(`wordsArray_${userId}`);
+      console.log('Stored words after update:', JSON.parse(storedWords));
+    } catch (error) {
+      console.error('Failed to update favorite status:', error);
+    }
+  }, [mostFavoritedWords, handleToggleFavoriteWord, userId]);
+  
+
   const renderItem = ({ item }) => (
     <View style={styles.transparentBox}>
-      <Text style={styles.wordText}>{item.Word}</Text>
+      <View style={styles.wordContainer}>
+        <Text style={styles.wordText}>{item.Word}</Text>
+        <TouchableOpacity
+          style={styles.detailButton}
+          onPress={() => {
+            navigation.navigate('WordDetail', { wordId: item.Id });
+          }}
+        >
+          <Text style={styles.ButtonDetail}>
+            Xem chi tiết
+          </Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.phoneticContainer}>
-        <Text style={styles.phoneticText}>UK: {item.PhoneticUK}</Text>
-        <Text style={styles.phoneticText}>US: {item.PhoneticUS}</Text>
+        <View style={styles.phoneticItem}>
+            <Text style={styles.phoneticText}>UK</Text>
+            <TouchableOpacity
+              style={styles.soundIcon}
+              onPress={() => playSound(item.AudioUK)}
+            >
+              <Icon name="volume-up" size={24} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
+          </View>
+          <View style={styles.phoneticItem}>
+            <Text style={styles.phoneticText}>US</Text>
+            <TouchableOpacity
+              style={styles.soundIcon}
+              onPress={() => playSound(item.AudioUS)}
+            >
+              <Icon name="volume-up" size={24} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
+          </View>
       </View>
       <Text style={styles.definitionText}>{item.Definition}</Text>
   
@@ -80,34 +160,20 @@ const Home = () => {
           onPress={() => handleToggleFavorite(item.Id)}
         >
           <Text style={styles.saveButtonText}>
-            {item.isFavorite ? "ĐÃ LƯU" : "LƯU TỪ"}
+            {item.FavoriteStatus ? "ĐÃ LƯU" : "LƯU TỪ"}
           </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
+
+  const playSound = (audioUrl) => {
+    if (!audioUrl) return;
   
-  const handleToggleFavorite = useCallback(async (wordId) => {
-    console.log('userId:', userId);
-    if (!userId) {
-      console.error('User not found');
-      return;
-    }
-  
-    const updatedWords = mostFavoritedWords.map(word =>
-      word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
-    );
-  
-    try {
-      await handleToggleFavoriteWord(userId, wordId); // Gửi yêu cầu đến API với userId
-      // Cập nhật danh sách mostFavoritedWords tại chỗ
-      setWordsArray(updatedWords);
-    } catch (error) {
-      console.error('Failed to update favorite status:', error);
-    }
-  }, [mostFavoritedWords, handleToggleFavoriteWord, userId]);
-  
-  
+    // Đổi soundUrl và reset WebView
+    setSoundUrl(audioUrl);
+    setWebviewKey(prevKey => prevKey + 1);
+  };
 
   const handleNavigateToFlashCard = () => {
     navigation.navigate('FlashCardVoca');
@@ -134,7 +200,7 @@ const Home = () => {
   // Lọc các kết quả tìm kiếm để loại bỏ từ trùng lặp
   const uniqueSearchResults = searchResults.filter(
     (item, index, self) =>
-      index === self.findIndex((t) => t.Word === item.Word)
+      index === self.findIndex((t) => t.Id === item.Id)
   );
 
   const limitedSearchResults = uniqueSearchResults.slice(0, 10);
@@ -174,7 +240,7 @@ const Home = () => {
                 {limitedSearchResults.length > 0 ? (
                   limitedSearchResults.map((item) => (
                     <TouchableOpacity
-                      key={item.Id} // Đảm bảo mỗi phần tử có thuộc tính key duy nhất
+                      key={`${item.Id}-${item.Word}`}
                       style={styles.dropdownItem}
                       onPress={() => handleDropdownItemPress(item)}
                     >
@@ -256,7 +322,7 @@ const Home = () => {
           </ScrollView>
           <View style={styles.popularWordContainer}>
             <ImageBackground source={require('../assets/images/background.jpg')} style={styles.backImage}>
-              <Text style={styles.popularWordText}>ĐANG ĐƯỢC LƯU NHIỀU NHẤT HÔM NAY</Text>
+              <Text style={styles.popularWordText}>ĐANG ĐƯỢC ĐỀ XUẤT HÔM NAY</Text>
               <FlatList
                 data={mostFavoritedWords}
                 renderItem={renderItem}
@@ -264,19 +330,26 @@ const Home = () => {
                 horizontal
                 contentContainerStyle={styles.flatListContainer}
                 showsHorizontalScrollIndicator={false}
-                snapToInterval={itemWidth} 
                 decelerationRate="fast"
                 snapToAlignment="center"
                 pagingEnabled
-                getItemLayout={(data, index) => ({
-                  length: itemWidth, 
-                  offset: itemWidth * index, 
-                  index, 
-                })}
               />
             </ImageBackground>
           </View>
           </View>
+          {soundUrl && (
+          <View style={{ height: 0 }}>
+            <WebView
+              key={webviewKey} 
+              source={{ uri: soundUrl }} 
+              style={{ height: 0, width: 0, opacity: 0 }} 
+              onLoad={() => console.log('WebView Loaded')}
+              onError={() => {
+                console.error('WebView Error');
+              }}
+            />
+          </View>
+        )}
         </View>
       </View>
     </TouchableWithoutFeedback>

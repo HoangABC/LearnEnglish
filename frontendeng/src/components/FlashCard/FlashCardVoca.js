@@ -164,7 +164,8 @@ const FlashCardVoca = ({ route }) => {
       await handleToggleFavoriteWord(userId, wordId);
       setWordsArray(updatedWordsArray);
       wordsArrayRef.current = updatedWordsArray;
-      await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(updatedWordsArray)); // Cập nhật danh sách từ khóa
+ 
+      await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(updatedWordsArray)); 
     } catch (error) {
       console.error('Failed to update favorite status:', error);
     }
@@ -257,11 +258,11 @@ const FlashCardVoca = ({ route }) => {
             <Text style={styles.title}>Ví dụ:</Text>
             <ScrollView style={styles.scrollView}>
               <Text style={styles.example}>
-                {item.Example.replace(/<\/?li[^>]*>/g, '').replace(/<[^>]+>/g, '').split(';')[0]}
+                {item.Example ? item.Example.replace(/<\/?li[^>]*>/g, '').replace(/<[^>]+>/g, '').split(';')[0] : ''}
               </Text>
               <Text style={styles.title}>Ví dụ VI:</Text>
               <Text style={styles.example}>
-                {item.ExampleVI.replace(/<\/?li[^>]*>/g, '').replace(/<[^>]+>/g, '').split(';')[0]}
+                {item.ExampleVI ? item.ExampleVI.replace(/<\/?li[^>]*>/g, '').replace(/<[^>]+>/g, '').split(';')[0] : ''}
               </Text>
             </ScrollView>
           </View>
@@ -332,7 +333,7 @@ const wordsArrayLength = favoriteWords.length;
   
         <View style={styles.flashCardContainer}>
           <FlatList
-            data={wordsArray}
+            data={wordsArray.slice(0, 10)}
             renderItem={renderItem}
             keyExtractor={(item) => item.Id.toString()}
             horizontal
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
     flexShrink: 1,
-    width:'100%',
+    width:'110%',
   },
   definition: {
     fontSize: 16,
@@ -530,6 +531,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start', 
     alignItems: 'center',  
     marginBottom: 10,
+    marginStart:'6%',
     width:'100%'
   },
   phoneticItem: {
@@ -550,7 +552,7 @@ const styles = StyleSheet.create({
   phonetic: {
     fontSize: 20,
     color: 'white',
-    width:100
+    width:170
   },
 
 });
