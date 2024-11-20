@@ -9,7 +9,8 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel
+  InputLabel,
+  Button
 } from '@mui/material';
 import Iconify from '../../components/iconify';
 
@@ -18,7 +19,8 @@ export default function WordTableToolbar({
   filterName,
   onFilterName,
   tabValue,
-  onTabChange
+  onTabChange,
+  onOpenAddModal
 }) {
   return (
     <Toolbar
@@ -30,6 +32,7 @@ export default function WordTableToolbar({
         }),
       }}
     >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
       {/* Select Dropdown for Tabs */}
       <FormControl sx={{ minWidth: 120, mr: 2 }}>
         <InputLabel id="tab-select-label">Select</InputLabel>
@@ -41,7 +44,7 @@ export default function WordTableToolbar({
           inputProps={{ 'aria-label': 'Select' }}
         >
           <MenuItem value={0}>Word 1</MenuItem>
-          <MenuItem value={1}>Wort 2</MenuItem>
+          <MenuItem value={1}>Word 2</MenuItem>
         </Select>
       </FormControl>
 
@@ -52,16 +55,21 @@ export default function WordTableToolbar({
         </Typography>
       ) : (
         <OutlinedInput
-          value={filterName}
-          onChange={onFilterName}
-          placeholder="Search word..."
-          startAdornment={
-            <InputAdornment position="start">
-              <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-            </InputAdornment>
-          }
-          sx={{ width: 240, transition: (theme) => theme.transitions.create(['width'], { duration: theme.transitions.duration.shorter }) }}
-        />
+        value={filterName}
+        onChange={onFilterName}
+        placeholder="Search word..."
+        startAdornment={
+          <InputAdornment position="start">
+            <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+          </InputAdornment>
+        }
+        sx={{ 
+          width: 320, 
+          transition: (theme) => theme.transitions.create(['width'], { 
+            duration: theme.transitions.duration.shorter 
+          }) 
+        }}
+      />
       )}
 
       {numSelected > 0 ? (
@@ -77,6 +85,20 @@ export default function WordTableToolbar({
           </IconButton>
         </Tooltip>
       )}
+      </div>
+      <Button
+        variant="contained"
+        startIcon={<Iconify icon="eva:plus-fill" />}
+        onClick={onOpenAddModal}
+        sx={{
+          position: 'absolute',
+          right: 16,
+          top: '50%',
+          transform: 'translateY(-50%)'
+        }}
+      >
+        Add Word
+      </Button>
     </Toolbar>
   );
 }
@@ -87,4 +109,5 @@ WordTableToolbar.propTypes = {
   onFilterName: PropTypes.func.isRequired,
   tabValue: PropTypes.number.isRequired,
   onTabChange: PropTypes.func.isRequired,
+  onOpenAddModal: PropTypes.func.isRequired,
 };

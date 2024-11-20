@@ -1,41 +1,58 @@
 const { poolPromise, sql } = require('../config/db');
 
+// Hàm tìm người dùng
 const findOne = async (condition) => {
   const pool = await poolPromise;
   const query = `
-    SELECT * FROM [User]
+    SELECT Id, GoogleId, Name, Email, LevelId, Image
+    FROM [User]
     WHERE GoogleId = @googleId OR Email = @Email
   `;
   const result = await pool.request()
     .input('googleId', sql.NVarChar, condition.googleId || null)
     .input('Email', sql.NVarChar, condition.email || null)
     .query(query);
-  return result.recordset[0];
+
+  if (result.recordset.length > 0) {
+    return result.recordset[0];  // Trả về người dùng đầu tiên tìm thấy
+  } else {
+    return null;  // Trả về null nếu không tìm thấy người dùng
+  }
 };
 
+// Hàm tạo người dùng mới
 const create = async (user) => {
   const pool = await poolPromise;
+  // Thêm người dùng vào cơ sở dữ liệu
   await pool.request()
     .input('googleId', sql.NVarChar, user.googleId)
     .input('name', sql.NVarChar, user.name)
-    .input('username', sql.NVarChar, user.username || null)
     .input('email', sql.NVarChar, user.email)
-    .input('password', sql.NVarChar, user.password || null) // Có thể bỏ qua nếu không cần
-    .input('levelId', sql.Int, user.levelId || null) // Cập nhật nếu có trường LevelId
+    .input('levelId', sql.Int, user.levelId || null)
+    .input('image', sql.NVarChar, user.image || null) 
     .query(`
-      INSERT INTO [User] (GoogleId, Name, Username, Email, Password, LevelId)
-      VALUES (@googleId, @name, @username, @email, @password, @levelId)
+      INSERT INTO [User] (GoogleId, Name, Email, LevelId, Image)
+      VALUES (@googleId, @name, @email, @levelId, @image)
     `);
+
+
+  const result = await pool.request()
+    .input('googleId', sql.NVarChar, user.googleId)
+    .query('SELECT Id FROM [User] WHERE GoogleId = @googleId');
+
+  return result.recordset[0].Id; 
 };
 
-const updateGoogleId = async (email, googleId) => {
+// Hàm cập nhật GoogleId của người dùng
+const updateGoogleId = async (email, googleId, image) => {
   const pool = await poolPromise;
   await pool.request()
     .input('email', sql.NVarChar, email)
     .input('googleId', sql.NVarChar, googleId)
+    .input('image', sql.NVarChar, image)
     .query(`
       UPDATE [User]
-      SET GoogleId = @googleId
+      SET GoogleId = @googleId, Image = @image
       WHERE Email = @email
     `);
 };

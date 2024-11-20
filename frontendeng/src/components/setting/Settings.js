@@ -6,12 +6,12 @@ import { useNavigation } from '@react-navigation/native';
 
 const Settings = () => {
   const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState(null); // 'US' or 'UK' or null
+  const [selectedRegion, setSelectedRegion] = useState(null);
   const navigation = useNavigation();
 
 
   useEffect(() => {
-    // Load settings from AsyncStorage when the component mounts
+ 
     const loadSettings = async () => {
       try {
         const savedSettings = await AsyncStorage.getItem('autoPlaySound');

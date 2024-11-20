@@ -27,87 +27,135 @@ const verifyWordMeaning = async (word) => {
 // Thêm từ vào cơ sở dữ liệu
 const addWord = async (req, res) => {
   try {
-    const { word } = req.body;
+    const { 
+      word,
+      partOfSpeech,
+      levelWordId,
+      definition,
+      definitionVI,
+      phoneticUK,
+      phoneticUS,
+      audioUK,
+      audioUS,
+      example,
+      exampleVI,
+      queryURL
+    } = req.body;
 
-    // Kiểm tra đầu vào
-    if (typeof word !== 'string' || !word.trim()) {
-      return res.status(400).json({ message: 'Invalid input: word must be a non-empty string.' });
+    // Validate required fields
+    if (!word || !partOfSpeech || !levelWordId || !definition) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: word, partOfSpeech, levelWordId, and definition are required.' 
+      });
     }
 
-    // Lấy nghĩa của từ từ API
-    const meanings = await verifyWordMeaning(word);
+    const pool = await poolPromise;
 
-    // Kiểm tra dữ liệu trả về
-    if (!meanings || meanings.length === 0) {
-      return res.status(404).json({ message: 'Word not found in dictionary.' });
+    // Check if levelWordId exists
+    const levelWordCheck = await pool.request()
+      .input('levelWordId', sql.Int, levelWordId)
+      .query('SELECT Id FROM LevelWord WHERE Id = @levelWordId AND Status = 1');
+
+    if (levelWordCheck.recordset.length === 0) {
+      return res.status(404).json({ 
+        message: 'Invalid levelWordId: Level word not found.' 
+      });
     }
 
-    // Lấy các thông tin cần thiết
-    const partOfSpeech = meanings[0]?.meanings
-      .map(meaning => meaning.partOfSpeech)
-      .filter(Boolean)
-      .join(', ');
-
-    const dictionaryDefinition = meanings[0]?.meanings
-      .flatMap(meaning => meaning.definitions.map(def => def.definition))
-      .join('; ');
-
-    const phoneticUK = meanings[0]?.phonetics
-      .filter(p => p.text && p.audio && p.audio.includes('uk'))
-      .map(p => p.text)
-      .join(', ') || 'N/A';
-
-    const phoneticUS = meanings[0]?.phonetics
-      .filter(p => p.text && p.audio && p.audio.includes('us'))
-      .map(p => p.text)
-      .join(', ') || 'N/A';
-
-    const example = meanings[0]?.meanings
-      .flatMap(meaning => meaning.definitions.map(def => def.example))
-      .filter(Boolean)
-      .join('; ') || 'No example available';
-
-    const audioUK = meanings[0]?.phonetics
-      .filter(p => p.audio && p.audio.includes('uk'))
-      .map(p => p.audio)
-      .join(', ') || 'N/A';
-
-    const audioUS = meanings[0]?.phonetics
-      .filter(p => p.audio && p.audio.includes('us'))
-      .map(p => p.audio)
-      .join(', ') || 'N/A';
-
-    if (!dictionaryDefinition) {
-      return res.status(400).json({ message: 'No definition found in dictionary.' });
+    // Try to verify word meaning but don't block if it fails
+    try {
+      await verifyWordMeaning(word);
+    } catch (verifyError) {
+      console.warn(`Word verification warning for "${word}":`, verifyError.message);
+      // Continue with word creation despite verification failure
     }
 
-    await Word.create({ 
-      word: word, 
-      partOfSpeech: partOfSpeech, 
-      level: '', 
-      definition: dictionaryDefinition, 
-      phoneticUK: phoneticUK, 
-      phoneticUS: phoneticUS, 
-      audioUK: audioUK, 
-      audioUS: audioUS, 
-      example: example, 
-      status: 0,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
+    // Insert new word using SQL Server
+    const result = await pool.request()
+      .input('word', sql.NVarChar, word)
+      .input('partOfSpeech', sql.NVarChar, partOfSpeech)
+      .input('levelWordId', sql.Int, levelWordId)
+      .input('definition', sql.NVarChar, definition)
+      .input('definitionVI', sql.NVarChar, definitionVI || null)
+      .input('phoneticUK', sql.NVarChar, phoneticUK || null)
+      .input('phoneticUS', sql.NVarChar, phoneticUS || null)
+      .input('audioUK', sql.NVarChar, audioUK || null)
+      .input('audioUS', sql.NVarChar, audioUS || null)
+      .input('example', sql.NVarChar, example || null)
+      .input('exampleVI', sql.NVarChar, exampleVI || null)
+      .input('queryURL', sql.NVarChar, queryURL || null)
+      .query(`
+        INSERT INTO Word (
+          Word, 
+          PartOfSpeech, 
+          LevelWordId, 
+          Definition, 
+          DefinitionVI, 
+          PhoneticUK, 
+          PhoneticUS, 
+          AudioUK, 
+          AudioUS, 
+          Example, 
+          ExampleVI, 
+          QueryURL,
+          Status,
+          CreatedAt,
+          UpdatedAt
+        )
+        VALUES (
+          @word,
+          @partOfSpeech,
+          @levelWordId,
+          @definition,
+          @definitionVI,
+          @phoneticUK,
+          @phoneticUS,
+          @audioUK,
+          @audioUS,
+          @example,
+          @exampleVI,
+          @queryURL,
+          1,
+          GETDATE(),
+          GETDATE()
+        );
+        
+        SELECT SCOPE_IDENTITY() AS Id;
+      `);
 
+    const newWordId = result.recordset[0].Id;
+
+    // Emit socket event for real-time updates
     const io = getIo();
-    io.emit('newWordAdded', { 
-      word, 
-      definition: dictionaryDefinition, 
-      phoneticUK, 
-      phoneticUS, 
-      audioUK, 
-      audioUS, 
-      example 
+    io.emit('newWordAdded', {
+      id: newWordId,
+      word,
+      partOfSpeech,
+      definition,
+      phoneticUK,
+      phoneticUS,
+      audioUK,
+      audioUS,
+      example
     });
 
-    res.status(201).json({ message: 'Word added successfully!' });
+    res.status(201).json({ 
+      message: 'Word added successfully!',
+      word: {
+        id: newWordId,
+        word,
+        partOfSpeech,
+        levelWordId,
+        definition,
+        definitionVI,
+        phoneticUK,
+        phoneticUS,
+        audioUK,
+        audioUS,
+        example,
+        exampleVI
+      }
+    });
   } catch (err) {
     console.error('Add word error:', err.message);
     res.status(500).json({ error: err.message });
@@ -182,7 +230,7 @@ const searchWord = async (req, res) => {
     
     // Truy vấn lấy 10 kết quả đầu tiên bắt đầu bằng từ khóa
     const result = await pool.request()
-      .input('keyword', sql.NVarChar, `${keyword}%`) // Ký tự % chỉ đặt ở cuối
+      .input('keyword', sql.NVarChar, `${keyword}%`)
       .query(`
         SELECT TOP 10 * 
         FROM Word 
@@ -324,7 +372,9 @@ const getFavoriteWords = async (req, res) => {
     const result = await pool.request()
       .input('userId', sql.Int, userId)
       .query(`
-        SELECT w.Id, w.Word, w.PartOfSpeech, w.LevelWordId, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS, w.Example, w.DefinitionVI, w.ExampleVI
+        SELECT w.Id, w.Word, w.PartOfSpeech, w.LevelWordId, w.Definition, 
+               w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS, w.Example, 
+               w.DefinitionVI, w.ExampleVI, fw.UserId
         FROM Word w
         INNER JOIN FavoriteWords fw ON w.Id = fw.WordId
         WHERE fw.UserId = @userId AND fw.Status = 1
@@ -335,13 +385,14 @@ const getFavoriteWords = async (req, res) => {
       return res.status(404).json({ message: 'No favorite words found for this user.' });
     }
 
-    // Trả về danh sách các từ yêu thích
+    // Trả về danh sách các từ yêu thích với userId
     res.status(200).json(result.recordset);
   } catch (err) {
     console.error('Error fetching favorite words:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // Lấy từ ngẫu nhiên để đoán
 const getRandomWordForGuess = async (req, res) => {
@@ -497,7 +548,7 @@ const getWordById = async (req, res) => {
   }
 };
 
-const getMostFavoritedWordsToday = async (req, res) => { 
+const getMostFavoritedWordsToday = async (req, res) => {
   try {
     const { levelId } = req.query;
 
@@ -507,7 +558,7 @@ const getMostFavoritedWordsToday = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Lấy tất cả các LevelWordId từ bảng LevelMapping với LevelId cụ thể
+    // Get all LevelWordIds from LevelMapping for the specific LevelId
     const levelMappingResult = await pool.request()
       .input('levelId', sql.Int, levelId)
       .query(`
@@ -522,7 +573,7 @@ const getMostFavoritedWordsToday = async (req, res) => {
       return res.status(404).json({ message: 'No LevelWordIds found for this level.' });
     }
 
-    // Lấy tất cả các WordId từ bảng Word với LevelWordId tương ứng
+    // Get all WordIds from Word where LevelWordId matches the ones retrieved
     const levelWordsResult = await pool.request()
       .input('levelWordIds', sql.Int, levelWordIds)
       .query(`
@@ -538,26 +589,24 @@ const getMostFavoritedWordsToday = async (req, res) => {
       return res.status(404).json({ message: 'No words found for this level.' });
     }
 
-    // Truy vấn từ yêu thích trong ngày hiện tại, bao gồm Status
+    // Query for today's most favorited words
     const mostFavoritedWordsQuery = `
-    SELECT w.Id, w.Word, COUNT(fw.WordId) AS FavoriteCount, 
-           w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS,
-           fw.Status AS FavoriteStatus 
-    FROM Word w
-    INNER JOIN FavoriteWords fw ON w.Id = fw.WordId
-    WHERE fw.WordId IN (${wordIds.join(',')}) 
-      AND fw.Status = 1
-      AND CAST(fw.CreatedAt AS DATE) = CAST(GETDATE() AS DATE)  
-      AND w.Word NOT LIKE '%[0-9]%'  
-    GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS, fw.Status 
-    ORDER BY FavoriteCount DESC  
-  `;
-  
-
+      SELECT w.Id, w.Word, COUNT(DISTINCT fw.UserId) AS FavoriteCount, 
+             w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS,
+             fw.Status AS FavoriteStatus, fw.CreatedAt, fw.UserId
+      FROM Word w
+      INNER JOIN FavoriteWords fw ON w.Id = fw.WordId
+      WHERE fw.WordId IN (${wordIds.join(',')}) 
+        AND fw.Status = 1
+        AND CAST(fw.CreatedAt AS DATE) = CAST(GETDATE() AS DATE)  
+        AND w.Word NOT LIKE '%[0-9]%'  
+      GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS, fw.Status, fw.CreatedAt, fw.UserId
+      ORDER BY FavoriteCount DESC, fw.CreatedAt DESC
+    `;
     const mostFavoritedWordsResult = await pool.request().query(mostFavoritedWordsQuery);
 
     if (mostFavoritedWordsResult.recordset.length === 0) {
-      // Nếu không có từ yêu thích trong ngày, lấy 10 từ ngẫu nhiên theo levelId
+      // If no favorited words for today, fetch 10 random words
       const randomWordsQuery = `
         SELECT TOP 10 w.Id, w.Word, ISNULL(COUNT(fw.WordId), 0) AS FavoriteCount,
                w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
@@ -565,7 +614,7 @@ const getMostFavoritedWordsToday = async (req, res) => {
         LEFT JOIN FavoriteWords fw ON w.Id = fw.WordId AND fw.Status = 1
         WHERE w.Status = 1
           AND w.Word NOT LIKE '%[0-9]%'  
-          AND w.LevelWordId IN (${levelWordIds.join(',')})  -- Lọc theo LevelWordId
+          AND w.LevelWordId IN (${levelWordIds.join(',')})  -- Filter by LevelWordId
         GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
         ORDER BY NEWID();  
       `;
@@ -573,16 +622,38 @@ const getMostFavoritedWordsToday = async (req, res) => {
       return res.status(200).json(randomWordsResult.recordset);
     }
 
-    // Nếu có từ yêu thích trong ngày
+    // Process most favorited words
     const favoritedWords = mostFavoritedWordsResult.recordset;
 
-    // Tính số lượng từ cần bổ sung (10 - số từ yêu thích)
-    const remainingCount = 10 - favoritedWords.length;
+    // Grouping by word and collecting all userIds for each word
+    const wordsWithUserIds = favoritedWords.reduce((acc, word) => {
+      const existingWord = acc.find(w => w.Id === word.Id);
+      if (existingWord) {
+        existingWord.userIds.push(word.UserId);
+        existingWord.FavoriteCount += 1;
+      } else {
+        acc.push({
+          Id: word.Id,
+          Word: word.Word,
+          FavoriteCount: 1,
+          Definition: word.Definition,
+          PhoneticUK: word.PhoneticUK,
+          PhoneticUS: word.PhoneticUS,
+          AudioUK: word.AudioUK,
+          AudioUS: word.AudioUS,
+          userIds: [word.UserId] // Initialize with first userId
+        });
+      }
+      return acc;
+    }, []);
 
-    let finalWords = favoritedWords;
+    // Calculate how many more words are needed to make 10
+    const remainingCount = 10 - wordsWithUserIds.length;
+
+    let finalWords = wordsWithUserIds;
 
     if (remainingCount > 0) {
-      // Lấy thêm từ ngẫu nhiên nếu còn thiếu
+      // Fetch random words to fill the remaining slots
       const randomWordsQuery = `
         SELECT TOP ${remainingCount} w.Id, w.Word, ISNULL(COUNT(fw.WordId), 0) AS FavoriteCount,
                w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
@@ -590,7 +661,7 @@ const getMostFavoritedWordsToday = async (req, res) => {
         LEFT JOIN FavoriteWords fw ON w.Id = fw.WordId AND fw.Status = 1
         WHERE w.Status = 1
           AND w.Word NOT LIKE '%[0-9]%'  
-          AND w.LevelWordId IN (${levelWordIds.join(',')})  -- Lọc theo LevelWordId
+          AND w.LevelWordId IN (${levelWordIds.join(',')})  -- Filter by LevelWordId
         GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
         ORDER BY NEWID();  
       `;
@@ -598,6 +669,7 @@ const getMostFavoritedWordsToday = async (req, res) => {
       finalWords = finalWords.concat(randomWordsResult.recordset);
     }
 
+    // Return the final list of words
     res.status(200).json(finalWords);
   } catch (err) {
     console.error('Error fetching most favorited words today:', err.message);
@@ -605,6 +677,101 @@ const getMostFavoritedWordsToday = async (req, res) => {
   }
 };
 
+const editWord = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      word,
+      partOfSpeech,
+      levelWordId,
+      definition,
+      definitionVI,
+      phoneticUK,
+      phoneticUS,
+      audioUK,
+      audioUS,
+      example,
+      exampleVI,
+      queryURL
+    } = req.body;
+
+    // Validate required fields
+    if (!word || !partOfSpeech || !levelWordId || !definition) {
+      return res.status(400).json({
+        message: 'Missing required fields: word, partOfSpeech, levelWordId, and definition are required.'
+      });
+    }
+
+    const pool = await poolPromise;
+
+    // Check if word exists
+    const existingWord = await pool.request()
+      .input('id', sql.Int, id)
+      .query('SELECT * FROM Word WHERE Id = @id');
+
+    if (existingWord.recordset.length === 0) {
+      return res.status(404).json({ message: 'Word not found.' });
+    }
+
+    // Check if levelWordId exists
+    const levelWordCheck = await pool.request()
+      .input('levelWordId', sql.Int, levelWordId)
+      .query('SELECT Id FROM LevelWord WHERE Id = @levelWordId AND Status = 1');
+
+    if (levelWordCheck.recordset.length === 0) {
+      return res.status(404).json({
+        message: 'Invalid levelWordId: Level word not found.'
+      });
+    }
+
+    // Update word
+    const result = await pool.request()
+      .input('id', sql.Int, id)
+      .input('word', sql.NVarChar, word)
+      .input('partOfSpeech', sql.NVarChar, partOfSpeech)
+      .input('levelWordId', sql.Int, levelWordId)
+      .input('definition', sql.NVarChar, definition)
+      .input('definitionVI', sql.NVarChar, definitionVI || null)
+      .input('phoneticUK', sql.NVarChar, phoneticUK || null)
+      .input('phoneticUS', sql.NVarChar, phoneticUS || null)
+      .input('audioUK', sql.NVarChar, audioUK || null)
+      .input('audioUS', sql.NVarChar, audioUS || null)
+      .input('example', sql.NVarChar, example || null)
+      .input('exampleVI', sql.NVarChar, exampleVI || null)
+      .input('queryURL', sql.NVarChar, queryURL || null)
+      .query(`
+        UPDATE Word 
+        SET Word = @word,
+            PartOfSpeech = @partOfSpeech,
+            LevelWordId = @levelWordId,
+            Definition = @definition,
+            DefinitionVI = @definitionVI,
+            PhoneticUK = @phoneticUK,
+            PhoneticUS = @phoneticUS,
+            AudioUK = @audioUK,
+            AudioUS = @audioUS,
+            Example = @example,
+            ExampleVI = @exampleVI,
+            QueryURL = @queryURL,
+            UpdatedAt = GETDATE()
+        WHERE Id = @id;
+
+        SELECT * FROM Word WHERE Id = @id;
+      `);
+
+    // Emit socket event for real-time updates
+    const io = getIo();
+    io.emit('wordUpdated', result.recordset[0]);
+
+    res.status(200).json({
+      message: 'Word updated successfully!',
+      word: result.recordset[0]
+    });
+  } catch (err) {
+    console.error('Edit word error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
 
 module.exports = {
   addWord,
@@ -619,4 +786,5 @@ module.exports = {
   submitWordGuessAnswer,
   getWordById,
   getMostFavoritedWordsToday,
+  editWord,
 };

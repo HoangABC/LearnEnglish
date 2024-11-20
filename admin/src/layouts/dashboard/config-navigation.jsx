@@ -22,6 +22,11 @@ const navConfig = [
     path: '/word',
     icon: icon('ic_blog'),
   },
+  {
+    title: 'feedback',
+    path: '/feedback',
+    icon: icon('ic_feedback'),
+  },
 ];
 
 export default navConfig;

@@ -10,38 +10,46 @@ passport.use(new GoogleStrategy({
 },
 async (accessToken, refreshToken, profile, done) => {
   try {
-    // Tìm người dùng trong cơ sở dữ liệu bằng googleId hoặc email
+    
     const existingUser = await findOne({ googleId: profile.id, email: profile.emails[0].value });
 
     if (existingUser) {
-      // Người dùng đã tồn tại
+    
       if (!existingUser.googleId) {
-        // Nếu người dùng có email nhưng không có googleId, cập nhật googleId
-        await updateGoogleId(existingUser.email, profile.id);
+       
+        await updateGoogleId(existingUser.email, profile.id, profile.photos[0].value);
         existingUser.googleId = profile.id;
+        existingUser.image = profile.photos[0].value; 
       }
+
       return done(null, {
         id: existingUser.Id,
         name: existingUser.Name,
         email: existingUser.Email,
-        levelId: existingUser.LevelId // Thêm LevelId vào đối tượng người dùng
+        levelId: existingUser.LevelId || null, 
+        image: existingUser.Image || null 
       });
     }
 
-    // Người dùng chưa tồn tại, thêm vào cơ sở dữ liệu
+    
     const newUser = {
       googleId: profile.id,
       name: profile.displayName,
       email: profile.emails[0].value,
-      levelId: null // LevelId có thể là null khi tạo mới
+      levelId: null, 
+      image: profile.photos[0].value 
     };
 
+
     await create(newUser);
+
+    
     return done(null, {
       id: newUser.Id,
       name: newUser.name,
       email: newUser.email,
-      levelId: null // LevelId có thể là null khi tạo mới
+      levelId: newUser.levelId, 
+      image: newUser.image 
     });
   } catch (error) {
     return done(error, null);
@@ -59,7 +67,7 @@ passport.deserializeUser(async (id, done) => {
       id: user.Id,
       name: user.Name,
       email: user.Email,
-      levelId: user.LevelId // Thêm LevelId vào đối tượng người dùng
+      levelId: user.LevelId || null 
     });
   } catch (error) {
     done(error, null);

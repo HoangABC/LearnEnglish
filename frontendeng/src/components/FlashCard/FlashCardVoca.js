@@ -80,7 +80,7 @@ const FlashCardVoca = ({ route }) => {
   const fetchWordsFromStorage = useCallback(async () => {
     try {
       const [wordsJson, userJson] = await Promise.all([
-        AsyncStorage.getItem(`wordsArray_${userId}`), // Sử dụng userId để lấy từ khóa khác nhau
+        AsyncStorage.getItem(`wordsArray_${userId}`), 
         AsyncStorage.getItem('user')
       ]);
 
@@ -129,7 +129,7 @@ const FlashCardVoca = ({ route }) => {
 
       setWordsArray(wordsWithFavorites);
       wordsArrayRef.current = wordsWithFavorites;
-      await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(wordsWithFavorites)); // Lưu từ khóa khác nhau cho từng tài khoản
+      await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(wordsWithFavorites)); 
     } catch (error) {
       setIsLoaded(false);
       console.error('Failed to fetch words:', error);
@@ -142,13 +142,6 @@ const FlashCardVoca = ({ route }) => {
     fetchWordsFromStorage();
   }, [fetchWordsFromStorage]);
 
-  const handleFetchWords = useCallback(async () => {
-    if (!levelId) {
-      console.error('Level ID is not set.');
-      return;
-    }
-    await fetchWords(); // Gọi hàm fetchWords khi người dùng yêu cầu
-  }, [fetchWords, levelId]);
 
   const handleToggleFavorite = useCallback(async (wordId) => {
     if (!userId) {
@@ -164,8 +157,8 @@ const FlashCardVoca = ({ route }) => {
       await handleToggleFavoriteWord(userId, wordId);
       setWordsArray(updatedWordsArray);
       wordsArrayRef.current = updatedWordsArray;
- 
-      await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(updatedWordsArray)); 
+      await AsyncStorage.setItem(`wordsArray_userId_${userId}`, JSON.stringify(updatedWordsArray));
+      console.log('abcs',updatedWordsArray)
     } catch (error) {
       console.error('Failed to update favorite status:', error);
     }
@@ -310,7 +303,7 @@ const wordsArrayLength = favoriteWords.length;
             title={(
               <View style={styles.progressContainer}>
                 <Text style={styles.progressText}>
-                  {currentCardIndex + 1}/{wordsArray.length}
+                  {currentCardIndex + 1}/{Math.min(wordsArray.length, 10)}
                 </Text>
               </View>
             )}

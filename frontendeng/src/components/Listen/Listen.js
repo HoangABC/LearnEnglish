@@ -5,6 +5,8 @@ import Slider from '@react-native-community/slider';
 import useListen from '../../hooks/useListen';
 import { WebView } from 'react-native-webview'; 
 import Sound from 'react-native-sound'; 
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
 
 const Listen = () => {
   const { listeningPracticeData, error, fetchPractice, submitPractice } = useListen();
@@ -16,6 +18,7 @@ const Listen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [inputValue, setInputValue] = useState('');
+  const [isPaused, setIsPaused] = useState(true);  // Initially set to paused
 
   const fetchUserId = async () => {
     try {
@@ -56,15 +59,23 @@ const Listen = () => {
         }
       });
     });
-    
   };
 
   const playSound = (audioUrl) => {
     if (!audioUrl) return;
+  
+    // Bắt đầu phát âm thanh
     setSoundUrl(audioUrl);
-    setWebviewKey(prevKey => prevKey + 1);
+    setWebviewKey((prevKey) => prevKey + 1);
     setIsPlaying(true);
+  
+    const audioDuration = 4000;
+  
+    setTimeout(() => {
+      setIsPlaying(false);
+    }, audioDuration);
   };
+  
 
   const handleAudioPlay = () => {
     if (isPlaying) {
@@ -85,12 +96,14 @@ const Listen = () => {
       ? currentAnswer.trim().toLowerCase()
       : currentAnswer;
   
-    const correctAnswer = listeningPracticeData.word.trim().toLowerCase(); // Normalize the correct word as well
+    const correctAnswer = listeningPracticeData.word.trim().toLowerCase(); 
     
     if (normalizedAnswer === correctAnswer) {
-      SoundCorrect('../../assets/audios/correct.mp3');  // Play the local sound
+      SoundCorrect('../../assets/audios/correct.mp3');  
+      setIsPaused(false); 
       setModalMessage('You are correct! Press OK to continue.');
     } else {
+      setIsPaused(true); 
       setModalMessage(`Incorrect. The correct word is: ${listeningPracticeData.word}. Press OK to continue.`);
     }
     setModalVisible(true);
@@ -111,28 +124,53 @@ const Listen = () => {
     return <Text style={styles.errorText}>Loading question...</Text>;
   }
 
+  const giphyHtmlPaused = `
+  <div style="width:100%;height:53%;padding-bottom:50%;position:relative;">
+   <img src="https://media.giphy.com/media/XKMPsmeTX6N6WlzI4c/giphy_s.gif" 
+     style="width:70%;height:98%;position:absolute;left:1%;bottom:3%" 
+     alt="Static GIPHY" />
+  </div>
+`;
+
+  const giphyHtmlActive = `
+  <div style="width:100%;height:50%;padding-bottom:50%;position:relative;right:15%">
+    <iframe src="https://giphy.com/embed/XKMPsmeTX6N6WlzI4c" 
+            width="100%" 
+            height="100%" 
+            style="position:absolute;" 
+            frameBorder="0" 
+            class="giphy-embed" 
+            allowFullScreen>
+    </iframe>
+  </div>
+`;
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Luyện nghe</Text>
       <ScrollView style={styles.questionContainer}>
-        {listeningPracticeData.audio && (
-          <View style={styles.audioContainer}>
-            <TouchableOpacity onPress={handleAudioPlay}>
-              <Text style={styles.audioButton}>{isPlaying ? 'Pause' : 'Play'} Audio</Text>
-            </TouchableOpacity>
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={100}
-              value={isPlaying ? 50 : 0}
-              minimumTrackTintColor="#1E90FF"
-              maximumTrackTintColor="#d3d3d3"
-              thumbTintColor="#1E90FF"
+        <View style={styles.rowContainer}>
+          <View style={styles.webViewContainer}>
+            <WebView
+              originWhitelist={['*']}
+              source={{ html: isPaused ? giphyHtmlPaused : giphyHtmlActive }} 
+              style={{ height: 300, backgroundColor: 'transparent' }} 
             />
           </View>
-        )}
+          <View style={styles.audioItem}>
+            {listeningPracticeData.audio && (
+              <View style={styles.speechBubbleContainer}>
+                <View style={[styles.audioContainer, { zIndex: 1 }]}>
+                  <TouchableOpacity onPress={handleAudioPlay}>
+                  <Icon name="volume-up" size={30} color="black" />
+                </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
-
+      
       {soundUrl && (
         <View style={{ height: 0 }}>
           <WebView
@@ -183,8 +221,9 @@ const Listen = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalText}>{modalMessage}</Text>
             <TouchableOpacity onPress={() => {
-              setModalVisible(false);
-              setInputValue('');
+              setModalVisible(false);  
+              setInputValue('');  
+              setIsPaused(true);  
               fetchPractice(userId);  
             }}>
               <Text style={styles.modalButton}>OK</Text>
@@ -202,6 +241,41 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     padding: 20,
   },
+  rowContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',  
+    alignItems: 'flex-start',        
+  },
+  audioItem: {
+    flex: 1,  
+    marginRight: 10,
+    marginTop:'25%', 
+
+  },
+  webViewContainer: {
+    flex: 1,  
+    height: 300,
+  },
+  audioButton: {
+    color: 'blue',
+    marginBottom: 10,
+  },
+  speechBubbleContainer: {
+    backgroundColor: '#f9f9f9', 
+    borderRadius: 10,
+    padding: 10,
+    position: 'relative',
+    marginTop: 10,
+    marginBottom: 20,
+    alignSelf: 'flex-start', 
+    maxWidth: '80%', 
+    
+  },
+  webView: {
+    flex: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -214,14 +288,11 @@ const styles = StyleSheet.create({
   audioContainer: {
     marginTop: 10,
     alignItems: 'center',
+    zIndex: 1, // Ensure it stays above the WebView
   },
   audioButton: {
     color: 'blue',
     marginBottom: 10,
-  },
-  slider: {
-    width: '100%',
-    height: 40,
   },
   optionsContainer: {
     marginTop: 20,
@@ -266,15 +337,20 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    position: 'absolute',  // Fix it at the bottom of the screen
+    bottom: 0,  // Position the modal one-third from the bottom
+    left: 0,
+    right: 0,
+    justifyContent: 'flex-end', // Align the modal content at the bottom
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingBottom: 30,  // Padding to avoid clipping at the screen edge
+    backgroundColor: 'transparent',  // Remove the overlay background
   },
   modalContent: {
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 10,
+    width: '100%',  // Adjust the width to fit the content properly
     alignItems: 'center',
   },
   modalText: {
@@ -286,6 +362,16 @@ const styles = StyleSheet.create({
     color: '#1E90FF',
     width:200,
     textAlign:'center',
+  },
+  speechBubbleContainer: {
+    backgroundColor: '#f9f9f9', 
+    borderRadius: 10,
+    padding: 10,
+    position: 'relative',
+    marginTop: 10,
+    marginBottom: 20,
+    alignSelf: 'flex-start', 
+    maxWidth: '80%', 
   },
 });
 

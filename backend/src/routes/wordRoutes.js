@@ -37,4 +37,6 @@ router.post('/submit-answer', wordController.submitWordGuessAnswer);
 // Route để lấy từ yêu thích nhiều nhất trong ngày
 router.get('/most-favorited-words-today', wordController.getMostFavoritedWordsToday);
 
+router.put('/words/edit/:id', wordController.editWord);
+
 module.exports = router;

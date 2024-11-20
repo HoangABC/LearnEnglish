@@ -11,12 +11,14 @@ const Home = () => {
   const navigation = useNavigation();
   const [keyword, setKeyword] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showWordDetail, setShowWordDetail] = useState(false); // Trạng thái để quản lý WordDetail
-  const [selectedWord, setSelectedWord] = useState({}); // Initialize as empty object
-  const [userId, setUserId] = useState(null); // Correct initialization
+  const [showWordDetail, setShowWordDetail] = useState(false);
+  const [selectedWord, setSelectedWord] = useState({});
+  const [userId, setUserId] = useState(null);
   const { mostFavoritedWords, searchResults, handleSearchWord, clearSearchResults, handleToggleFavoriteWord } = useWordActions();
+  const [wordsArray, setWordsArray] = useState([]);
   const [webviewKey, setWebviewKey] = useState(0);
   const [soundUrl, setSoundUrl] = useState(null);
+  const [background, setBackground] = useState(require('../assets/images/background.jpg'));
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -24,7 +26,7 @@ const Home = () => {
         const user = await AsyncStorage.getItem('user');
         console.log('Loaded user:', user);
         if (user) {
-          const { Id } = JSON.parse(user); // Extract Id with capital "I"
+          const { Id } = JSON.parse(user); 
           console.log('Loaded userId:', Id);
           setUserId(Id);
         } else {
@@ -63,55 +65,41 @@ const Home = () => {
   };
 
   const handleToggleFavorite = useCallback(async (wordId) => {
-    console.log('userId:', userId);
     if (!userId) {
       console.error('User not found');
       return;
     }
-  
+
     try {
-      // Update the favorite status locally
       const updatedWords = mostFavoritedWords.map(word =>
         word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
       );
-  
-      // Send request to API with userId
+
       await handleToggleFavoriteWord(userId, wordId);
-  
-      // Update local words array
+
       setWordsArray(updatedWords);
-  
-      // Get previous data from AsyncStorage
+
       const previousWords = await AsyncStorage.getItem(`wordsArray_${userId}`);
       let wordsToStore = [];
-  
+
       if (previousWords) {
         wordsToStore = JSON.parse(previousWords);
       }
-  
-      // Update the words list in AsyncStorage
+
       const updatedWordsToStore = wordsToStore.map(word =>
         word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
       );
-  
-      // Add the word if it's not already in the list
+
       if (!updatedWordsToStore.some(word => word.Id === wordId)) {
         const newWord = updatedWords.find(word => word.Id === wordId);
         updatedWordsToStore.push(newWord);
       }
-  
-      // Store the updated words array back into AsyncStorage
-      await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(updatedWordsToStore));
-  
-      // Check the data stored in AsyncStorage after update
-      const storedWords = await AsyncStorage.getItem(`wordsArray_${userId}`);
-      console.log('Stored words after update:', JSON.parse(storedWords));
+      await AsyncStorage.setItem(`wordsArray_userId_${userId}`, JSON.stringify(updatedWordsToStore));
     } catch (error) {
       console.error('Failed to update favorite status:', error);
     }
   }, [mostFavoritedWords, handleToggleFavoriteWord, userId]);
   
-
   const renderItem = ({ item }) => (
     <View style={styles.transparentBox}>
       <View style={styles.wordContainer}>
@@ -156,11 +144,11 @@ const Home = () => {
       <View style={styles.footer}>
         <Text style={styles.saveCount}>{item.FavoriteCount} lượt lưu</Text>
         <TouchableOpacity
-          style={styles.saveButton}
+          style={[styles.saveButton, item.userIds && item.userIds.includes(userId) ? styles.savedButton : styles.defaultButton]}
           onPress={() => handleToggleFavorite(item.Id)}
         >
-          <Text style={styles.saveButtonText}>
-            {item.FavoriteStatus ? "ĐÃ LƯU" : "LƯU TỪ"}
+          <Text style={[styles.saveButtonText, item.userIds && item.userIds.includes(userId) ? styles.savedText : styles.defaultText]}>
+            {item.userIds && item.userIds.includes(userId) ? "ĐÃ LƯU" : "LƯU TỪ"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -197,13 +185,35 @@ const Home = () => {
     navigation.navigate('Settings');
   };
 
-  // Lọc các kết quả tìm kiếm để loại bỏ từ trùng lặp
   const uniqueSearchResults = searchResults.filter(
     (item, index, self) =>
-      index === self.findIndex((t) => t.Id === item.Id)
+      index === self.findIndex((t) => t.Id === item.Id && t.Word.trim().toLowerCase() === item.Word.trim().toLowerCase())
   );
-
+  const uniqueMostFavoritedWords = mostFavoritedWords.filter(
+    (item, index, self) =>
+      index === self.findIndex((t) => t.Id === item.Id && t.Word.trim().toLowerCase() === item.Word.trim().toLowerCase())
+  );
+  
   const limitedSearchResults = uniqueSearchResults.slice(0, 10);
+  useEffect(() => {
+
+    const checkDateAndSetBackground = () => {
+      const currentDate = new Date();
+      const currentDay = currentDate.getDate();
+
+      if (currentDay % 2 === 0) {
+        setBackground(require('../assets/images/background.jpg')); 
+      } else {
+        setBackground(require('../assets/images/background2.jpg')); 
+      }
+    };
+
+    checkDateAndSetBackground();
+
+    const intervalId = setInterval(checkDateAndSetBackground, 24 * 60 * 60 * 1000); 
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <TouchableWithoutFeedback onPress={handlePressOutside}>
@@ -283,12 +293,12 @@ const Home = () => {
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToListen}>
-              <Text style={styles.cardText}>KIỂM TRA NGHE</Text>
+              <Text style={styles.cardText}>ÔN TẬP NGHE</Text>
               <Image
                 source={require('../assets/images/Study_Fav.png')}
                 style={styles.cardImage}
               />
-              <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM</Text>
+              <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM VÀ TỰ LUẬN</Text>
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
 
@@ -321,10 +331,10 @@ const Home = () => {
             </TouchableOpacity>
           </ScrollView>
           <View style={styles.popularWordContainer}>
-            <ImageBackground source={require('../assets/images/background.jpg')} style={styles.backImage}>
+            <ImageBackground source={background} style={styles.backImage}>
               <Text style={styles.popularWordText}>ĐANG ĐƯỢC ĐỀ XUẤT HÔM NAY</Text>
               <FlatList
-                data={mostFavoritedWords}
+                data={uniqueMostFavoritedWords}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.Id.toString()}
                 horizontal

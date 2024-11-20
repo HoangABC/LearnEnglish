@@ -7,11 +7,10 @@ export const register = createAsyncThunk(
   async ({ name, username, email, password }, { rejectWithValue }) => {
     try {
       const response = await api.register(name, username, email, password);
-      if (response.data.message === 'User registered successfully!') {
-        return { user: response.data.user, message: response.data.message };
-      } else {
-        return rejectWithValue(response.data.message || 'Đăng ký không thành công');
-      }
+      return {
+        user: response.data.user,
+        message: response.data.message,
+      };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -69,19 +68,56 @@ export const updateUserLevel = createAsyncThunk(
   }
 );
 
+// Thunk để cập nhật tên người dùng
+export const updateUserName = createAsyncThunk(
+  'auth/updateUserName',
+  async ({ userId, name }, { rejectWithValue }) => {
+    try {
+      const response = await api.updateUserName(userId, name);
+      if (response.status === 200) {
+        return { userId, name }; 
+      } else {
+        return rejectWithValue('Cập nhật tên người dùng không thành công');
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
 // Thunk để lấy danh sách Levels
 export const fetchLevels = createAsyncThunk(
   'auth/fetchLevels',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.fetchLevels();
-      return response.data; // Giả sử response.data là danh sách các levels
+      return response.data;
     } catch (error) {
-      console.error('Fetch Levels Error:', error); // Thêm log để kiểm tra lỗi
+      console.error('Fetch Levels Error:', error);
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi lấy dữ liệu Levels');
     }
   }
 );
+
+// Thunk để thay đổi mật khẩu
+export const changePassword = createAsyncThunk(
+  'auth/changePassword',
+  async ({ userId, currentPassword, newPassword }, { rejectWithValue }) => {
+    try {
+      const response = await api.changePassword(userId, currentPassword, newPassword);
+      if (response.status === 200) {
+        return response.data.message; // Thành công
+      } else if (response.status === 400) {
+        return rejectWithValue('Mật khẩu cũ không chính xác');
+      } else {
+        return rejectWithValue(response.data.message || 'Thay đổi mật khẩu không thành công');
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
 
 const authSlice = createSlice({
   name: 'auth',
@@ -103,7 +139,7 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Xử lý các trạng thái của login
+      // Các state của login
       .addCase(login.pending, (state) => {
         state.status = 'loading';
       })
@@ -115,13 +151,14 @@ const authSlice = createSlice({
         state.error = action.payload;
         state.status = 'failed';
       })
-      // Xử lý các trạng thái của register
+      // Các state của register
       .addCase(register.pending, (state) => {
         state.status = 'loading';
       })
       .addCase(register.fulfilled, (state, action) => {
         state.user = action.payload.user;
         state.successMessage = action.payload.message;
+        state.error = null;
         state.status = 'succeeded';
       })
       .addCase(register.rejected, (state, action) => {
@@ -129,7 +166,7 @@ const authSlice = createSlice({
         state.status = 'failed';
         state.successMessage = null;
       })
-      // Xử lý các trạng thái của googleLogin
+      // Các state của googleLogin
       .addCase(googleLogin.pending, (state) => {
         state.status = 'loading';
       })
@@ -141,7 +178,7 @@ const authSlice = createSlice({
         state.error = action.payload;
         state.status = 'failed';
       })
-      // Xử lý các trạng thái của updateUserLevel
+      // Các state của updateUserLevel
       .addCase(updateUserLevel.pending, (state) => {
         state.status = 'loading';
       })
@@ -156,15 +193,44 @@ const authSlice = createSlice({
         state.error = action.payload;
         state.status = 'failed';
       })
-      // Xử lý các trạng thái của fetchLevels
+      // Các state của fetchLevels
       .addCase(fetchLevels.pending, (state) => {
         state.status = 'loading';
       })
       .addCase(fetchLevels.fulfilled, (state, action) => {
-        state.levels = action.payload; // Lưu danh sách levels vào state
+        state.levels = action.payload;
         state.status = 'succeeded';
       })
       .addCase(fetchLevels.rejected, (state, action) => {
+        state.error = action.payload;
+        state.status = 'failed';
+      })
+      // Các state của updateUserName
+      .addCase(updateUserName.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(updateUserName.fulfilled, (state, action) => {
+        const { userId, name } = action.payload;
+        if (state.user && state.user.id === userId) {
+          state.user.name = name; 
+        }
+        state.status = 'succeeded';
+      })
+      .addCase(updateUserName.rejected, (state, action) => {
+        state.error = action.payload;
+        state.status = 'failed';
+      })
+      // Các state của changePassword
+      .addCase(changePassword.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(changePassword.fulfilled, (state, action) => {
+        console.log('Change Password Success:', action.payload); // Log message từ backend
+        state.successMessage = action.payload; // Phản hồi thành công từ backend
+        state.error = null;
+        state.status = 'succeeded';
+      })      
+      .addCase(changePassword.rejected, (state, action) => {
         state.error = action.payload;
         state.status = 'failed';
       });
@@ -172,5 +238,4 @@ const authSlice = createSlice({
 });
 
 export const { logout, setUser } = authSlice.actions;
-
 export default authSlice.reducer;

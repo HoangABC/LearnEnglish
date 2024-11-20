@@ -23,6 +23,8 @@ import LevelWordGuessPage from '../pages/LevelWordGuessPage';
 import WordDetailPage from '../pages/WordDetailPage';
 import ListenPage from '../pages/ListenPage';
 import SettingsPage from '../pages/SettingsPage';
+import EditInfoPage from '../pages/EditInfoPage';
+import EditPassPage from '../pages/EditPassPage';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -191,6 +193,16 @@ const AppNavigator = () => {
          <Stack.Screen
           name="WordDetail"
           component={WordDetailPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
+          name="EditInfo"
+          component={EditInfoPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
+          name="EditPass"
+          component={EditPassPage}
           options={{ headerTitle: '' }}
         />
         <Stack.Screen

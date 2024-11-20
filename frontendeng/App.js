@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, StyleSheet, StatusBar } from 'react-native';
-import FastImage from 'react-native-fast-image'; // Import FastImage để hiển thị GIF
-import AppNavigator from './src/navigation/AppNavigator'; // Cập nhật đường dẫn theo cấu trúc của bạn
+import FastImage from 'react-native-fast-image'; 
+import AppNavigator from './src/navigation/AppNavigator'; 
 import { Provider } from 'react-redux';
 import store from './src/redux/store';
 import FlashMessage from 'react-native-flash-message';
@@ -10,12 +10,10 @@ const App = () => {
   const [isSplashVisible, setIsSplashVisible] = useState(true);
 
   useEffect(() => {
-    // Hiển thị màn hình splash trong 6 giây trước khi chuyển qua AppNavigator
     const timer = setTimeout(() => {
-      setIsSplashVisible(false); // Ẩn splash screen sau 6 giây
+      setIsSplashVisible(false);
     }, 5000);
 
-    // Clean up the timeout if component unmounts
     return () => clearTimeout(timer);
   }, []);
 
@@ -25,7 +23,7 @@ const App = () => {
         <FastImage
           source={require('./src/assets/images/EEani.gif')}
           style={styles.splashImage}
-          resizeMode={FastImage.resizeMode.contain} // Đảm bảo ảnh hiển thị đúng
+          resizeMode={FastImage.resizeMode.contain}
         />
       </SafeAreaView>
     );

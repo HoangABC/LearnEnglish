@@ -190,6 +190,7 @@ const wordSlice = createSlice({
         state.mostFavoritedWords = action.payload;
        
       })
+      
       .addCase(fetchMostFavoritedWordsToday.rejected, handleRejected);
   },
 });

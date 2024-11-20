@@ -1,6 +1,6 @@
 import axios from 'axios';
-const BASE_URL = `http://192.168.1.9:3000`;
-
+// const BASE_URL = `https://3855-171-239-6-229.ngrok-free.app`;
+const BASE_URL = `http://192.168.1.100:3000`;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -31,4 +31,6 @@ export const api = {
   fetchListeningPractice: (userId) => apiClient.get('/listen/getListeningPractice', { params: { userId } }),
   submitListeningPractice: (userId, answer) => apiClient.post('/listen/submitListeningPractice', { userId, answer }),
   fetchMostFavoritedWordsToday: (levelId) => apiClient.get('/api/most-favorited-words-today', { params: { levelId } }),
+  updateUserName: (userId, name) => apiClient.put(`/account/users/updateUser`, { userId, name }),
+  changePassword: (userId, oldPassword, newPassword) => apiClient.put('/account/users/changePassword', { userId, oldPassword, newPassword }),
 };

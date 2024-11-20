@@ -118,7 +118,7 @@ const { sendEmail } = require('./src/scripts/nodeMailer');
 createTablesIfNotExists();
 
 // Hardcode Wi-Fi IP address
-const localIP = '192.168.1.9';
+const localIP = '192.168.1.100';
 console.log('IP:', localIP);
 
 // Cấu hình CORS và các middleware khác
@@ -149,6 +149,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Define routes
+app.use('/ad', require('./src/routes/adminRoutes'));
 app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api', require('./src/routes/wordRoutes'));
 app.use('/account', require('./src/routes/userRoutes'));
@@ -160,7 +161,7 @@ app.use('/listen', require('./src/routes/listenRoutes'));
 setupSocket(server);
 
 // Start server
-const PORT = process.env.PORT || 3000;  // Use port from environment or default to 3000
+const PORT = process.env.PORT || 3000; 
 server.listen(PORT, () => {
   console.log(`Server is running on http://${localIP}:${PORT}`);
 });

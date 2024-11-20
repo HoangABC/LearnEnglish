@@ -7,6 +7,7 @@ import useLogin from '../hooks/useLogin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { setUser } from '../redux/authSlice';
+import Feather from 'react-native-vector-icons/Feather';
 
 GoogleSignin.configure({
   forceConsentPrompt: true,
@@ -20,6 +21,7 @@ const Login = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const [loading, setLoading] = useState(false);
+  const [secureText, setSecureText] = useState(true); 
 
   useEffect(() => {
     const { params } = route;
@@ -51,10 +53,7 @@ const Login = () => {
       if (success) {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         if (user.LevelId === null) {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'LevelListView' }],
-          });
+          navigation.navigate('LevelListView');
         } else {
           navigation.reset({
             index: 0,
@@ -63,7 +62,11 @@ const Login = () => {
         }
         showMessage({ message: "Đăng nhập thành công!", type: "success" });
       } else {
-        showMessage({ message: error || "Có lỗi xảy ra", type: "danger" });
+        showMessage({ message: error || "Tài khoản hoặc mật khẩu không chính xác !", type: "danger",
+          icon: "danger",
+          duration: 5000,
+          autoHide: true, 
+          animationDuration: 500,  });
       }
     } catch (e) {
       showMessage({ message: 'Lỗi đăng nhập', description: e.message, type: 'danger' });
@@ -83,10 +86,7 @@ const Login = () => {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         dispatch(setUser(user));
         if (user.LevelId === null) {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'LevelListView' }],
-          });
+          navigation.navigate('LevelListView');
         } else {
           navigation.reset({
             index: 0,
@@ -117,8 +117,40 @@ const Login = () => {
       <View style={styles.loginCard}>
         <View style={styles.loginBox}>
           <Text style={styles.title}>Đăng Nhập</Text>
-          <TextInput style={styles.input} placeholder="Email hoặc Username" placeholderTextColor="#666" value={emailOrUsername} onChangeText={setEmailOrUsername} />
-          <TextInput style={styles.input} placeholder="Mật khẩu" secureTextEntry placeholderTextColor="#666" value={password} onChangeText={setPassword} />
+
+          {/* TextInput with Icon */}
+          <View style={styles.inputContainer}>
+            <Feather name="user" size={20} color="#000" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email hoặc Username"
+              placeholderTextColor="#666"
+              value={emailOrUsername}
+              onChangeText={setEmailOrUsername}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Feather name="lock" size={20} color="#000" style={styles.icon} />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Mật khẩu"
+              secureTextEntry={secureText}
+              placeholderTextColor="#666"
+              value={password}
+              onChangeText={setPassword}
+            />
+            
+            <Feather
+              name={secureText ? 'eye-off' : 'eye'} 
+              size={20}
+              color="#000"
+              style={styles.eyeIcon}
+              onPress={() => setSecureText(!secureText)} 
+            />
+          </View>
+
         </View>
       </View>
       <View>
@@ -150,6 +182,7 @@ const Login = () => {
 
 const styles = StyleSheet.create({
   container: {
+    flex:1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
@@ -184,14 +217,33 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+ inputContainer: {
+    position: 'relative',
+    width: '100%',
+    marginBottom: 15,
+  },
   input: {
     height: 45,
     borderColor: '#ddd',
     borderWidth: 1,
     borderRadius: 5,
-    marginBottom: 15,
-    paddingHorizontal: 10,
+    paddingLeft: 40,
+    paddingRight: 40,
     backgroundColor: '#fff',
+  },
+  icon: {
+    position: 'absolute',
+    left: 10,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    zIndex: 1,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 10,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    zIndex: 1,
   },
   button: {
     backgroundColor: '#007bff',

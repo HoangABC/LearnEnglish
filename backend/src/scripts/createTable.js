@@ -50,6 +50,7 @@ const createTablesAndUpdateData = async () => {
           CreatedAt DATETIME DEFAULT GETDATE(),
           UpdatedAt DATETIME DEFAULT GETDATE(),
           Status TINYINT DEFAULT 1,
+          Image VARCHAR(MAX),
           CONSTRAINT FK_User_Level FOREIGN KEY (LevelId) REFERENCES [Level](Id)
         );
       END
@@ -252,6 +253,53 @@ const createTablesAndUpdateData = async () => {
         );
       END
     `);
+    // Tạo bảng UserFeedback để lưu phản hồi của người dùng
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserFeedback')
+      BEGIN
+        CREATE TABLE [UserFeedback] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          UserId INT NOT NULL, -- Liên kết đến User
+          FeedbackText NVARCHAR(MAX) NOT NULL, -- Nội dung phản hồi của người dùng
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          Status INT DEFAULT 1, -- Trạng thái phản hồi (1: Chưa phản hồi, 2: Đã phản hồi)
+          CONSTRAINT FK_UserFeedback_User FOREIGN KEY (UserId) REFERENCES [User](Id)
+        );
+      END
+    `);
+
+    // Tạo bảng AdminResponse để lưu phản hồi của admin đối với người dùng
+    await request.query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AdminResponse')
+      BEGIN
+        CREATE TABLE [AdminResponse] (
+          Id INT IDENTITY(1,1) PRIMARY KEY,
+          FeedbackId INT NOT NULL, -- Liên kết đến UserFeedback
+          AdminId INT NOT NULL, -- ID của admin phản hồi
+          ResponseText NVARCHAR(MAX) NOT NULL, -- Nội dung phản hồi của admin
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          CONSTRAINT FK_AdminResponse_Feedback FOREIGN KEY (FeedbackId) REFERENCES [UserFeedback](Id),
+          CONSTRAINT FK_AdminResponse_Admin FOREIGN KEY (AdminId) REFERENCES [User](Id)
+        );
+      END
+    `);
+      // Tạo bảng Admin nếu chưa tồn tại
+      await request.query(`
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Admin')
+        BEGIN
+          CREATE TABLE [Admin] (
+            Id INT IDENTITY(1,1) PRIMARY KEY,
+            Name NVARCHAR(MAX) NOT NULL,
+            Username NVARCHAR(50) NOT NULL UNIQUE,
+            Email VARCHAR(255) UNIQUE NOT NULL,
+            Password NVARCHAR(255) NOT NULL,
+            Role NVARCHAR(50) DEFAULT 'Admin', -- Quyền hạn của admin
+            CreatedAt DATETIME DEFAULT GETDATE(),
+            UpdatedAt DATETIME DEFAULT GETDATE(),
+            Status TINYINT DEFAULT 1 -- Trạng thái admin
+          );
+        END
+      `);
 
     console.log('Tables and data created or updated successfully.');
   } catch (err) {

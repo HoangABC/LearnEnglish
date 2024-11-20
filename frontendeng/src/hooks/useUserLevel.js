@@ -13,10 +13,10 @@ const useUserLevel = () => {
     dispatch(fetchLevels());
   }, [dispatch]);
 
-  const setUserLevel = async (Id, levelId) => {  // Đổi userId thành Id
+  const setUserLevel = async (Id, levelId) => {  
     setUpdateStatus('loading');
     try {
-      await dispatch(updateUserLevel({ id: Id, levelId })).unwrap();  // Gọi API với Id
+      await dispatch(updateUserLevel({ id: Id, levelId })).unwrap(); 
       setUpdateStatus('succeeded');
     } catch (err) {
       setUpdateStatus('failed');

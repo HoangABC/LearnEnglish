@@ -5,9 +5,9 @@ export default function TableNoData({ isNotFound, query }) {
   return (
     isNotFound && (
       <TableRow>
-        <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
+        {/* <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
           No results found for "{query}"
-        </TableCell>
+        </TableCell> */}
       </TableRow>
     )
   );

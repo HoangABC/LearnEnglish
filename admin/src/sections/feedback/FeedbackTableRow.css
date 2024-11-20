@@ -1,0 +1,16 @@
+/* FeedbackTableRow.css */
+
+/* Điều chỉnh kích thước ô Example */
+.example-cell {
+    max-width: 400px;
+    overflow: auto;
+    white-space: nowrap;
+  }
+  
+  /* Điều chỉnh kích thước ô Definition */
+  .definition-cell {
+    max-width: 400px;
+    overflow: auto;
+    white-space: nowrap;
+  }
+  

@@ -1,6 +1,6 @@
-import { lazy, Suspense } from 'react';
-import { Outlet, Navigate, useRoutes } from 'react-router-dom';
-
+import { lazy, Suspense, useEffect } from 'react';  
+import { Outlet, Navigate, useRoutes, useNavigate } from 'react-router-dom';
+import useAuth from '../routes/hooks/useAuth';
 import DashboardLayout from '../layouts/dashboard';
 import WordPage from '../pages/word';
 
@@ -9,31 +9,44 @@ export const BlogPage = lazy(() => import('../pages/blog'));
 export const UserPage = lazy(() => import('../pages/user'));
 export const LoginPage = lazy(() => import('../pages/login'));
 export const ProductsPage = lazy(() => import('../pages/products'));
+export const FeedbackPage = lazy(() => import('../pages/feedback'));
 export const Page404 = lazy(() => import('../pages/page-not-found'));
-
-// ----------------------------------------------------------------------
+ 
 
 export default function Router() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const userSession = sessionStorage.getItem('user');
+    if (userSession && window.location.pathname === '/login') {
+      navigate('/');
+    }
+  }, [navigate]);
+
   const routes = useRoutes([
     {
-      element: (
+      path: 'login',
+      element: !isAuthenticated ? <LoginPage /> : <Navigate to="/" />,
+    },
+    {
+      element: (isAuthenticated || sessionStorage.getItem('user')) ? (
         <DashboardLayout>
-          <Suspense>
+          <Suspense fallback={<div>Loading...</div>}>
             <Outlet />
           </Suspense>
         </DashboardLayout>
+      ) : (
+        <Navigate to="/login" />
       ),
       children: [
         { element: <IndexPage />, index: true },
         { path: 'user', element: <UserPage /> },
         { path: 'word', element: <WordPage /> },
+        { path: 'feedback', element: <FeedbackPage /> },
         { path: 'products', element: <ProductsPage /> },
         { path: 'blog', element: <BlogPage /> },
       ],
-    },
-    {
-      path: 'login',
-      element: <LoginPage />,
     },
     {
       path: '404',

@@ -1,6 +1,6 @@
 import { View, StyleSheet } from 'react-native'
 import React from 'react'
-import Settings from '../components/setting/Settings';
+import Settings from '../components/Setting/Settings';
 
 
 

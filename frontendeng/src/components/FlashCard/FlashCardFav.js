@@ -15,9 +15,10 @@ const FlashCardFav = () => {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [userId, setUserId] = useState(null);
   const [exampleTexts, setExampleTexts] = useState([]);
-  const [wordsArray, setWordsArray] = useState([]);
   const [soundUrl, setSoundUrl] = useState(null);
   const [webviewKey, setWebviewKey] = useState(0);
+  const [autoPlay, setAutoPlay] = useState(false); 
+  const [soundRegion, setSoundRegion] = useState('UK'); 
 
   const {
     status,
@@ -44,9 +45,32 @@ const FlashCardFav = () => {
     };
 
     fetchUserId();
+
   }, []);
 
-
+  useEffect(() => {
+    const fetchSettingsAndFavoriteWords = async () => {
+      try {
+        // Fetch Auto Play Settings
+        const autoPlaySound = await AsyncStorage.getItem('autoPlaySound');
+        if (autoPlaySound) {
+          const { isEnabled, region } = JSON.parse(autoPlaySound);
+          setAutoPlay(isEnabled);
+          setSoundRegion(region); // Cập nhật vùng phát âm
+        }
+        
+        // Fetch Favorite Words (nếu đã có userId)
+        if (userId) {
+          handleFetchFavoriteWords(userId);
+        }
+      } catch (error) {
+        console.error('Failed to load settings or favorite words:', error);
+      }
+    };
+  
+    fetchSettingsAndFavoriteWords();
+  }, [userId]);  // Chạy lại khi userId thay đổi
+  
   useEffect(() => {
     if (userId) {
       handleFetchFavoriteWords(userId);
@@ -69,49 +93,40 @@ const FlashCardFav = () => {
       setExampleTexts(processedTexts);
     }
   }, [favoriteWords]);
-  
-
-  // Load words array from AsyncStorage
-  useEffect(() => {
-    const loadWordsArray = async (userId) => {
-      try {
-        const storedWordsArray = await AsyncStorage.getItem(`wordsArray_userId_${userId}`);
-        if (storedWordsArray) {
-          const parsedWordsArray = JSON.parse(storedWordsArray);
-          if (Array.isArray(parsedWordsArray)) {
-            setWordsArray(parsedWordsArray);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load words from AsyncStorage:', error);
-      }
-    };
-
-    if (userId) {
-      loadWordsArray(userId);
-    }
-  }, [userId]);
 
   const handleScroll = (event) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const currentIndex = Math.round(offsetX / (width * 0.9));
     setCurrentCardIndex(currentIndex);
+  
+    const currentWord = favoriteWords[currentIndex];
+  
+    // If autoPlay is enabled and there is a current word, play the sound
+    if (autoPlay && currentWord) {
+      const soundUrl = soundRegion === 'US' ? currentWord.AudioUS : currentWord.AudioUK;
+      if (soundUrl) {
+        playSound(soundUrl);
+      }
+    }
   };
-
+  
   const handleToggleFavoriteWordWithLogging = async (wordId) => {
     if (!userId || !wordId) return;
-
+  
     try {
-      await handleToggleFavoriteWord(userId, wordId);
-      const updatedWordsArray = wordsArray.map(word => (
-        word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
+      const updatedFavoriteWords = favoriteWords.map(word => (
+        word.Id === wordId ? { ...word, isFavorite: false } : word
       ));
-      setWordsArray(updatedWordsArray);
-      await AsyncStorage.setItem(`wordsArray_userId_${userId}`, JSON.stringify(updatedWordsArray));
+
+      await AsyncStorage.setItem(`wordsArray_userId_${userId}`, JSON.stringify(updatedFavoriteWords));
+      console.log('update', updatedFavoriteWords)
+
+      await handleToggleFavoriteWord(userId, wordId);
     } catch (error) {
       console.error('Failed to toggle favorite word:', error);
     }
   };
+  
   const formatDefinition = (definition) => {
     if (!definition) return null;
     const cleanedDefinition = definition.replace(/^- +/, '').trim();
@@ -135,87 +150,81 @@ const FlashCardFav = () => {
       </>
     );
   };
-  const renderItem = ({ item, index }) => (
-    <View style={styles.flipCardContainer}>
-      <FlipCard
-        key={item.Id}
-        style={styles.flipCard}
-        friction={8}
-        perspective={1000}
-        flipHorizontal={true}
-        flipVertical={false}
-      >
-        <LinearGradient
-          colors={['#353A5F', '#9EBAF3']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.cardFront}
-        >
-          <TouchableOpacity
-            style={styles.favoriteIcon}
-            onPress={() => handleToggleFavoriteWordWithLogging(item.Id)}
-          >
-            <Icon name='close' size={24} color='red' />
-          </TouchableOpacity>
-          <Text style={styles.word}>{item.Word}</Text>
-        
-        {/* Phần UK và US, mỗi phần một hàng */}
-        <View style={styles.phoneticContainer}>
-          {/* UK Section */}
-          <View style={styles.phoneticItem}>
-            <Text style={styles.phoneticText}>UK</Text>
-            <TouchableOpacity
-              style={styles.soundIcon}
-              onPress={() => playSound(item.AudioUK)}
-            >
-              <Icon name="volume-up" size={24} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
-          </View>
 
-          {/* US Section */}
-          <View style={styles.phoneticItem}>
-            <Text style={styles.phoneticText}>US</Text>
-            <TouchableOpacity
-              style={styles.soundIcon}
-              onPress={() => playSound(item.AudioUS)}
-            >
-              <Icon name="volume-up" size={24} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
-          </View>
-        </View>
-        </LinearGradient>
 
-        <View style={styles.cardBack}>
-          <View style={styles.tes}>
-            <Text style={styles.title}>Định nghĩa:</Text>
-            {formatDefinition(item.Definition)}
-            <Text style={styles.title}>Định nghĩa VI:</Text>
-            {formatDefinition(item.DefinitionVI)}
-            <Text style={styles.title}>Ví dụ:</Text>
-            <ScrollView style={styles.scrollView}>
-              <Text style={styles.example}>
-                {item.Example ? item.Example.replace(/<\/?li[^>]*>/g, '').replace(/<[^>]+>/g, '').split(';')[0] : 'No example available'}
-              </Text>
-              <Text style={styles.example}>
-                {item.ExampleVI ? item.ExampleVI.replace(/<\/?li[^>]*>/g, '').replace(/<[^>]+>/g, '').split(';')[0] : 'No Vietnamese example available'}
-              </Text>
-            </ScrollView>
-          </View>
-        </View>
-      </FlipCard>
-    </View>
-  );
   const playSound = (audioUrl) => {
     if (!audioUrl) return;
-    
-    // Thay đổi soundUrl và reset WebView
+  
+    // Update soundUrl and reset WebView
     setSoundUrl(audioUrl);
-    
-    // Tạo mới key để làm mới WebView
+  
+    // Create a new key to reload WebView
     setWebviewKey(prevKey => prevKey + 1);
   };
+  
+  const renderItem = ({ item, index }) => {
+    return (
+      <View style={styles.flipCardContainer}>
+        <FlipCard
+          key={item.Id}
+          style={styles.flipCard}
+          friction={8}
+          perspective={1000}
+          flipHorizontal={true}
+          flipVertical={false}
+        >
+          <LinearGradient
+            colors={['#353A5F', '#9EBAF3']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cardFront}
+          >
+            <TouchableOpacity
+              style={styles.favoriteIcon}
+              onPress={() => handleToggleFavoriteWordWithLogging(item.Id)}
+            >
+              <Icon name='close' size={24} color='red' />
+            </TouchableOpacity>
+            <Text style={styles.word}>{item.Word}</Text>
+  
+            {/* Phonetic sections */}
+            <View style={styles.phoneticContainer}>
+              <View style={styles.phoneticItem}>
+                <Text style={styles.phoneticText}>UK</Text>
+                <TouchableOpacity
+                  style={styles.soundIcon}
+                  onPress={() => playSound(item.AudioUK)}
+                >
+                  <Icon name="volume-up" size={24} color="white" />
+                </TouchableOpacity>
+                <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
+              </View>
+  
+              <View style={styles.phoneticItem}>
+                <Text style={styles.phoneticText}>US</Text>
+                <TouchableOpacity
+                  style={styles.soundIcon}
+                  onPress={() => playSound(item.AudioUS)}
+                >
+                  <Icon name="volume-up" size={24} color="white" />
+                </TouchableOpacity>
+                <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
+              </View>
+            </View>
+          </LinearGradient>
+  
+          <View style={styles.cardBack}>
+            <Text style={styles.definition}>Definition:</Text>
+            {formatDefinition(item.DefinitionVI || item.Definition)}
+  
+            <Text style={styles.example}>Example:</Text>
+            <Text style={styles.exampleText}>{exampleTexts[index]}</Text>
+          </View>
+        </FlipCard>
+      </View>
+    );
+  };
+
   
   const wordsArrayLength = favoriteWords.length;
 

@@ -270,18 +270,7 @@ const styles = StyleSheet.create({
     color: 'white',
     flex: 1,  
   },
-  saveButton: {
-    backgroundColor: '#4CAF50',  
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 14,
-    textAlign:'center',
-    width:70,
-  },
+
   detailButton:{
     backgroundColor: '#4CAF50',  
     paddingVertical: 8,
@@ -316,7 +305,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#fff',
     width: '100%',
-    marginTop: 10, 
+   
   },
   footer: {
     flexDirection: 'row',
@@ -328,17 +317,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#fff',
     textAlign: 'center', 
+    width:'20%'
   },
   saveButton: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-    backgroundColor: '#007bff',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    height:'100%',
+    padding:'1%',
     borderRadius: 5,
-    textAlign: 'center', 
+    borderWidth: 1,
+    width: 'auto',
   },
+  defaultButton: {
+    backgroundColor: '#ffcc00', 
+  },
+  savedButton: {
+    backgroundColor: '#4caf50', 
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  defaultText: {
+    color: '#000',
+  },
+  savedText: {
+    color: '#fff', 
+  },
+  
   flatListContainer: {
     flexDirection: 'row', 
     alignItems: 'center', 

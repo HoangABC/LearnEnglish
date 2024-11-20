@@ -8,7 +8,7 @@ import Popover from '@mui/material/Popover';
 import MenuItem from '@mui/material/MenuItem';
 import Label from '../../components/label';
 import Iconify from '../../components/iconify';
-import './WordTableRow.css'; // Import CSS file
+import './WordTableRow.css';
 
 // Helper function to format date
 const formatDate = (date) => {
@@ -25,22 +25,49 @@ const cleanExampleText = (text) => {
   return text.replace(/;/g, '').trim();
 };
 
+// Add this helper function at the top with other helpers
+const getLevelLabel = (levelId) => {
+  const numericLevelId = Number(levelId);
+  
+  const levels = {
+    1: 'A1',
+    2: 'A2',
+    3: 'B1',
+    4: 'B2',
+    5: 'B2+',
+    6: 'C1',
+    7: 'D'
+  };
+  
+  if (!numericLevelId && numericLevelId !== 0) {
+    return 'N/A';
+  }
+  
+  return levels[numericLevelId] || 'N/A';
+};
+
 export default function WordTableRow({
   selected,
   QueryURL,
   Word,
   PartOfSpeech,
-  Level,
+  LevelWordId, 
   Definition,
+  DefinitionVI,
   PhoneticUK,
   PhoneticUS,
   AudioUK,
   AudioUS,
   Example,
+  ExampleVI,
   CreatedAt,
   UpdatedAt,
   Status,
   handleClick,
+  tabValue,
+  id,
+  onStatusUpdate,
+  onEdit,
 }) {
   const [open, setOpen] = useState(null);
 
@@ -52,6 +79,31 @@ export default function WordTableRow({
     setOpen(null);
   };
 
+  const handleStatusChange = async (newStatus) => {
+    await onStatusUpdate(id, newStatus);
+    handleCloseMenu();
+  };
+
+  const handleEdit = () => {
+    onEdit({
+      Id: id,
+      Word,
+      PartOfSpeech,
+      LevelWordId,
+      Definition,
+      DefinitionVI,
+      PhoneticUK,
+      PhoneticUS,
+      AudioUK,
+      AudioUS,
+      Example,
+      ExampleVI,
+      QueryURL,
+      Status,
+    });
+    handleCloseMenu();
+  };
+
   return (
     <>
       <TableRow hover tabIndex={-1} role="checkbox" selected={selected}>
@@ -59,25 +111,32 @@ export default function WordTableRow({
           <Checkbox disableRipple checked={selected} onChange={handleClick} />
         </TableCell>
 
-        <TableCell>{QueryURL}</TableCell>
-        <TableCell>{Word}</TableCell>
+        <TableCell>{QueryURL || 'N/A'}</TableCell>
+        <TableCell>{Word || 'N/A'}</TableCell>
         <TableCell>{PartOfSpeech || 'N/A'}</TableCell>
-        <TableCell>{Level || 'N/A'}</TableCell>
-        <TableCell className="definition-cell">{Definition}</TableCell>
+        <TableCell>
+          {console.log('LevelWordId:', LevelWordId)}
+          {getLevelLabel(LevelWordId)}
+        </TableCell>
+        <TableCell className="definition-cell">{Definition || 'N/A'}</TableCell>
+        <TableCell className="definition-cell">{DefinitionVI || 'N/A'}</TableCell>
         <TableCell>{PhoneticUK || 'N/A'}</TableCell>
         <TableCell>{PhoneticUS || 'N/A'}</TableCell>
         <TableCell>{AudioUK || 'N/A'}</TableCell>
         <TableCell>{AudioUS || 'N/A'}</TableCell>
         <TableCell className="example-cell">
-          <div dangerouslySetInnerHTML={{ __html: cleanExampleText(Example) }} />
+          <div dangerouslySetInnerHTML={{ __html: cleanExampleText(Example) || 'N/A' }} />
+        </TableCell>
+        <TableCell className="example-cell">
+          <div dangerouslySetInnerHTML={{ __html: cleanExampleText(ExampleVI) || 'N/A' }} />
         </TableCell>
         <TableCell>{formatDate(new Date(CreatedAt))}</TableCell>
         <TableCell>{formatDate(new Date(UpdatedAt))}</TableCell>
 
         <TableCell align="center">
-          <Label color={Status === 1 ? 'success' : 'error'}>
-            {Status === 1 ? 'Active' : 'Inactive'}
-          </Label>
+        <Label color={(Status === 1 || Status === 'Active') ? 'success' : 'error'}>
+          {(Status === 1 || Status === 'Active') ? 'Active' : 'Inactive'}
+        </Label>
         </TableCell>
 
         <TableCell align="right">
@@ -91,8 +150,14 @@ export default function WordTableRow({
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <MenuItem onClick={handleCloseMenu}>Edit</MenuItem>
-            <MenuItem onClick={handleCloseMenu}>Delete</MenuItem>
+            {tabValue === 0 ? (
+              <MenuItem onClick={() => handleStatusChange(0)}>Inactive</MenuItem>
+            ) : (
+              <>
+                <MenuItem onClick={() => handleStatusChange(1)}>Active</MenuItem>
+                <MenuItem onClick={handleEdit}>Edit</MenuItem>
+              </>
+            )}
           </Popover>
         </TableCell>
       </TableRow>
@@ -104,16 +169,22 @@ WordTableRow.propTypes = {
   QueryURL: PropTypes.string,
   Word: PropTypes.string.isRequired,
   PartOfSpeech: PropTypes.string,
-  Level: PropTypes.string,
+  LevelWordId: PropTypes.number,
   Definition: PropTypes.string.isRequired,
+  DefinitionVI: PropTypes.string,
   PhoneticUK: PropTypes.string,
   PhoneticUS: PropTypes.string,
   AudioUK: PropTypes.string,
   AudioUS: PropTypes.string,
   Example: PropTypes.string,
+  ExampleVI: PropTypes.string,
   CreatedAt: PropTypes.string.isRequired,
   UpdatedAt: PropTypes.string.isRequired,
   Status: PropTypes.number.isRequired,
   selected: PropTypes.bool.isRequired,
   handleClick: PropTypes.func.isRequired,
+  tabValue: PropTypes.number.isRequired,
+  id: PropTypes.number.isRequired,
+  onStatusUpdate: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
 };

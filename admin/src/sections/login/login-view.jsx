@@ -1,5 +1,6 @@
-import { useState } from 'react';
-
+import { useState, useEffect } from 'react'; 
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import useAuth from '../../routes/hooks/useAuth';  
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Card from '@mui/material/Card';
@@ -12,36 +13,50 @@ import IconButton from '@mui/material/IconButton';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { alpha, useTheme } from '@mui/material/styles';
 import InputAdornment from '@mui/material/InputAdornment';
-
-import { useRouter } from '../../routes/hooks';
-
 import { bgGradient } from '../../theme/css';
-
 import Logo from '../../components/logo';
 import Iconify from '../../components/iconify';
 
-// ----------------------------------------------------------------------
-
 export default function LoginView() {
   const theme = useTheme();
-
-  const router = useRouter();
-
   const [showPassword, setShowPassword] = useState(false);
+  const [emailOrUsername, setEmailOrUsername] = useState('');
+  const [password, setPassword] = useState('');
+  
+  const { handleLogin, loading, isAuthenticated } = useAuth(); 
+  const navigate = useNavigate(); 
 
-  const handleClick = () => {
-    router.push('/dashboard');
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/'); 
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await handleLogin(emailOrUsername, password);
+    
+    if (sessionStorage.getItem('user')) {
+      navigate('/');
+    }
   };
 
   const renderForm = (
     <>
       <Stack spacing={3}>
-        <TextField name="email" label="Email address" />
-
+        <TextField
+          name="email"
+          label="Email address"
+          value={emailOrUsername}
+          onChange={(e) => setEmailOrUsername(e.target.value)} 
+        />
         <TextField
           name="password"
           label="Password"
           type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)} 
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
@@ -53,20 +68,19 @@ export default function LoginView() {
           }}
         />
       </Stack>
-
       <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ my: 3 }}>
         <Link variant="subtitle2" underline="hover">
           Forgot password?
         </Link>
       </Stack>
-
       <LoadingButton
         fullWidth
         size="large"
         type="submit"
         variant="contained"
         color="inherit"
-        onClick={handleClick}
+        onClick={handleSubmit} 
+        loading={loading} 
       >
         Login
       </LoadingButton>
@@ -83,69 +97,30 @@ export default function LoginView() {
         height: 1,
       }}
     >
-      <Logo
-        sx={{
-          position: 'fixed',
-          top: { xs: 16, md: 24 },
-          left: { xs: 16, md: 24 },
-        }}
-      />
-
+      <Logo sx={{ position: 'fixed', top: { xs: 16, md: 24 }, left: { xs: 16, md: 24 } }} />
       <Stack alignItems="center" justifyContent="center" sx={{ height: 1 }}>
-        <Card
-          sx={{
-            p: 5,
-            width: 1,
-            maxWidth: 420,
-          }}
-        >
-          <Typography variant="h4">Sign in to Minimal</Typography>
-
+      <Card sx={{ p: 5, width: 1, maxWidth: 420 }}>
+      <Typography variant="h4">Sign in to Admin</Typography>
           <Typography variant="body2" sx={{ mt: 2, mb: 5 }}>
             Don’t have an account?
             <Link variant="subtitle2" sx={{ ml: 0.5 }}>
               Get started
             </Link>
           </Typography>
-
           <Stack direction="row" spacing={2}>
-            <Button
-              fullWidth
-              size="large"
-              color="inherit"
-              variant="outlined"
-              sx={{ borderColor: alpha(theme.palette.grey[500], 0.16) }}
-            >
+            <Button fullWidth size="large" color="inherit" variant="outlined">
               <Iconify icon="eva:google-fill" color="#DF3E30" />
             </Button>
-
-            <Button
-              fullWidth
-              size="large"
-              color="inherit"
-              variant="outlined"
-              sx={{ borderColor: alpha(theme.palette.grey[500], 0.16) }}
-            >
+            <Button fullWidth size="large" color="inherit" variant="outlined">
               <Iconify icon="eva:facebook-fill" color="#1877F2" />
             </Button>
-
-            <Button
-              fullWidth
-              size="large"
-              color="inherit"
-              variant="outlined"
-              sx={{ borderColor: alpha(theme.palette.grey[500], 0.16) }}
-            >
+            <Button fullWidth size="large" color="inherit" variant="outlined">
               <Iconify icon="eva:twitter-fill" color="#1C9CEA" />
             </Button>
           </Stack>
-
           <Divider sx={{ my: 3 }}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              OR
-            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>OR</Typography>
           </Divider>
-
           {renderForm}
         </Card>
       </Stack>

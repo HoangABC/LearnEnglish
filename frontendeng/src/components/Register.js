@@ -1,34 +1,41 @@
 import React from 'react';
-import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
-import FlashMessage, { showMessage } from 'react-native-flash-message';
-import { useDispatch, useSelector } from 'react-redux';
-import { register } from '../redux/authSlice';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  View,
+  TextInput,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  ScrollView,
+} from 'react-native';
+import FlashMessage from 'react-native-flash-message';
+import useRegister from '../hooks/useRegister'; // Import hook
+import { useNavigation } from '@react-navigation/native';
 
 const Register = () => {
-  const dispatch = useDispatch();
-  const { status, successMessage, error } = useSelector(state => state.auth);
   const navigation = useNavigation();
-  const [name, setName] = React.useState('');
-  const [username, setUsername] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState('');
-
-  const handleRegister = async () => {
-    if (password !== confirmPassword) {
-      showMessage({ message: 'Passwords do not match', type: 'danger' });
-      return;
-    }
-
-    try {
-      await dispatch(register({ name, username, email, password })).unwrap();
-      showMessage({ message: 'Registration successful', type: 'success' });
-      navigation.navigate('Login');
-    } catch (err) {
-      showMessage({ message: err, type: 'danger' });
-    }
-  };
+  
+  // Lấy các giá trị và hàm từ hook useRegister
+  const {
+    name,
+    setName,
+    username,
+    setUsername,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    confirmPassword,
+    setConfirmPassword,
+    handleRegister, // Hàm handleRegister ở đây
+    loading,
+  } = useRegister(() => {
+    navigation.navigate('Login'); // Điều hướng đến Login khi đăng ký thành công
+  });
+  
 
   return (
     <KeyboardAvoidingView
@@ -40,7 +47,7 @@ const Register = () => {
         keyboardShouldPersistTaps="handled"
       >
         <Image
-          source={require('../assets/images/logo.png')} 
+          source={require('../assets/images/logo.png')}
           style={styles.logo}
         />
         <View style={styles.loginCard}>
@@ -86,7 +93,7 @@ const Register = () => {
           </View>
         </View>
         <View style={styles.buttonContainer}>
-          {status === 'loading' ? (
+          {loading ? (
             <ActivityIndicator size="large" color="#007bff" />
           ) : (
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
@@ -110,8 +117,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   logo: {
-    width: 250,  
-    height: 250, 
+    width: 250,
+    height: 250,
     marginBottom: 5,
     resizeMode: 'contain',
   },

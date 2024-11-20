@@ -16,72 +16,88 @@ const transporter = nodemailer.createTransport({
 const register = async (req, res) => {
   const { name, username, email, password } = req.body;
   
+  // Kiểm tra các trường bắt buộc
   if (!name || !username || !email || !password) {
-    return res.status(400).json({ message: 'Name, username, email, and password are required' });
+    return res.status(400).json({ message: 'Tên, tên đăng nhập, email và mật khẩu là bắt buộc' });
+  }
+
+  // Kiểm tra độ dài của Name và Username
+  if (name.length < 5) {
+    return res.status(400).json({ message: 'Tên phải có ít nhất 5 ký tự' });
+  }
+  
+  if (username.length < 5) {
+    return res.status(400).json({ message: 'Tên đăng nhập phải có ít nhất 5 ký tự' });
+  }
+
+  // Kiểm tra định dạng email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: 'Email không đúng định dạng' });
   }
 
   try {
     const pool = await poolPromise;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const existingUser = await pool.request()
+    // Kiểm tra xem email đã tồn tại chưa
+    const existingUserByEmail = await pool.request()
       .input('Email', sql.VarChar, email)
       .query('SELECT * FROM [User] WHERE Email = @Email');
 
-    if (existingUser.recordset.length > 0) {
-      const user = existingUser.recordset[0];
-
-      // Kiểm tra nếu người dùng đã đăng nhập bằng Google nhưng chưa có Username và Password
-      if (!user.Username || !user.Password) {
-        await pool.request()
-          .input('Id', sql.Int, user.Id)
-          .input('Username', sql.VarChar, username)
-          .input('Password', sql.NVarChar, hashedPassword)
-          .query(`
-            UPDATE [User]
-            SET Username = @Username, Password = @Password
-            WHERE Id = @Id
-          `);
-
-        return res.status(200).json({
-          message: 'User account updated successfully!',
-          user: { name, username, email }
-        });
-      } else {
-        return res.status(400).json({ message: 'Email already exists' });
-      }
-    } else {
-      await pool.request()
-        .input('LevelId', sql.NVarChar, null)
-        .input('GoogleId', sql.NVarChar, null)
-        .input('Name', sql.NVarChar, name)
-        .input('Username', sql.VarChar, username)
-        .input('Email', sql.VarChar, email)
-        .input('Password', sql.NVarChar, hashedPassword)
-        .input('ConfirmationToken', sql.NVarChar, null)
-        .input('Status', sql.Int, 1)
-        .query('INSERT INTO [User] (LevelId,GoogleId, Name, Username, Email, Password, ConfirmationToken, Status) VALUES (@LevelId,@GoogleId, @Name, @Username, @Email, @Password, @ConfirmationToken,  @Status)');
-
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Cảm ơn bạn đã đăng ký!',
-        text: 'Cảm ơn bạn đã đăng ký tài khoản với chúng tôi. Bạn có thể đăng nhập ngay lập tức!'
-      };
-
-      await transporter.sendMail(mailOptions);
-
-      res.status(200).json({
-        message: 'User registered successfully!',
-        user: { name, username, email }
-      });
+    if (existingUserByEmail.recordset.length > 0) {
+      return res.status(400).json({ message: 'Email đã tồn tại' });
     }
+
+    // Kiểm tra xem tên đăng nhập đã tồn tại chưa
+    const existingUserByUsername = await pool.request()
+      .input('Username', sql.VarChar, username)
+      .query('SELECT * FROM [User] WHERE Username = @Username');
+
+    if (existingUserByUsername.recordset.length > 0) {
+      return res.status(400).json({ message: 'Tên đăng nhập đã tồn tại' });
+    }
+
+    // Kiểm tra xem tên đã tồn tại chưa
+    const existingUserByName = await pool.request()
+      .input('Name', sql.NVarChar, name)
+      .query('SELECT * FROM [User] WHERE Name = @Name');
+
+    if (existingUserByName.recordset.length > 0) {
+      return res.status(400).json({ message: 'Tên đã tồn tại' });
+    }
+
+    // Nếu không trùng lặp, tiến hành đăng ký
+    await pool.request()
+      .input('LevelId', sql.NVarChar, null)
+      .input('GoogleId', sql.NVarChar, null)
+      .input('Name', sql.NVarChar, name)
+      .input('Username', sql.VarChar, username)
+      .input('Email', sql.VarChar, email)
+      .input('Password', sql.NVarChar, hashedPassword)
+      .input('ConfirmationToken', sql.NVarChar, null)
+      .input('Status', sql.Int, 1)
+      .query('INSERT INTO [User] (LevelId, GoogleId, Name, Username, Email, Password, ConfirmationToken, Status) VALUES (@LevelId, @GoogleId, @Name, @Username, @Email, @Password, @ConfirmationToken, @Status)');
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Cảm ơn bạn đã đăng ký!',
+      text: 'Cảm ơn bạn đã đăng ký tài khoản với chúng tôi. Bạn có thể đăng nhập ngay lập tức!'
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({
+      message: 'Đăng ký tài khoản thành công!',
+      user: { name, username, email }
+    });
+
   } catch (err) {
-    console.error('Registration error:', err);
-    res.status(500).send({ message: err.message });
+    console.error('Lỗi đăng ký:', err);
+    res.status(500).send({ message: 'Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại sau.' });
   }
 };
-
 
 
 const login = async (req, res) => {
@@ -114,11 +130,12 @@ const login = async (req, res) => {
             Id: user.Id, 
             name: user.Name, 
             email: user.Email, 
-            LevelId: user.LevelId 
+            LevelId: user.LevelId, 
+            Password: user.Password
           } 
         });
       } else {
-        res.status(401).json({ message: 'Invalid credentials' });
+        res.status(401).json({ message: 'Tài khoản hoặc mật khẩu không chính xác.' });
       }
     } else {
       res.status(401).json({ message: 'Invalid credentials' });
@@ -217,7 +234,7 @@ const updateUserLevel = async (req, res) => {
   try {
     const pool = await poolPromise;
 
-    // Kiểm tra xem LevelId có tồn tại trong bảng Level không
+ 
     const levelCheck = await pool.request()
       .input('LevelId', sql.Int, levelId)
       .query('SELECT Id FROM [Level] WHERE Id = @LevelId');
@@ -226,7 +243,7 @@ const updateUserLevel = async (req, res) => {
       return res.status(400).json({ message: 'Invalid LevelId' });
     }
 
-    // Cập nhật LevelId cho người dùng
+   
     const result = await pool.request()
       .input('Id', sql.Int, id)
       .input('LevelId', sql.Int, levelId)
@@ -236,14 +253,13 @@ const updateUserLevel = async (req, res) => {
         WHERE Id = @Id
       `);
 
-    // Kiểm tra nếu bản cập nhật không ảnh hưởng đến bất kỳ bản ghi nào
     if (result.rowsAffected[0] === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     res.status(200).json({ message: 'User LevelId updated successfully' });
   } catch (err) {
-    console.error('Database error:', err.message);  // Ghi log lỗi chi tiết
+    console.error('Database error:', err.message);  
     res.status(500).send({ message: 'Internal server error' });
   }
 };
@@ -256,10 +272,105 @@ const getAllLevels = async (req, res) => {
 
     res.status(200).json(result.recordset);
   } catch (err) {
-    console.error('Database error:', err.message);  // Ghi log lỗi chi tiết
+    console.error('Database error:', err.message); 
     res.status(500).send({ message: 'Internal server error' });
   }
 };
+
+const updateUserName = async (req, res) => {
+  const { userId, name } = req.body;
+
+  console.log('thong tin:',userId);
+  if (!userId || !name) {
+    return res.status(400).json({ message: 'UserId and name are required' });
+  }
+
+  try {
+    const pool = await poolPromise;
+
+    
+    const userCheck = await pool.request()
+      .input('UserId', sql.Int, userId)
+      .query('SELECT * FROM [User] WHERE Id = @UserId');
+
+    if (userCheck.recordset.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+
+    const nameCheck = await pool.request()
+      .input('Name', sql.NVarChar, name)
+      .query('SELECT * FROM [User] WHERE Name = @Name');
+
+    if (nameCheck.recordset.length > 0) {
+      return res.status(400).json({ message: 'Tên đã tồn tại. Vui lòng chọn tên khác.' });
+    }
+
+   
+    await pool.request()
+      .input('UserId', sql.Int, userId)
+      .input('Name', sql.NVarChar, name)
+      .query(`
+        UPDATE [User]
+        SET Name = @Name
+        WHERE Id = @UserId
+      `);
+
+    res.status(200).json({ message: 'Tên người dùng đã được cập nhật thành công' });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+};
+
+const changePassword = async (req, res) => {
+  const { userId, oldPassword, newPassword } = req.body;
+  console.log('userId ở đây', userId);  
+  
+  if (!userId || !oldPassword || !newPassword) {
+    return res.status(400).json({ message: 'UserId, mật khẩu cũ và mật khẩu mới là bắt buộc' });
+  }
+
+  try {
+    const pool = await poolPromise;
+
+    const userResult = await pool.request()
+      .input('UserId', sql.Int, userId)
+      .query('SELECT Password FROM [User] WHERE Id = @UserId');
+
+    if (userResult.recordset.length === 0) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại' });
+    }
+
+    const user = userResult.recordset[0];
+
+
+    if (!user.Password) {
+      return res.status(400).json({ message: 'Mật khẩu người dùng không hợp lệ' });
+    }
+
+    console.log('Mật khẩu cũ:', oldPassword);
+    console.log('Mật khẩu đã băm:', user.Password);
+
+    const isMatch = await bcrypt.compare(oldPassword, user.Password);
+    if (!isMatch) {
+      console.log('Mật khẩu cũ không chính xác');  
+      return res.status(400).json({ message: 'Mật khẩu cũ không chính xác' });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    await pool.request()
+      .input('UserId', sql.Int, userId)
+      .input('NewPassword', sql.NVarChar, hashedNewPassword)
+      .query('UPDATE [User] SET Password = @NewPassword WHERE Id = @UserId');
+
+    res.status(200).json({ message: 'Mật khẩu đã được thay đổi thành công' });
+  } catch (err) {
+    console.error('Lỗi khi thay đổi mật khẩu:', err);
+    res.status(500).send({ message: 'Đã xảy ra lỗi khi thay đổi mật khẩu. Vui lòng thử lại sau.' });
+  }
+};
+
 
 module.exports = {
   register,
@@ -269,5 +380,7 @@ module.exports = {
   updateUser,
   deleteUser,
   updateUserLevel,
-  getAllLevels // Export hàm mới
+  getAllLevels,
+  updateUserName, 
+  changePassword,
 };
