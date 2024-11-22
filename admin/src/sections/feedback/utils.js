@@ -26,18 +26,30 @@ export function applyFilter({ inputData, comparator, filterName }) {
 
 export function getComparator(order, orderBy) {
   return order === 'desc'
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
-}
-
-function descendingComparator(a, b, orderBy) {
-  if (b[orderBy] < a[orderBy]) {
-    return -1;
-  }
-  if (b[orderBy] > a[orderBy]) {
-    return 1;
-  }
-  return 0;
+    ? (a, b) => {
+        if (orderBy === 'CreatedAt' || orderBy === 'ResponseDate') {
+          // Xử lý đặc biệt cho các trường ngày tháng
+          const dateA = new Date(a[orderBy] || 0);
+          const dateB = new Date(b[orderBy] || 0);
+          return dateB - dateA;
+        }
+        // Xử lý cho các trường khác
+        if (b[orderBy] < a[orderBy]) return -1;
+        if (b[orderBy] > a[orderBy]) return 1;
+        return 0;
+      }
+    : (a, b) => {
+        if (orderBy === 'CreatedAt' || orderBy === 'ResponseDate') {
+          // Xử lý đặc biệt cho các trường ngày tháng
+          const dateA = new Date(a[orderBy] || 0);
+          const dateB = new Date(b[orderBy] || 0);
+          return dateA - dateB;
+        }
+        // Xử lý cho các trường khác
+        if (a[orderBy] < b[orderBy]) return -1;
+        if (a[orderBy] > b[orderBy]) return 1;
+        return 0;
+      };
 }
 
 export function emptyRows(page, rowsPerPage, arrayLength) {

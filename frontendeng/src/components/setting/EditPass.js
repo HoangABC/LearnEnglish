@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Tex
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Entypo from 'react-native-vector-icons/Entypo';
-import { useChangePassword } from '../../hooks/useChangePassword'; // Đảm bảo import hook đúng
-import { showMessage } from 'react-native-flash-message'; // Import thêm nếu chưa có
-import { useNavigation } from '@react-navigation/native'; // Import hook navigation
+import { useChangePassword } from '../../hooks/useChangePassword'; 
+import { showMessage } from 'react-native-flash-message';
+import { useNavigation } from '@react-navigation/native'; 
 
 const EditPass = () => {
   const [userDetails, setUserDetails] = useState({});
@@ -82,52 +82,56 @@ const EditPass = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.menuContainer}>
-        <Text style={styles.contactHeader}>Mật khẩu hiện tại</Text>
-        <View style={styles.ItemEdit}>
-          <View style={[styles.menuItem, { flex: 10 }]}>
-            <MaterialCommunityIcons name="key" size={29} />
-            <TextInput
-              style={styles.menuItemText}
-              placeholder="Nhập mật khẩu hiện tại"
-              secureTextEntry
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-            />
+        <View style={styles.formContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Mật khẩu hiện tại</Text>
+            <View style={styles.inputWrapper}>
+              <MaterialCommunityIcons name="key" size={24} color="#666" />
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập mật khẩu hiện tại"
+                secureTextEntry
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholderTextColor="#999"
+              />
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.contactHeader}>Mật khẩu mới</Text>
-        <View style={styles.ItemEdit}>
-          <View style={[styles.menuItem, { flex: 10 }]}>
-            <MaterialCommunityIcons name="key-variant" size={29} />
-            <TextInput
-              style={styles.menuItemText}
-              placeholder="Nhập mật khẩu mới"
-              secureTextEntry
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Mật khẩu mới</Text>
+            <View style={styles.inputWrapper}>
+              <MaterialCommunityIcons name="key-variant" size={24} color="#666" />
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập mật khẩu mới"
+                secureTextEntry
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholderTextColor="#999"
+              />
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.contactHeader}>Nhập lại mật khẩu</Text>
-        <View style={styles.ItemEdit}>
-          <View style={[styles.menuItem, { flex: 10 }]}>
-            <Entypo name="key" size={29} />
-            <TextInput
-              style={styles.menuItemText}
-              placeholder="Nhập lại mật khẩu"
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Nhập lại mật khẩu</Text>
+            <View style={styles.inputWrapper}>
+              <Entypo name="key" size={24} color="#666" />
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập lại mật khẩu"
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholderTextColor="#999"
+              />
+            </View>
           </View>
         </View>
-        
       </ScrollView>
 
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Lưu thông tin</Text>
+        <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -136,50 +140,68 @@ const EditPass = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
   menuContainer: {
     flex: 1,
+  },
+  formContainer: {
     padding: 20,
   },
-  menuItem: {
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    borderRadius: 10,
-    backgroundColor: '#f9f9f9',
-    marginBottom: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: 'black',
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  menuItemText: {
-    fontSize: 18,
-    marginLeft: 10,
+  input: {
     flex: 1,
-    color: 'black',
-  },
-  contactHeader: {
-    fontSize: 18,
-    fontWeight: '900',
-    marginVertical: 10,
-    backgroundColor: '#DDDDDD',
-    padding: 10,
-    color: 'black',
+    fontSize: 16,
+    marginLeft: 12,
+    color: '#333',
   },
   saveButton: {
-    backgroundColor: '#007BFF',
-    paddingVertical: 15,
+    backgroundColor: '#007AFF',
     marginHorizontal: 20,
-    borderRadius: 10,
-    alignItems: 'center',
     marginBottom: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: '#007AFF',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   saveButtonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   loader: {
     flex: 1,

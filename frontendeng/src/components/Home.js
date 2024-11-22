@@ -1,51 +1,78 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image, ImageBackground, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image, ImageBackground, FlatList, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import styles from '../styles/HomeStyles';
 import useWordActions from '../hooks/useWordActions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
+import useFeedback from '../hooks/useFeedback'
+import { useDispatch, useSelector } from 'react-redux';
 
 const Home = () => {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const [keyword, setKeyword] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showWordDetail, setShowWordDetail] = useState(false);
-  const [selectedWord, setSelectedWord] = useState({});
   const [userId, setUserId] = useState(null);
   const { mostFavoritedWords, searchResults, handleSearchWord, clearSearchResults, handleToggleFavoriteWord } = useWordActions();
   const [wordsArray, setWordsArray] = useState([]);
   const [webviewKey, setWebviewKey] = useState(0);
   const [soundUrl, setSoundUrl] = useState(null);
   const [background, setBackground] = useState(require('../assets/images/background.jpg'));
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { getFeedbacks, feedbacks: feedbacksData } = useFeedback();
+  const [feedbacks, setFeedbacks] = useState([]);
 
   useEffect(() => {
     const loadUserData = async () => {
       try {
         const user = await AsyncStorage.getItem('user');
-        console.log('Loaded user:', user);
         if (user) {
-          const { Id } = JSON.parse(user); 
-          console.log('Loaded userId:', Id);
+          const { Id } = JSON.parse(user);
           setUserId(Id);
-        } else {
-          console.error('User not found in AsyncStorage');
         }
       } catch (error) {
         console.error('Failed to load user data:', error);
       }
     };
-
     loadUserData();
   }, []);
 
+  useEffect(() => {
+    if (!userId) return;
 
-  
-  const handleSearch = (text) => {
+    const checkNotifications = async () => {
+      try {
+        await getFeedbacks(userId);
+      } catch (error) {
+        console.error('Failed to check notifications:', error);
+      }
+    };
+
+    checkNotifications();
+    const interval = setInterval(checkNotifications, 300000);
+    return () => clearInterval(interval);
+  }, [userId]);
+
+  useEffect(() => {
+    if (feedbacksData?.data) {
+      const unreadNotifications = feedbacksData.data.filter(feedback => 
+        feedback.FeedbackStatus === 2
+      );
+      
+      setFeedbacks(feedbacksData.data);
+      setNotifications(unreadNotifications);
+      setUnreadCount(unreadNotifications.length);
+    }
+  }, [feedbacksData]);
+
+  const handleSearch = useCallback((text) => {
     handleSearchWord(text);
     setShowDropdown(true);
-  };
+  }, [handleSearchWord]);
 
   const handleChangeText = (text) => {
     setKeyword(text);
@@ -100,6 +127,32 @@ const Home = () => {
     }
   }, [mostFavoritedWords, handleToggleFavoriteWord, userId]);
   
+  const renderFeedbackItem = useCallback(({ item }) => (
+    <TouchableOpacity 
+      style={styles.feedbackItem}
+      onPress={() => handleNotificationItemPress(item)}
+    >
+      <View style={styles.feedbackContent}>
+        <Text style={styles.feedbackTime}>
+          {new Date(item.FeedbackCreatedAt).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          })}
+          {' '}
+          {new Date(item.FeedbackCreatedAt).toLocaleDateString('vi-VN')}
+        </Text>
+        <Text style={styles.feedbackSender}>[TB] {item.FeedbackTitle || 'Thông báo'}</Text>
+        <Text style={styles.feedbackMessage}>{item.FeedbackText}</Text>
+      </View>
+    </TouchableOpacity>
+  ), []);
+
+  const handleNotificationItemPress = useCallback((feedback) => {
+    setShowNotificationModal(false);
+    navigation.navigate('Feedback', { selectedFeedbackId: feedback.FeedbackId });
+  }, [navigation]);
+
   const renderItem = ({ item }) => (
     <View style={styles.transparentBox}>
       <View style={styles.wordContainer}>
@@ -137,8 +190,9 @@ const Home = () => {
             <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
           </View>
       </View>
-      <Text style={styles.definitionText}>{item.Definition}</Text>
-  
+      <ScrollView style={styles.definitionScrollView}>
+        <Text style={styles.definitionText}>{item.Definition}</Text>
+      </ScrollView>
       <View style={styles.divider} />
   
       <View style={styles.footer}>
@@ -215,12 +269,23 @@ const Home = () => {
     return () => clearInterval(intervalId);
   }, []);
 
+  const handleNotificationPress = () => {
+    setShowNotificationModal(true);
+  };
+
   return (
     <TouchableWithoutFeedback onPress={handlePressOutside}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.languageText}>EasyEnglish</Text>
-          <Icon name="notifications" size={24} color="gray" style={styles.bellIcon} />
+          <TouchableOpacity onPress={handleNotificationPress} style={styles.notificationContainer}>
+            <Icon name="notifications" size={24} color="gray" style={styles.bellIcon} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
         <View style={styles.header2}>
           <View style={styles.headerContent}>
@@ -361,9 +426,39 @@ const Home = () => {
           </View>
         )}
         </View>
+        <Modal
+          visible={showNotificationModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowNotificationModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Thông báo</Text>
+              
+              <FlatList
+                data={(feedbacksData?.data || []).filter(item => item.FeedbackStatus === 2)}
+                renderItem={renderFeedbackItem}
+                keyExtractor={(item, index) => `${item.FeedbackId}_${index}`}
+                style={styles.feedbackList}
+                ListEmptyComponent={
+                  <Text style={styles.emptyText}>Không có thông báo mới</Text>
+                }
+              />
+
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowNotificationModal(false)}
+              >
+                <Text style={styles.closeButtonText}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </TouchableWithoutFeedback>
   );
 };
+
 
 export default Home;

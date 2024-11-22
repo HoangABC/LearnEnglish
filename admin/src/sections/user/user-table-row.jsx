@@ -10,6 +10,7 @@ import Popover from '@mui/material/Popover';
 import MenuItem from '@mui/material/MenuItem';
 import Label from '../../components/label';
 import Iconify from '../../components/iconify';
+import { api } from '../../apis/api';
 
 // Helper function to format date
 const formatDate = (date) => {
@@ -21,6 +22,7 @@ const formatDate = (date) => {
 
 export default function UserTableRow({
   selected,
+  Id,
   Name,
   Username,
   Email,
@@ -30,6 +32,7 @@ export default function UserTableRow({
   UpdatedAt,
   Status,
   handleClick,
+  userType,
 }) {
   const [open, setOpen] = useState(null);
 
@@ -37,8 +40,18 @@ export default function UserTableRow({
     setOpen(event.currentTarget);
   };
 
-  const handleCloseMenu = () => {
+  const handleCloseMenu = async () => {
     setOpen(null);
+    try {
+      // If user1 (active), set to inactive (0)
+      // If user2 (inactive), set to active (1)
+      const newStatus = userType === 'user1' ? 0 : 1;
+      await api.updateUserStatus(Id, newStatus);
+      // Reload the page to reflect changes
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to update user status:', error);
+    }
   };
 
   return (
@@ -81,12 +94,15 @@ export default function UserTableRow({
           <Popover
             open={Boolean(open)}
             anchorEl={open}
-            onClose={handleCloseMenu}
+            onClose={() => setOpen(null)}
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <MenuItem onClick={handleCloseMenu}>Edit</MenuItem>
-            <MenuItem onClick={handleCloseMenu}>Delete</MenuItem>
+            {userType === 'user1' ? (
+              <MenuItem onClick={handleCloseMenu}>Inactive</MenuItem>
+            ) : (
+              <MenuItem onClick={handleCloseMenu}>Active</MenuItem>
+            )}
           </Popover>
         </TableCell>
       </TableRow>
@@ -105,4 +121,6 @@ UserTableRow.propTypes = {
   Status: PropTypes.string.isRequired,
   selected: PropTypes.bool.isRequired,
   handleClick: PropTypes.func.isRequired,
+  userType: PropTypes.oneOf(['user1', 'user2']).isRequired,
+  Id: PropTypes.number.isRequired,
 };

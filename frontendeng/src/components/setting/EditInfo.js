@@ -14,8 +14,8 @@ const EditInfo = () => {
   const [userDetails, setUserDetails] = useState({});
   const [loading, setLoading] = useState(true);
   const [isEditable, setIsEditable] = useState(false);  
-  const [newName, setNewName] = useState('');  // State to store the updated name
-  const { updateName, status, error } = useUpdateUserName();  // Use the custom hook
+  const [newName, setNewName] = useState('');  
+  const { updateName, status, error } = useUpdateUserName();  
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -37,7 +37,7 @@ const EditInfo = () => {
 
   useEffect(() => {
     if (status === 'succeeded') {
-      setIsEditable(false);  // Disable editing after a successful update
+      setIsEditable(false); 
     }
   }, [status]);
 
@@ -83,50 +83,72 @@ const EditInfo = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.userInfo}>
-          {userDetails.avatarUrl ? (
-            <Image source={{ uri: userDetails.avatarUrl }} style={styles.userImage} />
-          ) : (
-            <Image source={require('../../assets/images/EE.png')} style={styles.userImage} />
-          )}
+      <View style={styles.headerBackground}>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../../assets/images/EE.png')} 
+            style={styles.logo}
+          />
         </View>
       </View>
-      <ScrollView style={styles.menuContainer}>
-        <Text style={styles.contactHeader}>Họ và tên</Text>
-        <View style={styles.ItemEdit}>
-          <View style={[styles.menuItem, { backgroundColor: isEditable ? '#fff' : '#d0d3d4' }, { flex: 10 }]}>
-            <MaterialCommunityIcons name="account-edit" size={29} />
-            <TextInput
-              style={styles.menuItemText}
-              editable={isEditable}
-              value={newName}  
-              onChangeText={setNewName}  
+
+      <View style={styles.formContainer}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Họ và tên</Text>
+          <View style={[
+            styles.inputWrapper,
+            isEditable && styles.inputWrapperEditable
+          ]}>
+            <MaterialCommunityIcons 
+              name="account" 
+              size={20} 
+              color={isEditable ? "#2196F3" : "#666"} 
+              style={styles.inputIcon} 
             />
+            <TextInput
+              style={[
+                styles.input,
+                isEditable && styles.inputEditable
+              ]}
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="Nhập họ và tên"
+              editable={isEditable}
+            />
+            <TouchableOpacity onPress={() => setIsEditable(!isEditable)}>
+              <MaterialCommunityIcons 
+                name={isEditable ? "check" : "pencil"} 
+                size={20} 
+                color="#2196F3" 
+              />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={{ position: 'absolute', right: 10, top: '45%', transform: [{ translateY: -15 }] }}
-            onPress={() => setIsEditable(!isEditable)} 
-          >
-            <FontAwesome name="edit" size={29} />
-          </TouchableOpacity>
         </View>
-        <Text style={styles.contactHeader}>Email</Text>
-        <View style={styles.menuItem}>
-          <MaterialCommunityIcons name="email-outline" size={29} />
-          <Text style={styles.menuItemText}>{userDetails.Email || userDetails.email || 'Guest'}</Text>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="email" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={styles.inputText}>{userDetails.Email || userDetails.email || 'Guest'}</Text>
+          </View>
         </View>
-        <Text style={styles.contactHeader}>Trình độ</Text>
-        <View style={styles.menuItem}>
-          <Entypo name="gauge" size={29} />
-          <Text style={styles.menuItemText}>{levelDetails.name}</Text>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Trình độ</Text>
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="school" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={styles.inputText}>{levelDetails.name}</Text>
+          </View>
         </View>
-      </ScrollView>
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.saveButton} 
+        onPress={handleSave}
+        disabled={!isEditable}
+      >
         <Text style={styles.saveButtonText}>Lưu thông tin</Text>
       </TouchableOpacity>
-      {status === 'loading' && <Text>Đang cập nhật...</Text>}
-      {status === 'failed' && <Text style={{ color: 'red' }}>{error}</Text>}
     </SafeAreaView>
   );
 };
@@ -134,64 +156,110 @@ const EditInfo = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F7FA',
   },
-  header: {
-    height: 200,
+  headerBackground: {
+    height: 120,
+    backgroundColor: '#2196F3',
+    width: '100%',
+    alignItems: 'center',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  logoContainer: {
+    position: 'absolute',
+    bottom: -40,
+    backgroundColor: '#fff',
+    width: 90,
+    height: 90,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 40,
+    borderRadius: 45,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  userInfo: {
-    alignItems: 'center',
+  logo: {
+    width: 80,
+    height: 80,
+    resizeMode: 'contain',
+    borderRadius: 40,
   },
-  userImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 50,
-  },
-  menuContainer: {
+  formContainer: {
     flex: 1,
-    padding: 20,
+    backgroundColor: 'transparent',
+    paddingTop: 70,
+    paddingHorizontal: 24,
+    position: 'relative',
   },
-  menuItem: {
+  inputGroup: {
+    marginBottom: 28,
+  },
+  label: {
+    fontSize: 15,
+    color: '#4A5568',
+    marginBottom: 8,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,        
-    borderBottomColor: '#ddd',   
-    borderRadius: 10,             
-    backgroundColor: '#f9f9f9',  
-    marginBottom: 10,            
-    borderWidth: 1,               
-    borderColor: 'black',    
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  menuItemText: {
-    fontSize: 20,
-    marginLeft: 10,
-    flex: 1, 
-    color: 'black',
+  inputWrapperEditable: {
+    backgroundColor: '#fff',
+    borderColor: '#2196F3',
+    shadowColor: '#2196F3',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  contactHeader: {
-    fontSize: 18,
-    fontWeight: '900',
-    marginVertical: 10,
-    backgroundColor: '#DDDDDD',
-    padding: 10,
-    color: 'black',
+  inputIcon: {
+    marginRight: 12,
+    fontSize: 24,
+  },
+  input: {
+    flex: 1,
+    fontSize: 17,
+    color: '#333',
+    paddingVertical: 0,
+  },
+  inputEditable: {
+    color: '#2196F3',
+    fontWeight: '500',
+  },
+  inputText: {
+    flex: 1,
+    fontSize: 17,
+    color: '#333',
   },
   saveButton: {
-    backgroundColor: '#007BFF', 
-    paddingVertical: 15,
+    backgroundColor: '#2196F3',
     marginHorizontal: 20,
-    borderRadius: 10,
+    paddingVertical: 18,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 20,
+    marginTop: 'auto',
+    marginBottom: 25,
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   loader: {
     flex: 1,

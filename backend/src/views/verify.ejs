@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Xác thực Email</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .success {
+            color: #4CAF50;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+        .error {
+            color: #f44336;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+        small {
+            display: block;
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Xác thực Email</h2>
+        <% if (success) { %>
+            <p class="success">
+                <%= message %>
+                <br>
+                <small>Bạn có thể đóng tab này và đăng nhập vào ứng dụng.</small>
+            </p>
+        <% } else { %>
+            <p class="error"><%= message %></p>
+        <% } %>
+    </div>
+</body>
+</html> 

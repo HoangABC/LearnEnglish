@@ -112,68 +112,71 @@ const Login = () => {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Image source={require('../assets/images/logo.png')} style={styles.logo} />
       <View style={styles.loginCard}>
         <View style={styles.loginBox}>
           <Text style={styles.title}>Đăng Nhập</Text>
 
-          {/* TextInput with Icon */}
           <View style={styles.inputContainer}>
-            <Feather name="user" size={20} color="#000" style={styles.icon} />
+            <Feather name="user" size={20} color="#666" style={styles.icon} />
             <TextInput
               style={styles.input}
               placeholder="Email hoặc Username"
-              placeholderTextColor="#666"
+              placeholderTextColor="#999"
               value={emailOrUsername}
               onChangeText={setEmailOrUsername}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Feather name="lock" size={20} color="#000" style={styles.icon} />
-            
+            <Feather name="lock" size={20} color="#666" style={styles.icon} />
             <TextInput
               style={styles.input}
               placeholder="Mật khẩu"
               secureTextEntry={secureText}
-              placeholderTextColor="#666"
+              placeholderTextColor="#999"
               value={password}
               onChangeText={setPassword}
             />
-            
-            <Feather
-              name={secureText ? 'eye-off' : 'eye'} 
-              size={20}
-              color="#000"
-              style={styles.eyeIcon}
-              onPress={() => setSecureText(!secureText)} 
-            />
+            <TouchableOpacity onPress={() => setSecureText(!secureText)} style={styles.eyeIconContainer}>
+              <Feather name={secureText ? 'eye-off' : 'eye'} size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
+          {loading ? (
+            <ActivityIndicator size="large" color="#007bff" style={styles.loader} />
+          ) : (
+            <>
+              <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
+                <Text style={styles.buttonText}>Đăng nhập</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.dividerContainer}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerText}>HOẶC</Text>
+                <View style={styles.divider} />
+              </View>
+
+              <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
+                <View style={styles.googleButtonContent}>
+                  <Image 
+                    source={require('../assets/icons/gg-icon.png')} 
+                    style={styles.googleIcon} 
+                  />
+                  <Text style={styles.googleButtonText}>Đăng nhập bằng Google</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
-      <View>
-        {loading ? (
-          <ActivityIndicator size="large" color="#007bff" />
-        ) : (
-          <>
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-              <Text style={styles.buttonText}>Đăng nhập</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={handleGoogleLogin}>
-              <Text style={styles.buttonText}>Đăng nhập bằng Google</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
+
       <View style={styles.registerContainer}>
-        <View style={styles.registerRow}>
-          <Text style={styles.registerText}>Bạn chưa có tài khoản?{' '}</Text>
-          <TouchableOpacity onPress={navigateToRegister}>
-            <Text style={styles.registerLink}>Đăng ký</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.registerText}>Bạn chưa có tài khoản? </Text>
+        <TouchableOpacity onPress={navigateToRegister}>
+          <Text style={styles.registerLink}>Đăng ký ngay</Text>
+        </TouchableOpacity>
       </View>
       <FlashMessage position="top" />
     </KeyboardAvoidingView>
@@ -182,96 +185,130 @@ const Login = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex:1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    flex: 1,
+    backgroundColor: '#ffffff',
     paddingHorizontal: 20,
-    paddingBottom: 20,
   },
   logo: {
-    width: 250,
-    height: 250,
-    marginBottom: 5,
+    width: 180,
+    height: 180,
+    alignSelf: 'center',
+    marginTop: 60,
+    marginBottom: 40,
     resizeMode: 'contain',
   },
   loginCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
+    borderRadius: 15,
     padding: 20,
-    borderRadius: 10,
     width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-    marginBottom: 20,
-  },
-  loginBox: {
-    marginBottom: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#333',
+    marginBottom: 30,
     textAlign: 'center',
   },
- inputContainer: {
+  inputContainer: {
+    marginBottom: 20,
     position: 'relative',
-    width: '100%',
-    marginBottom: 15,
   },
   input: {
-    height: 45,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingLeft: 40,
-    paddingRight: 40,
-    backgroundColor: '#fff',
+    height: 50,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    paddingHorizontal: 45,
+    fontSize: 16,
+    color: '#333',
   },
   icon: {
     position: 'absolute',
-    left: 10,
-    top: '50%',
-    transform: [{ translateY: -10 }],
+    left: 15,
+    top: 15,
     zIndex: 1,
   },
-  eyeIcon: {
+  eyeIconContainer: {
     position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: [{ translateY: -10 }],
+    right: 15,
+    top: 15,
     zIndex: 1,
   },
-  button: {
+  primaryButton: {
     backgroundColor: '#007bff',
-    padding: 15,
-    borderRadius: 5,
+    height: 50,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginTop: 10,
+    shadowColor: '#007bff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  registerContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  registerRow: {
+  dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: '#666',
+    fontSize: 14,
+  },
+  googleButton: {
+    backgroundColor: '#fff',
+    height: 50,
+    borderRadius: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  googleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  googleIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 10,
+  },
+  googleButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+    width: '60%',
+  },
+  registerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
   },
   registerText: {
     fontSize: 16,
+    color: '#666',
   },
   registerLink: {
+    fontSize: 16,
     color: '#007bff',
     fontWeight: 'bold',
-    fontSize: 16,
+  },
+  loader: {
+    marginVertical: 20,
   },
 });
 

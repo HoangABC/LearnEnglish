@@ -4,6 +4,7 @@ import wordReducer from './wordSlice';
 import testReducer from './testSlice';
 import gameReducer from './gameSlice'; 
 import listenReducer from './listenSlice'; 
+import feedbackReducer from './feedbackSlice';
 
 const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ const store = configureStore({
     tests: testReducer,
     games: gameReducer,
     listen: listenReducer, 
+    feedback: feedbackReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -77,9 +77,8 @@ const getRandomWordForGuess = async (req, res) => {
   
 const submitWordGuessAnswer = async (req, res) => {
     try {
-        const { userId, wordId, answer } = req.body; // Nhận thông tin từ body
+        const { userId, wordId, answer } = req.body; 
 
-        // Ghi lại thông tin nhận được
         console.log('Received data:', { userId, wordId, answer });
 
         // Kiểm tra thông tin đầu vào

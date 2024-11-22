@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://192.168.1.100:3000'; 
+const BASE_URL = 'https://983e-171-239-30-182.ngrok-free.app'; 
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -24,4 +24,9 @@ export const api = {
   getFeedbacksByUserId: (userId) => apiClient.get(`/ad/feedbacks/user/${userId}`),
   respondToFeedback: (feedbackId, responseText) => 
     apiClient.post('/ad/feedbacks/respond', { feedbackId, responseText }),
+  getLearningStats: () => apiClient.get('/statistics/learning-stats'),
+  getLevelDistribution: () => apiClient.get('/statistics/level-distribution'),
+  updateUserStatus: (userId, status) => apiClient.put('/account/update-user-status', { userId, status }),
+  getUsersByStatus1: () => apiClient.get('/account/users/status1'),
+  getUsersByStatus0: () => apiClient.get('/account/users/status0'),
 };

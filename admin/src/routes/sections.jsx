@@ -11,6 +11,7 @@ export const LoginPage = lazy(() => import('../pages/login'));
 export const ProductsPage = lazy(() => import('../pages/products'));
 export const FeedbackPage = lazy(() => import('../pages/feedback'));
 export const Page404 = lazy(() => import('../pages/page-not-found'));
+export const AuthenticateView = lazy(() => import('../pages/authenticate'));
  
 
 export default function Router() {
@@ -26,26 +27,37 @@ export default function Router() {
 
   const routes = useRoutes([
     {
-      path: 'login',
-      element: !isAuthenticated ? <LoginPage /> : <Navigate to="/" />,
+      path: 'verify/*',
+      element: <Suspense fallback={<div>Loading...</div>}>
+        <AuthenticateView />
+      </Suspense>,
     },
     {
-      element: (isAuthenticated || sessionStorage.getItem('user')) ? (
-        <DashboardLayout>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Outlet />
-          </Suspense>
-        </DashboardLayout>
-      ) : (
-        <Navigate to="/login" />
-      ),
+      path: '*',
       children: [
-        { element: <IndexPage />, index: true },
-        { path: 'user', element: <UserPage /> },
-        { path: 'word', element: <WordPage /> },
-        { path: 'feedback', element: <FeedbackPage /> },
-        { path: 'products', element: <ProductsPage /> },
-        { path: 'blog', element: <BlogPage /> },
+        {
+          path: 'login',
+          element: !isAuthenticated ? <LoginPage /> : <Navigate to="/" />,
+        },
+        {
+          element: (isAuthenticated || sessionStorage.getItem('user')) ? (
+            <DashboardLayout>
+              <Suspense fallback={<div>Loading...</div>}>
+                <Outlet />
+              </Suspense>
+            </DashboardLayout>
+          ) : (
+            <Navigate to="/login" />
+          ),
+          children: [
+            { element: <IndexPage />, index: true },
+            { path: 'user', element: <UserPage /> },
+            { path: 'word', element: <WordPage /> },
+            { path: 'feedback', element: <FeedbackPage /> },
+            { path: 'products', element: <ProductsPage /> },
+            { path: 'blog', element: <BlogPage /> },
+          ],
+        },
       ],
     },
     {

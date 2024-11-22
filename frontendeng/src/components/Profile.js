@@ -47,7 +47,7 @@ const Profile = () => {
         await AsyncStorage.removeItem(`wordsArray_userId_${userId}`);
       }
 
-      setUserDetails({}); // Clear user data
+      setUserDetails({});
       await GoogleSignin.signOut();
 
       dispatch(logoutAction());
@@ -107,62 +107,63 @@ const Profile = () => {
       console.error('Error checking user login method:', error);
     }
   };
-  
+
+  const handleNavigateToFeedback = () => {
+    navigation.navigate('Feedback');
+  };
   
   const levelDetails = getLevelName(userDetails.LevelId); 
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.userInfo}>
-          {userDetails.image ? (
-            <Image source={{ uri: userDetails.image }} style={styles.userImage} />
-          ) : (
-            <Image source={require('../assets/images/EE.png')} style={styles.userImage} />
-          )}
-          <View style={styles.userTextInfo}>
-            <View style={styles.userTextItem}>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
+          <View style={styles.userInfo}>
+            {userDetails.image ? (
+              <Image source={{ uri: userDetails.image }} style={styles.userImage} />
+            ) : (
+              <Image source={require('../assets/images/EE.png')} style={styles.userImage} />
+            )}
             <Text style={styles.userName}>
-              {userDetails.Name || userDetails.name || 'Guest'}
-            </Text>
-            <Text style={styles.iconItem}> 
+              {userDetails.Name || userDetails.name || 'Guest'} 
+              <Text style={styles.iconItem}>
                 {levelDetails.icon === 'leaf' && <FontAwesome5 name={levelDetails.icon} size={20} color={levelDetails.color} />}
                 {levelDetails.icon === 'font' && <FontAwesome5 name={levelDetails.icon} size={20} color={levelDetails.color} />}
                 {levelDetails.icon === 'tree' && <Entypo name={levelDetails.icon} size={20} color={levelDetails.color} />}
                 {levelDetails.icon === 'apple-alt' && <FontAwesome5 name={levelDetails.icon} size={20} color={levelDetails.color} />}
-            </Text>
-            </View>
-            <View style={styles.levelContainer}>
-              <Text style={[styles.userDetails, { color: levelDetails.color }]}>
-              Cấp độ: {levelDetails.name}
               </Text>
-            </View>
+            </Text>
+            <Text style={[styles.userLevel, { color: levelDetails.color }]}>
+              {'Cấp độ: ' + levelDetails.name}
+            </Text>
           </View>
         </View>
-      </View>
-      <ScrollView style={styles.menuContainer}>
-        <Text style={styles.contactHeader}>Thông tin</Text>
-        <View style={styles.menuItem}>
-          <MaterialCommunityIcons name="account-edit" size={24} />
-          <Text style={styles.menuItemText} onPress={handleNavigateToEditInfo}>Chỉnh sửa tài khoản</Text>
-        </View>
-        <View style={styles.menuItem}>
-          <TouchableOpacity style={styles.menuItemAction} onPress={handleNavigateToEditPass}>
-            <MaterialCommunityIcons name="lock-reset"  size={24} />
+
+        <View style={styles.menuContainer}>
+          <Text style={styles.sectionHeader}>Thông tin</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleNavigateToEditInfo}>
+            <MaterialCommunityIcons name="account-edit" size={24} color="#666" />
+            <Text style={styles.menuItemText}>Chỉnh sửa tài khoản</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.menuItem} onPress={handleNavigateToEditPass}>
+            <MaterialCommunityIcons name="lock-reset" size={24} color="#666" />
             <Text style={styles.menuItemText}>Đổi mật khẩu</Text>
           </TouchableOpacity>
-        </View>
-        <View style={styles.menuItem}>
-          <TouchableOpacity style={styles.menuItemAction} onPress={handleLogout}>
-            <MaterialCommunityIcons name="logout" size={24} />
-            <Text style={styles.menuItemText}>Đăng xuất</Text>
+
+          <Text style={styles.sectionHeader}>Hỗ trợ</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleNavigateToFeedback}>
+            <MaterialCommunityIcons name="email-edit-outline" size={24} color="#666" />
+            <Text style={styles.menuItemText}>Báo lỗi hoặc góp ý</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.contactHeader}>Hỗ trợ</Text>
-        <View style={styles.contactItem}>
-          <MaterialCommunityIcons name="email-edit-outline" size={24} />
-          <Text style={styles.contactItemText}>Báo lỗi hoặc góp ý</Text>
-        </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <MaterialCommunityIcons name="logout" size={24} color="#fff" />
+          <Text style={styles.logoutText}>Đăng xuất</Text>
+        </TouchableOpacity>
+
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -171,89 +172,92 @@ const Profile = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
-    height: 200,
-    justifyContent: 'center',
+    paddingVertical: 30,
     alignItems: 'center',
-    paddingTop: 40,
+    backgroundColor: '#fff',
   },
   userInfo: {
     alignItems: 'center',
-    
-  },
-  userTextItem:{
-    flexDirection:'row',
     width: '100%',
-  },
-  iconItem:{
-    marginLeft:'1%'
   },
   userImage: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 50,
-  },
-  userTextInfo: {
-    alignItems: 'center',
-    marginTop: 10,
-    width: '100%',
+    marginBottom: 15,
   },
   userName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-  },
-  userDetails: {
-    fontSize: 19,
-    textAlign: 'center',
+    marginBottom: 5,
     width: '100%',
+    textAlign: 'center',
   },
-  levelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  userLevel: {
+    fontSize: 20,
+    opacity: 0.8,
+    width: '100%',
+    textAlign: 'center',
+    marginTop: 5,
+    color: '#000',
+  },
+  iconItem: {
+    marginLeft: 8,
   },
   menuContainer: {
     flex: 1,
-    padding: 20,
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '500',
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
+    padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#f0f0f0',
   },
   menuItemText: {
     fontSize: 16,
     marginLeft: 15,
+    color: '#333',
     width: '100%',
-  },
-  menuItemAction: {
-    flexDirection: 'row',
-  },
-  contactHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 10,
-    backgroundColor: '#DDDDDD',
-    padding: 10,
-    color: 'black',
-  },
-  contactItem: {
-    flexDirection: 'row',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  contactItemText: {
-    fontSize: 16,
-    marginLeft: 15,
   },
   loader: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF3B30',
+    padding: 15,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 20,
+    borderRadius: 10,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  bottomPadding: {
+    height: 60, // Adjust this value based on your navigation bar height
+  }
 });
 
 export default Profile;

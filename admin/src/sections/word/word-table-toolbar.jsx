@@ -13,6 +13,7 @@ import {
   Button
 } from '@mui/material';
 import Iconify from '../../components/iconify';
+import { alpha } from '@mui/material/styles';
 
 export default function WordTableToolbar({
   numSelected,
@@ -25,76 +26,85 @@ export default function WordTableToolbar({
   return (
     <Toolbar
       sx={{
-        pl: { sm: 2 },
+        pl: { sm: 3 },
         pr: { xs: 1, sm: 1 },
+        bgcolor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        minHeight: 96,
         ...(numSelected > 0 && {
-          bgcolor: (theme) => theme.palette.action.activatedOpacity,
+          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
         }),
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-      {/* Select Dropdown for Tabs */}
-      <FormControl sx={{ minWidth: 120, mr: 2 }}>
-        <InputLabel id="tab-select-label">Select</InputLabel>
-        <Select
-          labelId="tab-select-label"
-          value={tabValue}
-          onChange={(event) => onTabChange(event, event.target.value)}
-          displayEmpty
-          inputProps={{ 'aria-label': 'Select' }}
-        >
-          <MenuItem value={0}>Word 1</MenuItem>
-          <MenuItem value={1}>Word 2</MenuItem>
-        </Select>
-      </FormControl>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '24px',
+        flexWrap: 'wrap',
+        flex: 1,
+        padding: '16px 0'
+      }}>
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel id="tab-select-label">Select Status</InputLabel>
+          <Select
+            labelId="tab-select-label"
+            value={tabValue}
+            onChange={(event) => onTabChange(event, event.target.value)}
+            sx={{ 
+              height: '40px',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(145, 158, 171, 0.32)'
+              }
+            }}
+          >
+            <MenuItem value={0}>Active Words</MenuItem>
+            <MenuItem value={1}>Inactive Words</MenuItem>
+          </Select>
+        </FormControl>
 
-      {/* Conditional rendering based on numSelected */}
-      {numSelected > 0 ? (
-        <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1" component="div">
-          {numSelected} selected
-        </Typography>
-      ) : (
         <OutlinedInput
-        value={filterName}
-        onChange={onFilterName}
-        placeholder="Search word..."
-        startAdornment={
-          <InputAdornment position="start">
-            <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-          </InputAdornment>
-        }
-        sx={{ 
-          width: 320, 
-          transition: (theme) => theme.transitions.create(['width'], { 
-            duration: theme.transitions.duration.shorter 
-          }) 
-        }}
-      />
-      )}
+          value={filterName}
+          onChange={onFilterName}
+          placeholder="Search word..."
+          startAdornment={
+            <InputAdornment position="start">
+              <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+            </InputAdornment>
+          }
+          sx={{ 
+            width: 280,
+            height: '40px',
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(145, 158, 171, 0.32)'
+            }
+          }}
+        />
 
-      {numSelected > 0 ? (
-        <Tooltip title="Delete">
-          <IconButton>
-            <Iconify icon="eva:trash-2-fill" />
-          </IconButton>
-        </Tooltip>
-      ) : (
-        <Tooltip title="Filter list">
-          <IconButton>
-            <Iconify icon="ic:round-filter-list" />
-          </IconButton>
-        </Tooltip>
-      )}
+        {numSelected > 0 ? (
+          <Tooltip title="Delete">
+            <IconButton>
+              <Iconify icon="eva:trash-2-fill" />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Tooltip title="Filter list">
+            <IconButton>
+              <Iconify icon="ic:round-filter-list" />
+            </IconButton>
+          </Tooltip>
+        )}
       </div>
       <Button
         variant="contained"
         startIcon={<Iconify icon="eva:plus-fill" />}
         onClick={onOpenAddModal}
         sx={{
-          position: 'absolute',
-          right: 16,
-          top: '50%',
-          transform: 'translateY(-50%)'
+          position: { xs: 'static', sm: 'absolute' },
+          right: { sm: 16 },
+          top: { sm: '50%' },
+          transform: { sm: 'translateY(-50%)' },
+          alignSelf: { xs: 'flex-end', sm: 'auto' },
         }}
       >
         Add Word

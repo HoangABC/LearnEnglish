@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { Appbar } from 'react-native-paper';
 import { useNavigation, useRoute  } from '@react-navigation/native';
 import ConfettiCannon from 'react-native-confetti-cannon';
+import wordList from '../../data/wordList.json';
 
 const WordGuess = () => {
     const [userInput, setUserInput] = useState(Array.from({ length: 6 }, () => Array(5).fill('')));
@@ -28,6 +29,7 @@ const WordGuess = () => {
     const route = useRoute();
     const { selectedLevel } = route.params;
     const [isResetting, setIsResetting] = useState(false);
+    const [shouldFetchWord, setShouldFetchWord] = useState(false);
 
     useEffect(() => {
         fetchUserId();
@@ -56,12 +58,60 @@ const WordGuess = () => {
     
     
     useEffect(() => {
-        if (wordForGuess && wordForGuess.original) {
-            setWordId(wordForGuess.wordId);
-            setCorrectWord(wordForGuess.original.toUpperCase()); 
-            console.log('Fetched word for guessing:', wordForGuess); 
+        if (shouldFetchWord && userId) {
+            fetchWordGuess(userId);
+            setShouldFetchWord(false);
         }
-        
+    }, [shouldFetchWord, userId, fetchWordGuess]);
+
+    useEffect(() => {
+        const initializeGame = async () => {
+            if (wordForGuess && wordForGuess.original) {
+                console.log('Fetched word for guessing:', wordForGuess);
+                setWordId(wordForGuess.wordId);
+                setCorrectWord(wordForGuess.original.toUpperCase());
+                
+                // Lấy level từ AsyncStorage và tạo màu ngay lập tức
+                try {
+                    const storedLevel = await AsyncStorage.getItem('currentLevel');
+                    const level = storedLevel || 'normal';
+                    console.log('Current level:', level); // Log để debug
+
+                    const incorrectLetterCount = level === 'easy' ? 3 : 
+                                               level === 'normal' ? 2 : 0;
+                    
+                    console.log('Incorrect letter count:', incorrectLetterCount); // Log để debug
+                    
+                    if (incorrectLetterCount > 0) {
+                        const newWord = wordForGuess.original.toUpperCase();
+                        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+                        const correctLetters = newWord.split('');
+                        const incorrectLetters = letters.filter(letter => !correctLetters.includes(letter));
+                        
+                        const selectedIncorrectLetters = [];
+                        while (selectedIncorrectLetters.length < incorrectLetterCount) {
+                            const randomIndex = Math.floor(Math.random() * incorrectLetters.length);
+                            const randomLetter = incorrectLetters[randomIndex];
+                            if (!selectedIncorrectLetters.includes(randomLetter)) {
+                                selectedIncorrectLetters.push(randomLetter);
+                            }
+                        }
+
+                        console.log('Selected incorrect letters:', selectedIncorrectLetters); // Log để debug
+
+                        const newKeyboardColors = {};
+                        selectedIncorrectLetters.forEach((char) => {
+                            newKeyboardColors[char] = { backgroundColor: '#FF0000', textColor: '#FFFFFF' };
+                        });
+                        setKeyboardColors(newKeyboardColors);
+                    }
+                } catch (error) {
+                    console.error("Error getting level from AsyncStorage:", error);
+                }
+            }
+        };
+
+        initializeGame();
     }, [wordForGuess]);
 
     useEffect(() => {
@@ -79,17 +129,15 @@ const WordGuess = () => {
         } else if (level === 'normal') {
             incorrectLetterCount = 2;
         } else if (level === 'hard') {
-            return; // Hard thì không cần đổi màu các ký tự không có trong correctWord
+            return; // Hard level không cần đổi màu
         }
     
-        // Chỉ gọi getRandomIncorrectLetters nếu correctWord đã có
         if (correctWord && correctWord.length > 0) {
+            console.log('Setting colors for level:', level, 'with count:', incorrectLetterCount);
             const incorrectLetters = getRandomIncorrectLetters(incorrectLetterCount);
-    
-            // Đổi màu bàn phím cho các ký tự không có trong correctWord
-            const newKeyboardColors = { ...keyboardColors };
+            const newKeyboardColors = {};
             incorrectLetters.forEach((char) => {
-                newKeyboardColors[char] = { backgroundColor: '#FF0000', textColor: '#FFFFFF' }; // Màu nền đỏ
+                newKeyboardColors[char] = { backgroundColor: '#FF0000', textColor: '#FFFFFF' };
             });
             setKeyboardColors(newKeyboardColors);
         }
@@ -162,15 +210,11 @@ const handleRemovePress = () => {
 
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-    const checkWordValidity = async (word) => {
-        try {
-            const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-            const data = await response.json();
-            return data.title !== "No Definitions Found";
-        } catch (error) {
-            console.error("Error checking word validity:", error);
-            return false;
-        }
+    const checkWordValidity = (word) => {
+        // Convert word to lowercase to match dictionary format
+        const lowercaseWord = word.toLowerCase();
+        // Check if the word exists in our word list
+        return wordList.includes(lowercaseWord);
     };
 
     const checkIfAllRowsIncorrect = () => {
@@ -178,44 +222,40 @@ const handleRemovePress = () => {
         return cellColors.every((row) => row.every((color) => color !== '#008000'));
     };
     
-    const handleCheckManual = async () => {
+    const handleCheckManual = () => {
         const answer = userInput[currentRow].join('');
     
-        // Kiểm tra nếu đã nhập 6 dòng
-        if (currentRow === 5) { // Nếu là dòng thứ 6
+        if (currentRow === 5) {
             if (answer.length < 5 || gameOver) {
                 return;
             }
             
-            const isValid = await checkWordValidity(answer);
+            const isValid = checkWordValidity(answer);
             
-            // Nếu không hợp lệ, hiển thị modal
             if (!isValid) {
                 setIsValidWord(false);
-                setModalVisible(true); // Hiện modal thông báo không hợp lệ
+                setModalVisible(true);
                 return;
             }
-    
-            // Kiểm tra nếu có ô nào trong dòng thứ 6 không có màu xanh lá (#008000)
+
             const hasNonGreenCell = cellColors[currentRow].some((color) => color !== '#008000');
             if (hasNonGreenCell) {
-                setModalVisible(true); // Hiện modal nếu có ô không phải màu xanh lá
+                setModalVisible(true);
                 return;
             }
         } else {
-            // Kiểm tra cho các dòng khác
             if (answer.length < 5 || gameOver) {
                 return;
             }
-    
-            const isValid = await checkWordValidity(answer);
+
+            const isValid = checkWordValidity(answer);
             if (!isValid) {
                 setIsValidWord(false);
                 return;
             }
         }
-    
-        await validateAndSubmitGuess(answer);
+
+        validateAndSubmitGuess(answer);
     };
     
     
@@ -274,7 +314,7 @@ const handleRemovePress = () => {
                 }, 500); // Thời gian trễ cho ô nhập liệu
             });
     
-            // Sau khi ô nhập liệu đã được cập nhật, cập nhật màu cho bàn phím với thời gian trễ thêm 0.5 giây
+            // Sau khi ô nhập liệu đã ược cập nht, cập nhật màu cho bàn phím với thời gian trễ thêm 0.5 giây
             await new Promise((resolve) => {
                 setTimeout(() => {
                     setKeyboardColors((prev) => ({
@@ -297,7 +337,7 @@ const handleRemovePress = () => {
     
     const validateAndSubmitGuess = async (answer) => {
         try {
-            const isValid = await checkWordValidity(answer);
+            const isValid = checkWordValidity(answer);
             if (!isValid) {
                 setIsValidWord(false);
                 return;
@@ -342,12 +382,9 @@ const handleRemovePress = () => {
     };
     
     const handleNext = async () => {
-        // Bắt đầu reset màu
         setIsResetting(true);
         
-        // Xóa correctWord trước khi fetch từ mới
-        setCorrectWord('');
-    
+        // Reset states
         setUserInput(Array.from({ length: 6 }, () => Array(5).fill('')));
         setCellColors(Array.from({ length: 6 }, () => Array(5).fill('#FFFFFF')));
         setCurrentRow(0);
@@ -355,30 +392,57 @@ const handleRemovePress = () => {
         setLockedRows(Array(6).fill(false));
         setModalVisible(false);
         setShowConfetti(false);
-    
-        // Reset lại màu của bàn phím
-        setKeyboardColors({}); // Xóa hết màu hiện tại
-    
+        setCorrectWord('');
+        setKeyboardColors({});
+
+        // Fetch từ mới
         if (userId) {
             const fetchedWord = await fetchWordGuess(userId);
             if (fetchedWord && fetchedWord.original) {
                 setCorrectWord(fetchedWord.original.toUpperCase());
                 setWordId(fetchedWord.wordId);
-    
-                // Sau khi fetch từ mới, gọi hàm getRandomIncorrectLetters dựa trên từ mới
-                changeKeyboardColorsBasedOnLevel(selectedLevel); 
+                setIsResetting(false);
+                // Không cần setTimeout ở đây vì useEffect sẽ xử lý việc tạo màu
             }
         }
-    
-        // Sau khi reset xong, đặt lại trạng thái
-        setTimeout(() => {
-            setIsResetting(false);
-        }, 100); // Có thể đặt delay nhỏ nếu cần
     };
     
      
     const isCurrentRowValid = currentRow >= 0 && currentRow < userInput.length && userInput[currentRow].join('').length === 5;
 
+    // Thêm useEffect để xử lý cleanup khi unmount component
+    useEffect(() => {
+        return () => {
+            // Cleanup function - sẽ chạy khi component unmount
+            const removeStoredLevel = async () => {
+                try {
+                    await AsyncStorage.removeItem('currentLevel');
+                    console.log('Removed stored level');
+                } catch (error) {
+                    console.error("Error removing stored level:", error);
+                }
+            };
+            removeStoredLevel();
+        };
+    }, []);
+
+    // Sửa lại useEffect khi nhận selectedLevel từ route
+    useEffect(() => {
+        if (selectedLevel) {
+            const initializeLevel = async () => {
+                try {
+                    // Xóa level cũ (nếu có) trước khi lưu level mới
+                    await AsyncStorage.removeItem('currentLevel');
+                    // Lưu level mới
+                    await AsyncStorage.setItem('currentLevel', selectedLevel);
+                    console.log('Saved new level:', selectedLevel);
+                } catch (error) {
+                    console.error("Error handling level:", error);
+                }
+            };
+            initializeLevel();
+        }
+    }, [selectedLevel]);
 
     return (  
         <View style={styles.container}>

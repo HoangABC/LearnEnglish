@@ -16,6 +16,9 @@ import UserTableToolbar from '../user-table-toolbar';
 import TableEmptyRows from '../table-empty-rows';
 import TableNoData from '../table-no-data';
 import { emptyRows, applyFilter, getComparator } from '../utils';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Box from '@mui/material/Box';
 
 export default function UserPage() {
   const [page, setPage] = useState(0);
@@ -24,16 +27,19 @@ export default function UserPage() {
   const [orderBy, setOrderBy] = useState('Name');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
+  const [users1, setUsers1] = useState([]);
+  const [users2, setUsers2] = useState([]);
 
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const response = await api.getAllUser();
-        setUsers(response.data);
-        console.log(response.data);
+        const response1 = await api.getUsersByStatus1();
+        const response2 = await api.getUsersByStatus0();
+        setUsers1(response1.data);
+        setUsers2(response2.data);
       } catch (error) {
         console.error('Failed to fetch users:', error);
       } finally {
@@ -92,17 +98,41 @@ export default function UserPage() {
     setFilterName(event.target.value);
   };
 
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+    setPage(0);
+  };
+
+  const users = tabValue === 0 ? users1 : users2;
+
   const filteredUsers = applyFilter({ inputData: users, comparator: getComparator(order, orderBy), filterName });
 
   const isNotFound = !filteredUsers.length && !!filterName;
 
   return (
     <Container>
+      <Box sx={{ mb: 3 }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          sx={{
+            px: 2,
+            bgcolor: 'background.paper',
+            borderRadius: 1,
+          }}
+        >
+          <Tab value={0} label="User Active" />
+          <Tab value={1} label="User Banned" />
+        </Tabs>
+      </Box>
+
       <Card>
         <UserTableToolbar
           numSelected={selected.length}
           filterName={filterName}
           onFilterName={handleFilterByName}
+          tabValue={tabValue}
+          onTabChange={handleTabChange}
         />
 
         <Scrollbar>
@@ -143,6 +173,7 @@ export default function UserPage() {
                       return (
                         <UserTableRow
                           key={Id}
+                          Id={Id}
                           Name={Name}
                           Username={Username}
                           Email={Email}
@@ -153,6 +184,7 @@ export default function UserPage() {
                           Status={Status === 1 ? 'Active' : 'Banned'}
                           selected={isItemSelected}
                           handleClick={(event) => handleClick(event, Name)}
+                          userType={tabValue === 0 ? 'user1' : 'user2'}
                         />
                       );
                     })

@@ -51,56 +51,71 @@ const Register = () => {
           style={styles.logo}
         />
         <View style={styles.loginCard}>
-          <View style={styles.loginBox}>
-            <Text style={styles.title}>Đăng ký</Text>
+          <Text style={styles.title}>Đăng ký tài khoản</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Họ và tên</Text>
             <TextInput
               style={styles.input}
-              placeholder="Name"
-              placeholderTextColor="#666"
+              placeholder="Nhập họ và tên của bạn"
+              placeholderTextColor="#999"
               value={name}
               onChangeText={setName}
             />
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Tên đăng nhập</Text>
             <TextInput
               style={styles.input}
-              placeholder="Username"
-              placeholderTextColor="#666"
+              placeholder="Nhập tên đăng nhập"
+              placeholderTextColor="#999"
               value={username}
               onChangeText={setUsername}
             />
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#666"
+              placeholder="Nhập email"
+              placeholderTextColor="#999"
               value={email}
               onChangeText={setEmail}
             />
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Mật khẩu</Text>
             <TextInput
               style={styles.input}
-              placeholder="Mật khẩu"
+              placeholder="Nhập mật khẩu"
+              placeholderTextColor="#999"
               secureTextEntry
-              placeholderTextColor="#666"
               value={password}
               onChangeText={setPassword}
             />
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Nhập lại mật khẩu</Text>
             <TextInput
               style={styles.input}
               placeholder="Nhập lại mật khẩu"
+              placeholderTextColor="#999"
               secureTextEntry
-              placeholderTextColor="#666"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
           </View>
         </View>
-        <View style={styles.buttonContainer}>
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={handleRegister}
+          disabled={loading}
+        >
           {loading ? (
-            <ActivityIndicator size="large" color="#007bff" />
+            <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <TouchableOpacity style={styles.button} onPress={handleRegister}>
-              <Text style={styles.buttonText}>Đăng ký</Text>
-            </TouchableOpacity>
+            <Text style={styles.buttonText}>Đăng ký</Text>
           )}
-        </View>
+        </TouchableOpacity>
       </ScrollView>
       <FlashMessage position="top" />
     </KeyboardAvoidingView>
@@ -109,64 +124,78 @@ const Register = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f5f5f5',
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   scrollViewContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexGrow: 1,
     paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 20,
   },
   logo: {
-    width: 250,
-    height: 250,
-    marginBottom: 5,
+    width: 180,
+    height: 180,
+    alignSelf: 'center',
+    marginBottom: 30,
     resizeMode: 'contain',
   },
   loginCard: {
     backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 10,
+    borderRadius: 15,
+    padding: 20,
     width: '100%',
-    maxWidth: 400,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 5,
-    marginBottom: 20,
-  },
-  loginBox: {
     marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#333',
+    marginBottom: 25,
     textAlign: 'center',
   },
-  input: {
-    height: 45,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 5,
+  inputContainer: {
     marginBottom: 15,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
   },
-  buttonContainer: {
-    marginTop: 20,
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  input: {
+    height: 50,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e1e4e8',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: '#333',
   },
   button: {
     backgroundColor: '#007bff',
-    padding: 15,
-    borderRadius: 5,
+    height: 54,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginTop: 10,
+    shadowColor: '#007bff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });
 

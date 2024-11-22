@@ -279,7 +279,7 @@ const createTablesAndUpdateData = async () => {
           ResponseText NVARCHAR(MAX) NOT NULL, -- Nội dung phản hồi của admin
           CreatedAt DATETIME DEFAULT GETDATE(),
           CONSTRAINT FK_AdminResponse_Feedback FOREIGN KEY (FeedbackId) REFERENCES [UserFeedback](Id),
-          CONSTRAINT FK_AdminResponse_Admin FOREIGN KEY (AdminId) REFERENCES [User](Id)
+          CONSTRAINT FK_AdminResponse_Admin FOREIGN KEY (AdminId) REFERENCES [Admin](Id)
         );
       END
     `);

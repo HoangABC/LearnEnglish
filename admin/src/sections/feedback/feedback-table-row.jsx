@@ -71,15 +71,36 @@ export default function FeedbackTableRow({
       </TableCell>
 
       <TableCell>{Id}</TableCell>
-      <TableCell>{UserName || 'N/A'}</TableCell>
-      <TableCell>{FeedbackText || 'No feedback provided'}</TableCell>
+      <TableCell sx={{ 
+        maxWidth: 200, 
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }}>
+        {UserName || 'N/A'}
+      </TableCell>
+      <TableCell sx={{ 
+        maxWidth: 300,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }}>
+        {FeedbackText || 'No feedback provided'}
+      </TableCell>
       <TableCell>{formatDate(CreatedAt)}</TableCell>
       <TableCell align="center">
         <Label color={(Status === 1) ? 'warning' : 'success'}>
           {(Status === 1) ? 'Chưa phản hồi' : 'Đã phản hồi'}
         </Label>
       </TableCell>
-      <TableCell>{AdminResponse || 'No response'}</TableCell>
+      <TableCell sx={{ 
+        maxWidth: 200,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }}>
+        {AdminResponse || 'No response'}
+      </TableCell>
       <TableCell>{AdminName || 'N/A'}</TableCell>
       <TableCell>{formatDate(ResponseDate)}</TableCell>
       <TableCell align="right" onClick={(e) => e.stopPropagation()}>

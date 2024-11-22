@@ -16,12 +16,11 @@ const transporter = nodemailer.createTransport({
 const register = async (req, res) => {
   const { name, username, email, password } = req.body;
   
-  // Kiểm tra các trường bắt buộc
   if (!name || !username || !email || !password) {
     return res.status(400).json({ message: 'Tên, tên đăng nhập, email và mật khẩu là bắt buộc' });
   }
 
-  // Kiểm tra độ dài của Name và Username
+
   if (name.length < 5) {
     return res.status(400).json({ message: 'Tên phải có ít nhất 5 ký tự' });
   }
@@ -30,7 +29,6 @@ const register = async (req, res) => {
     return res.status(400).json({ message: 'Tên đăng nhập phải có ít nhất 5 ký tự' });
   }
 
-  // Kiểm tra định dạng email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ message: 'Email không đúng định dạng' });
@@ -40,7 +38,6 @@ const register = async (req, res) => {
     const pool = await poolPromise;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Kiểm tra xem email đã tồn tại chưa
     const existingUserByEmail = await pool.request()
       .input('Email', sql.VarChar, email)
       .query('SELECT * FROM [User] WHERE Email = @Email');
@@ -49,7 +46,6 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Email đã tồn tại' });
     }
 
-    // Kiểm tra xem tên đăng nhập đã tồn tại chưa
     const existingUserByUsername = await pool.request()
       .input('Username', sql.VarChar, username)
       .query('SELECT * FROM [User] WHERE Username = @Username');
@@ -58,7 +54,6 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Tên đăng nhập đã tồn tại' });
     }
 
-    // Kiểm tra xem tên đã tồn tại chưa
     const existingUserByName = await pool.request()
       .input('Name', sql.NVarChar, name)
       .query('SELECT * FROM [User] WHERE Name = @Name');
@@ -67,7 +62,16 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Tên đã tồn tại' });
     }
 
-    // Nếu không trùng lặp, tiến hành đăng ký
+    const confirmationToken = require('crypto').randomBytes(32).toString('hex');
+
+    const existingToken = await pool.request()
+      .input('Token', sql.NVarChar, confirmationToken)
+      .query('SELECT * FROM [User] WHERE ConfirmationToken = @Token');
+
+    if (existingToken.recordset.length > 0) {
+      return res.status(500).json({ message: 'Lỗi hệ thống, vui lòng thử lại' });
+    }
+
     await pool.request()
       .input('LevelId', sql.NVarChar, null)
       .input('GoogleId', sql.NVarChar, null)
@@ -75,21 +79,37 @@ const register = async (req, res) => {
       .input('Username', sql.VarChar, username)
       .input('Email', sql.VarChar, email)
       .input('Password', sql.NVarChar, hashedPassword)
-      .input('ConfirmationToken', sql.NVarChar, null)
-      .input('Status', sql.Int, 1)
+      .input('ConfirmationToken', sql.NVarChar, confirmationToken)
+      .input('Status', sql.Int, 0)
       .query('INSERT INTO [User] (LevelId, GoogleId, Name, Username, Email, Password, ConfirmationToken, Status) VALUES (@LevelId, @GoogleId, @Name, @Username, @Email, @Password, @ConfirmationToken, @Status)');
 
+    const confirmationUrl = `https://741d-171-239-30-182.ngrok-free.app/account/verify/${confirmationToken}`;
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'Cảm ơn bạn đã đăng ký!',
-      text: 'Cảm ơn bạn đã đăng ký tài khoản với chúng tôi. Bạn có thể đăng nhập ngay lập tức!'
+      subject: 'Xác nhận tài khoản của bạn',
+      html: `
+        <h2>Xác nhận tài khoản</h2>
+        <p>Vui lòng nhấp vào liên kết dưới đây để xác nhận tài khoản của bạn:</p>
+        <a href="${confirmationUrl}">${confirmationUrl}</a>
+        <p>Liên kết này sẽ hết hạn sau 5 phút.</p>
+      `
     };
 
     await transporter.sendMail(mailOptions);
 
+    setTimeout(async () => {
+      try {
+        await pool.request()
+          .input('Token', sql.NVarChar, confirmationToken)
+          .query('UPDATE [User] SET ConfirmationToken = NULL WHERE ConfirmationToken = @Token AND Status = 0');
+      } catch (error) {
+        console.error('Lỗi khi xóa token:', error);
+      }
+    }, 5 * 60 * 1000);
+
     res.status(200).json({
-      message: 'Đăng ký tài khoản thành công!',
+      message: 'Đăng ký tài khoản thành công! Vui lòng kiểm tra email của bạn để xác nhận tài khoản.',
       user: { name, username, email }
     });
 
@@ -371,6 +391,96 @@ const changePassword = async (req, res) => {
   }
 };
 
+const updateUserStatus = async (req, res) => {
+  const { userId, status } = req.body;
+
+  if (!userId || status === undefined) {
+    return res.status(400).json({ message: 'UserId và trạng thái là bắt buộc' });
+  }
+
+  try {
+    const pool = await poolPromise;
+
+    const userCheck = await pool.request()
+      .input('UserId', sql.Int, userId)
+      .query('SELECT * FROM [User] WHERE Id = @UserId');
+
+    if (userCheck.recordset.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    // Cập nhật trạng thái
+    await pool.request()
+      .input('UserId', sql.Int, userId)
+      .input('Status', sql.Int, status)
+      .query(`
+        UPDATE [User]
+        SET Status = @Status
+        WHERE Id = @UserId
+      `);
+
+    res.status(200).json({ message: 'Trạng thái người dùng đã được cập nhật thành công' });
+  } catch (err) {
+    console.error('Lỗi khi cập nhật trạng thái:', err);
+    res.status(500).send({ message: 'Đã xảy ra lỗi khi cập nhật trạng thái. Vui lòng thử lại sau.' });
+  }
+};
+
+const getUsersByStatus1 = async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .query('SELECT * FROM [User] WHERE Status = 1');
+
+    res.status(200).json(result.recordset);
+  } catch (err) {
+    console.error('Lỗi khi lấy danh sách người dùng:', err);
+    res.status(500).send({ message: 'Đã xảy ra lỗi khi lấy danh sách người dùng. Vui lòng thử lại sau.' });
+  }
+};
+
+const getUsersByStatus0 = async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .query('SELECT * FROM [User] WHERE Status = 0');
+
+    res.status(200).json(result.recordset);
+  } catch (err) {
+    console.error('Lỗi khi lấy danh sách người dùng:', err);
+    res.status(500).send({ message: 'Đã xảy ra lỗi khi lấy danh sách người dùng. Vui lòng thử lại sau.' });
+  }
+};
+
+const confirmEmail = async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const pool = await poolPromise;
+    
+    const result = await pool.request()
+      .input('Token', sql.NVarChar, token)
+      .query('UPDATE [User] SET Status = 1, ConfirmationToken = NULL WHERE ConfirmationToken = @Token AND Status = 0');
+
+    if (result.rowsAffected[0] === 0) {
+      return res.render('verify', {
+        success: false,
+        message: 'Token không hợp lệ hoặc đã hết hạn'
+      });
+    }
+
+    res.render('verify', {
+      success: true,
+      message: 'Xác nhận email thành công!'
+    });
+  } catch (err) {
+    console.error('Lỗi xác nhận email:', err);
+    res.render('verify', {
+      success: false,
+      message: 'Đã xảy ra lỗi khi xác nhận email. Vui lòng thử lại sau.'
+    });
+  }
+};
 
 module.exports = {
   register,
@@ -383,4 +493,8 @@ module.exports = {
   getAllLevels,
   updateUserName, 
   changePassword,
+  updateUserStatus,
+  getUsersByStatus1,
+  getUsersByStatus0,
+  confirmEmail,
 };

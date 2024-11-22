@@ -17,5 +17,11 @@ router.put('/users/updateUser', userController.updateUserName);
 // Route for changing password
 router.put('/users/changePassword', userController.changePassword);
 
+router.put('/update-user-status', userController.updateUserStatus);
+
+router.get('/users/status1', userController.getUsersByStatus1);
+router.get('/users/status0', userController.getUsersByStatus0);
+
+router.get('/verify/:token', userController.confirmEmail);
 
 module.exports = router;

@@ -9,10 +9,9 @@ import Chart, { useChart } from '../../components/chart';
 // ----------------------------------------------------------------------
 
 export default function AppWebsiteVisits({ title, subheader, chart, ...other }) {
-  const { labels, colors, series, options } = chart;
+  const { labels, series } = chart;
 
   const chartOptions = useChart({
-    colors,
     plotOptions: {
       bar: {
         columnWidth: '16%',
@@ -31,13 +30,12 @@ export default function AppWebsiteVisits({ title, subheader, chart, ...other }) 
       y: {
         formatter: (value) => {
           if (typeof value !== 'undefined') {
-            return `${value.toFixed(0)} visits`;
+            return `${value.toFixed(0)} lần`;
           }
           return value;
         },
       },
     },
-    ...options,
   });
 
   return (

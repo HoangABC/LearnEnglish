@@ -29,9 +29,9 @@ import Alert from '@mui/material/Alert';
 
 export default function FeedbackPage() {
   const [page, setPage] = useState(0);
-  const [order, setOrder] = useState('asc');
+  const [order, setOrder] = useState('desc');
   const [selected, setSelected] = useState([]);
-  const [orderBy, setOrderBy] = useState('FeedbackText');
+  const [orderBy, setOrderBy] = useState('CreatedAt');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [tabValue, setTabValue] = useState(0);

@@ -28,12 +28,25 @@ export const fetchWordGuess = createAsyncThunk(
 // Thunk để gửi câu trả lời đoán từ
 export const submitWordGuess = createAsyncThunk(
   'games/submitWordGuess',
-  async ({ userId, wordId, answer }, { rejectWithValue }) => {
+  async ({ userId, wordId, answer }, { rejectWithValue, signal }) => {
     try {
-      const response = await api.submitWordGuess(userId, wordId, answer);
-      return response.data; // Trả về toàn bộ response.data
+      // Giảm timeout xuống 3 giây
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 3000)
+      );
+      
+      const controller = new AbortController();
+      signal.addEventListener('abort', () => controller.abort());
+
+      const responsePromise = api.submitWordGuess(userId, wordId, answer);
+      
+      const response = await Promise.race([responsePromise, timeoutPromise]);
+      return response.data;
     } catch (error) {
-      return rejectWithValue(handleError(error, 'Có lỗi xảy ra khi gửi câu trả lời'));
+      if (error.name === 'AbortError') {
+        return rejectWithValue('Request was cancelled');
+      }
+      return rejectWithValue(handleError(error, 'Error submitting answer'));
     }
   }
 );

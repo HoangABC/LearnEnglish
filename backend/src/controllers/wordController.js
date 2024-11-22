@@ -228,13 +228,13 @@ const searchWord = async (req, res) => {
     // Kết nối cơ sở dữ liệu
     const pool = await poolPromise;
     
-    // Truy vấn lấy 10 kết quả đầu tiên bắt đầu bằng từ khóa
+    // Truy vấn lấy 10 kết quả đầu tiên bắt đầu bằng từ khóa và có Status = 1
     const result = await pool.request()
       .input('keyword', sql.NVarChar, `${keyword}%`)
       .query(`
         SELECT TOP 10 * 
         FROM Word 
-        WHERE Word LIKE @keyword
+        WHERE Word LIKE @keyword AND Status = 1
         ORDER BY Word
       `);
 

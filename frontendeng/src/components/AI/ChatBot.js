@@ -55,7 +55,7 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
         await new Promise(resolve => setTimeout(resolve, 1000));
         return makeApiCall(updatedChat, retryCount + 1);
       } else {
-        throw error; // Re-throw error if not 429 or retry limit exceeded
+        throw error; 
       }
     }
   };
@@ -63,10 +63,10 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
   // Send an initial message when the view is opened
   useEffect(() => {
     const initialMessage = { role: 'model', parts: [{ text: 'Hello! I’m your English learning assistant. How can I help you today?' }] };
-    setChat([initialMessage]); // Add initial message to chat state
-  }, []); // Empty array means this effect runs only once when the component mounts
+    setChat([initialMessage]);
+  }, []);
 
-  // Scroll to the end of the list when the chat updates
+
   useEffect(() => {
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
@@ -82,13 +82,13 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
     <View style={styles.container}>
       <Text style={styles.title}>English Learning ChatBot</Text>
       <FlatList
-        ref={flatListRef} // Attach the reference to FlatList
-        data={chat} // Display all chat items (both user and model messages)
+        ref={flatListRef} 
+        data={chat} 
         renderItem={renderChatItem}
         keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={styles.chatContainer} // Adjust this style if necessary
-        onContentSizeChange={() => flatListRef.current.scrollToEnd({ animated: true })} // Scroll on content size change
-        style={{ flexGrow: 1 }} // Allow FlatList to expand and take available space
+        contentContainerStyle={styles.chatContainer}
+        onContentSizeChange={() => flatListRef.current.scrollToEnd({ animated: true })} 
+        style={{ flexGrow: 1 }} 
       />
       <View style={styles.inputContainer}>
         <TextInput
@@ -96,7 +96,7 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
           placeholder="Type your message..."
           placeholderTextColor="#aaa"
           value={userInput}
-          onChangeText={text => setUserInput(text)} // Update input
+          onChangeText={text => setUserInput(text)} 
         />
         <TouchableOpacity style={styles.button} onPress={handleUserInput}>
           <Text style={styles.buttonText}>Send</Text>
@@ -112,55 +112,63 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F5F7FB', // Màu nền nhẹ nhàng
+    padding: 16,
   },
   title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-    marginTop: 40,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1A2138',
+    marginBottom: 24,
+    marginTop: 20,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   chatContainer: {
     flexGrow: 1,
-    marginBottom: 10,
+    paddingBottom: 16,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    padding: 12,
   },
   input: {
     flex: 1,
     height: 50,
-    marginRight: 10,
-    padding: 8,
-    borderColor: '#333',
-    borderWidth: 1,
+    marginRight: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
     borderRadius: 25,
-    color: '#333',
-    backgroundColor: '#fff',
     fontSize: 18,
+    color: '#1F2937',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   button: {
-    padding: 10,
-    backgroundColor: '#007AF',
+    height: 50,
+    width: 50,
+    backgroundColor: '#4F46E5',
     borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   buttonText: {
     fontSize: 18,
-    color: 'blue',
-    textAlign: 'center',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   loading: {
-    marginTop: 10,
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -15 }, { translateY: -15 }],
   },
   error: {
-    color: 'red',
-    marginTop: 10,
+    color: '#DC2626',
+    marginTop: 8,
     textAlign: 'center',
+    fontSize: 14,
   },
 });
 

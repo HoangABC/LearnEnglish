@@ -132,11 +132,6 @@ const styles = StyleSheet.create({
     height: 120,
   },
 
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Overlay with dim background
-  },
   modalContainer: {
     height: '50%',
     backgroundColor: 'white',
@@ -222,13 +217,13 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   popularWordContainer: {
-    marginTop: 10,
+    marginBottom: '5%',
     width: '100%',
     alignItems: 'center',
   },
   backImage: {
     width: '100%',
-    height: 350,
+    height: 400,
     resizeMode: 'cover',
     position: 'relative',
     justifyContent: 'center',
@@ -245,7 +240,7 @@ const styles = StyleSheet.create({
   },
   transparentBox: {
     width: 429.8, 
-    height: 297, 
+    height: 320, 
     backgroundColor: 'rgba(0, 0, 0, 0.3)', 
     borderRadius: 10,
     borderWidth: 1, 
@@ -253,7 +248,7 @@ const styles = StyleSheet.create({
     padding: 20, 
     marginRight: 20, 
     marginLeft:20,
-    top: 19,
+    top: 2,
     flexDirection: 'column', 
     justifyContent: 'flex-start', 
     position: 'relative', 
@@ -320,28 +315,31 @@ const styles = StyleSheet.create({
     width:'20%'
   },
   saveButton: {
-    height:'100%',
-    padding:'1%',
-    borderRadius: 5,
-    borderWidth: 1,
-    width: 'auto',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    elevation: 2,
   },
+  
   defaultButton: {
-    backgroundColor: '#ffcc00', 
+    backgroundColor: '#FFC107',
   },
+  
   savedButton: {
-    backgroundColor: '#4caf50', 
+    backgroundColor: '#4CAF50',
   },
+  
   saveButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
   },
+  
   defaultText: {
     color: '#000',
   },
+  
   savedText: {
-    color: '#fff', 
+    color: '#fff',
   },
   
   flatListContainer: {
@@ -360,6 +358,167 @@ const styles = StyleSheet.create({
   },
   soundIcon: {
     marginHorizontal: 10,
+  },
+  definitionScrollView: {
+    maxHeight: 100,
+    marginVertical: 5,
+  },
+  notificationContainer: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    right: -6,
+    top: -6,
+    backgroundColor: 'red',
+    borderRadius: 9,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '95%',
+    maxHeight: '90%',
+    alignItems: 'center',
+    
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333',
+  },
+  emptyNotificationContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noNotifications: {
+    fontSize: 16,
+    color: '#666',
+  },
+  closeButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 20,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  notificationList: {
+    maxHeight: 300,
+    width: '100%',
+  },
+  notificationItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  notificationText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 5,
+  },
+  notificationDate: {
+    fontSize: 12,
+    color: '#666',
+  },
+  notificationContent: {
+    padding: 10,
+  },
+  feedbackText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  notificationText: {
+    fontSize: 16,
+    color: '#000',
+    marginBottom: 5,
+  },
+  notificationDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  feedbackItem: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: 'white',
+    width: '100%',
+  },
+  
+  feedbackContent: {
+    gap: 4,
+  },
+  
+  feedbackTime: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+  },
+  
+  feedbackSender: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 2,
+  },
+  
+  feedbackMessage: {
+    fontSize: 14,
+    color: '#444',
+    lineHeight: 20,
+  },
+
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+
+  feedbackList: {
+    width: '100%',
+    maxHeight: '85%',
   },
 });
 

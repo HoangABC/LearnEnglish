@@ -99,7 +99,6 @@
 // });
 
 
-// src/server.js
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -115,13 +114,15 @@ const { setupSocket } = require('./src/Module/socket');
 const createTablesIfNotExists = require('./src/scripts/createTable');
 const { sendEmail } = require('./src/scripts/nodeMailer');
 
+app.set('view engine', 'ejs');
+app.set('views', './src/views');
+
 createTablesIfNotExists();
 
 // Hardcode Wi-Fi IP address
 const localIP = '192.168.1.100';
 console.log('IP:', localIP);
 
-// Cấu hình CORS và các middleware khác
 app.use(cors({
   origin: [
     `http://localhost:3001`,
@@ -149,14 +150,15 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Define routes
+app.use('/games', require('./src/routes/gameRoutes')); // Moved to top for priority
 app.use('/ad', require('./src/routes/adminRoutes'));
 app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api', require('./src/routes/wordRoutes'));
 app.use('/account', require('./src/routes/userRoutes'));
 app.use('/test', require('./src/routes/testRoutes'));
-app.use('/games', require('./src/routes/gameRoutes'));
 app.use('/listen', require('./src/routes/listenRoutes'));
-
+app.use('/statistics', require('./src/routes/statisticsRoutes'));
+app.use('/feedback', require('./src/routes/feedbackRoutes'));
 // Setup WebSocket
 setupSocket(server);
 

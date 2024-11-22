@@ -80,15 +80,27 @@ const FlashCardFav = () => {
   useEffect(() => {
     if (favoriteWords.length) {
       const processedTexts = favoriteWords.map(word => {
-        return word.Example
-          ? word.Example
-              .replace(/<\/?li[^>]*>/g, '')
-              .replace(/<[^>]+>/g, '')
-              .split(';')
-              .filter(Boolean)
-              .map(item => `- ${item.trim()}`)
-              .join('\n')
-          : 'No example available';
+        const examples = {
+          en: word.Example || 'No example available',
+          vi: word.ExampleVI || 'Không có ví dụ'
+        };
+        
+        return {
+          en: examples.en
+            .replace(/<\/?li[^>]*>/g, '')
+            .replace(/<[^>]+>/g, '')
+            .split(';')
+            .filter(Boolean)
+            .map(item => `- ${item.trim()}`)
+            .join('\n'),
+          vi: examples.vi
+            .replace(/<\/?li[^>]*>/g, '')
+            .replace(/<[^>]+>/g, '')
+            .split(';')
+            .filter(Boolean)
+            .map(item => `- ${item.trim()}`)
+            .join('\n')
+        };
       });
       setExampleTexts(processedTexts);
     }
@@ -174,7 +186,7 @@ const FlashCardFav = () => {
           flipVertical={false}
         >
           <LinearGradient
-            colors={['#353A5F', '#9EBAF3']}
+            colors={['#2C3E50', '#3498DB']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.cardFront}
@@ -183,42 +195,54 @@ const FlashCardFav = () => {
               style={styles.favoriteIcon}
               onPress={() => handleToggleFavoriteWordWithLogging(item.Id)}
             >
-              <Icon name='close' size={24} color='red' />
+              <Icon name='close' size={24} color='#FF6B6B' />
             </TouchableOpacity>
             <Text style={styles.word}>{item.Word}</Text>
   
             {/* Phonetic sections */}
             <View style={styles.phoneticContainer}>
               <View style={styles.phoneticItem}>
-                <Text style={styles.phoneticText}>UK</Text>
-                <TouchableOpacity
-                  style={styles.soundIcon}
-                  onPress={() => playSound(item.AudioUK)}
-                >
-                  <Icon name="volume-up" size={24} color="white" />
-                </TouchableOpacity>
+                <View style={styles.regionContainer}>
+                  <Text style={styles.phoneticText}>UK</Text>
+                  <TouchableOpacity
+                    style={styles.soundButton}
+                    onPress={() => playSound(item.AudioUK)}
+                  >
+                    <Icon name="volume-up" size={22} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
                 <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
               </View>
   
               <View style={styles.phoneticItem}>
-                <Text style={styles.phoneticText}>US</Text>
-                <TouchableOpacity
-                  style={styles.soundIcon}
-                  onPress={() => playSound(item.AudioUS)}
-                >
-                  <Icon name="volume-up" size={24} color="white" />
-                </TouchableOpacity>
+                <View style={styles.regionContainer}>
+                  <Text style={styles.phoneticText}>US</Text>
+                  <TouchableOpacity
+                    style={styles.soundButton}
+                    onPress={() => playSound(item.AudioUS)}
+                  >
+                    <Icon name="volume-up" size={22} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
                 <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
               </View>
             </View>
           </LinearGradient>
   
           <View style={styles.cardBack}>
-            <Text style={styles.definition}>Definition:</Text>
-            {formatDefinition(item.DefinitionVI || item.Definition)}
-  
-            <Text style={styles.example}>Example:</Text>
-            <Text style={styles.exampleText}>{exampleTexts[index]}</Text>
+            <ScrollView style={styles.scrollView}>
+              <Text style={styles.sectionTitle}>Definition:</Text>
+              {formatDefinition(item.Definition)}
+              
+              <Text style={styles.sectionTitle}>Vietnamese Definition:</Text>
+              {formatDefinition(item.DefinitionVI)}
+              
+              <Text style={styles.sectionTitle}>Example:</Text>
+              <Text style={styles.exampleText}>{exampleTexts[index]?.en}</Text>
+              
+              <Text style={styles.sectionTitle}>Vietnamese Example:</Text>
+              <Text style={styles.exampleText}>{exampleTexts[index]?.vi}</Text>
+            </ScrollView>
           </View>
         </FlipCard>
       </View>
@@ -348,56 +372,94 @@ const styles = StyleSheet.create({
     height: '100%', // Đảm bảo chiều cao đầy đủ để căn giữa
   },
   flipCard: {
-    marginStart:9,
-    height: 500,
-    width: width * 0.8,
+    marginStart: 9,
+    height: 450,
+    width: width * 0.85,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   cardFront: {
-    borderRadius: 8,
-    padding: 15,
+    borderRadius: 15,
+    padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    height: 500,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  cardBack: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 15,
-    justifyContent: 'center',
-    
-    height: 500,
-    width: '100%',
-    overflow: 'hidden',
+    height: '100%',
   },
   word: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#fff',
+    color: '#FFF',
+    marginBottom: 30,
     textAlign: 'center',
-    flexShrink: 1,
+  },
+  phoneticContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  phoneticItem: {
+    marginBottom: 20,
+  },
+  regionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  phoneticText: {
+    fontSize: 18,
+    color: '#FFF',
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  soundButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 8,
+    borderRadius: 20,
   },
   phonetic: {
+    fontSize: 22,
+    color: '#FFF',
+    opacity: 0.9,
+    marginLeft: 5,
+  },
+  cardBack: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 25,
+    height: '100%',
+  },
+  sectionTitle: {
     fontSize: 20,
-    color: '#eee',
-    marginBottom: 10,
-    textAlign: 'center',
-    flexShrink: 1,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 15,
+    marginTop: 10,
   },
   definition: {
     fontSize: 16,
-    color: '#555',
-    marginBottom: 10,
-    textAlign: 'left',
-    flexShrink: 1,
+    color: '#34495E',
+    marginBottom: 12,
+    lineHeight: 24,
   },
-  example: {
-    fontSize: 14,
-    color: '#777',
-    textAlign: 'left',
-    flexShrink: 1,
+  exampleText: {
+    fontSize: 16,
+    color: '#7F8C8D',
+    fontStyle: 'italic',
+    lineHeight: 24,
+  },
+  favoriteIcon: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    padding: 8,
   },
   scrollView: {
     width: '100%',

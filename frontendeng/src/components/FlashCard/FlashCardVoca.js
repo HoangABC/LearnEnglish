@@ -24,7 +24,7 @@ const FlashCardVoca = ({ route }) => {
   const [soundUrl, setSoundUrl] = useState(null);
   const [isWebViewVisible, setWebViewVisible] = useState(false);
   const [webviewKey, setWebviewKey] = useState(0);
-
+  const [exampleTexts, setExampleTexts] = useState([]);
   const dataFetched = useRef(false);
   const wordsArrayRef = useRef([]);
   const [autoPlay, setAutoPlay] = useState(false); 
@@ -58,6 +58,35 @@ const FlashCardVoca = ({ route }) => {
       fetchWords();
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (wordsArray.length) {
+      const processedTexts = wordsArray.map(word => {
+        const examples = {
+          en: word.Example || 'No example available',
+          vi: word.ExampleVI || 'Không có ví dụ'
+        };
+        
+        return {
+          en: examples.en
+            .replace(/<\/?li[^>]*>/g, '')  
+            .replace(/<[^>]+>/g, '')      
+            .split(';')                    
+            .filter(Boolean)              
+            .map(item => `- ${item.trim()}`)  
+            .join('\n'),                 
+          vi: examples.vi
+            .replace(/<\/?li[^>]*>/g, '')
+            .replace(/<[^>]+>/g, '')
+            .split(';')
+            .filter(Boolean)
+            .map(item => `- ${item.trim()}`)
+            .join('\n')
+        };
+      });
+      setExampleTexts(processedTexts);
+    }
+  }, [wordsArray]);
 
   useEffect(() => {
     const fetchAutoPlaySettings = async () => {
@@ -157,7 +186,7 @@ const FlashCardVoca = ({ route }) => {
       await handleToggleFavoriteWord(userId, wordId);
       setWordsArray(updatedWordsArray);
       wordsArrayRef.current = updatedWordsArray;
-      await AsyncStorage.setItem(`wordsArray_userId_${userId}`, JSON.stringify(updatedWordsArray));
+      await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(updatedWordsArray));
       console.log('abcs',updatedWordsArray)
     } catch (error) {
       console.error('Failed to update favorite status:', error);
@@ -188,77 +217,84 @@ const FlashCardVoca = ({ route }) => {
     );
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item, index }) => (
     <View style={styles.flipCardContainer}>
       <FlipCard
         key={item.Id}
-        style={[styles.flipCard, { zIndex: 10 }]}
+        style={styles.flipCard}
         friction={8}
         perspective={1000}
-        flipHorizontal
+        flipHorizontal={true}
         flipVertical={false}
       >
-      <LinearGradient 
-        colors={['#353A5F', '#9EBAF3']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.cardFront}
-      >
-        <TouchableOpacity
-          style={styles.favoriteIcon}
-          onPress={() => handleToggleFavorite(item.Id)}
+        {/* Front Card */}
+        <LinearGradient
+          colors={['#2C3E50', '#3498DB']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cardFront}
         >
-          <Icon
-            name={item.isFavorite ? 'star' : 'star-border'}
-            size={24}
-            color={item.isFavorite ? 'yellow' : 'white'}
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.favoriteIcon}
+            onPress={() => handleToggleFavorite(item.Id)}
+          >
+            <Icon
+              name={item.isFavorite ? 'star' : 'star-border'}
+              size={24}
+              color={item.isFavorite ? '#FFD700' : '#E0E0E0'}
+            />
+          </TouchableOpacity>
+          <Text style={styles.word}>{item.Word}</Text>
 
-        <Text style={styles.word}>{item.Word}</Text>
+          {/* Phonetic sections */}
+          <View style={styles.phoneticContainer}>
+            <View style={styles.phoneticItem}>
+              <View style={styles.regionContainer}>
+                <Text style={styles.phoneticText}>UK</Text>
+                <TouchableOpacity
+                  style={styles.soundButton}
+                  onPress={() => playSound(item.AudioUK)}
+                >
+                  <Icon name="volume-up" size={22} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
+            </View>
 
-        <View style={styles.phoneticContainer}>
-
-          <View style={styles.phoneticItem}>
-            <Text style={styles.phoneticText}>UK</Text>
-            <TouchableOpacity
-              style={styles.soundIcon}
-              onPress={() => playSound(item.AudioUK)}
-            >
-              <Icon name="volume-up" size={24} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
+            <View style={styles.phoneticItem}>
+              <View style={styles.regionContainer}>
+                <Text style={styles.phoneticText}>US</Text>
+                <TouchableOpacity
+                  style={styles.soundButton}
+                  onPress={() => playSound(item.AudioUS)}
+                >
+                  <Icon name="volume-up" size={22} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
+            </View>
           </View>
+        </LinearGradient>
 
-          <View style={styles.phoneticItem}>
-            <Text style={styles.phoneticText}>US</Text>
-            <TouchableOpacity
-              style={styles.soundIcon}
-              onPress={() => playSound(item.AudioUS)}
-            >
-              <Icon name="volume-up" size={24} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
-          </View>
-        </View>
-      </LinearGradient>
+        {/* Back Card */}
         <View style={styles.cardBack}>
-          <View style={styles.tes}>
-            <Text style={styles.title}>Định nghĩa:</Text>
-            {formatDefinition(item.Definition)}
-            <Text style={styles.title}>Định nghĩa VI:</Text>
-            {formatDefinition(item.DefinitionVI)}
-            <Text style={styles.title}>Ví dụ:</Text>
-            <ScrollView style={styles.scrollView}>
-              <Text style={styles.example}>
-                {item.Example ? item.Example.replace(/<\/?li[^>]*>/g, '').replace(/<[^>]+>/g, '').split(';')[0] : ''}
-              </Text>
-              <Text style={styles.title}>Ví dụ VI:</Text>
-              <Text style={styles.example}>
-                {item.ExampleVI ? item.ExampleVI.replace(/<\/?li[^>]*>/g, '').replace(/<[^>]+>/g, '').split(';')[0] : ''}
-              </Text>
-            </ScrollView>
-          </View>
+          <ScrollView style={styles.scrollView}>
+            <Text style={styles.sectionTitle}>Definition:</Text>
+            <Text style={styles.definitionText}>
+              - {item.Definition?.replace(/<[^>]+>/g, '')}
+            </Text>
+            
+            <Text style={styles.sectionTitle}>Vietnamese Definition:</Text>
+            <Text style={styles.definitionText}>
+              - {item.DefinitionVI?.replace(/<[^>]+>/g, '')}
+            </Text>
+            
+            <Text style={styles.sectionTitle}>Example:</Text>
+            <Text style={styles.exampleText}>{exampleTexts[index]?.en}</Text>
+            
+            <Text style={styles.sectionTitle}>Vietnamese Example:</Text>
+            <Text style={styles.exampleText}>{exampleTexts[index]?.vi}</Text>
+          </ScrollView>
         </View>
       </FlipCard>
     </View>
@@ -289,6 +325,36 @@ const FlashCardVoca = ({ route }) => {
     setSoundUrl(audioUrl);
     setWebviewKey(prevKey => prevKey + 1);
   };
+
+  // Thêm useEffect để xử lý examples
+  useEffect(() => {
+    if (wordsArray.length) {
+      const processedTexts = wordsArray.map(word => {
+        const examples = {
+          en: word.Example || 'No example available',
+          vi: word.ExampleVI || 'Không có ví dụ'
+        };
+        
+        return {
+          en: examples.en
+            .replace(/<\/?li[^>]*>/g, '')  // Xóa thẻ li
+            .replace(/<[^>]+>/g, '')       // Xóa các thẻ HTML khác
+            .split(';')                    // Tách các ví dụ
+            .filter(Boolean)               // Lọc bỏ chuỗi rỗng
+            .map(item => `- ${item.trim()}`)  // Thêm dấu gạch đầu dòng
+            .join('\n'),                   // Nối với xuống dòng
+          vi: examples.vi
+            .replace(/<\/?li[^>]*>/g, '')
+            .replace(/<[^>]+>/g, '')
+            .split(';')
+            .filter(Boolean)
+            .map(item => `- ${item.trim()}`)
+            .join('\n')
+        };
+      });
+      setExampleTexts(processedTexts);
+    }
+  }, [wordsArray]);
 
 const wordsArrayLength = favoriteWords.length;
   return (
@@ -409,58 +475,86 @@ const styles = StyleSheet.create({
     height: '100%', 
   },
   flipCard: {
-    marginStart:9,
-    height: 500,
-    width: width * 0.8,
+    marginStart: 9,
+    height: 450,
+    width: width * 0.85,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   cardFront: {
-    borderRadius: 8,
-    padding: 15,
+    borderRadius: 15,
+    padding: 20,
     justifyContent: 'center',
-    height: 500,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  cardBack: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 15,
-    justifyContent: 'center',
-    height: 500,
-    width: '100%',
-    overflow: 'hidden',
+    alignItems: 'center',
+    height: '100%',
   },
   word: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#fff',
+    color: '#FFF',
+    marginBottom: 30,
     textAlign: 'center',
-    flexShrink: 1,
+  },
+  phoneticContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  phoneticItem: {
+    marginBottom: 20,
+  },
+  regionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  phoneticText: {
+    fontSize: 18,
+    color: '#FFF',
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  soundButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 8,
+    borderRadius: 20,
   },
   phonetic: {
+    fontSize: 22,
+    color: '#FFF',
+    opacity: 0.9,
+    marginLeft: 5,
+  },
+  cardBack: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 25,
+    height: '100%',
+  },
+  sectionTitle: {
     fontSize: 20,
-    color: '#eee',
-    marginBottom: 10,
-    textAlign: 'center',
-    flexShrink: 1,
-    width:'110%',
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 15,
+    marginTop: 10,
   },
-  definition: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 10,
-    textAlign: 'left',
-    flexShrink: 1,
-  },
-  example: {
-    fontSize: 14,
-    color: '#777',
-    textAlign: 'left',
-    flexShrink: 1,
+  favoriteIcon: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    padding: 8,
   },
   scrollView: {
-    width: '100%',
+    flex: 1,
+    paddingHorizontal: 15,
   },
   noData: {
     fontSize: 18,
@@ -485,11 +579,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-  },
-  favoriteIcon: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
   },
   title: {
     fontSize: 18,
@@ -547,7 +636,21 @@ const styles = StyleSheet.create({
     color: 'white',
     width:170
   },
-
+  definitionText: {
+    fontSize: 16,
+    color: '#34495E',
+    marginBottom: 12,
+    lineHeight: 24,
+    paddingHorizontal: 5,
+  },
+  exampleText: {
+    fontSize: 16,
+    color: '#7F8C8D',
+    fontStyle: 'italic',
+    lineHeight: 24,
+    marginBottom: 12,
+    paddingHorizontal: 5,
+  },
 });
 
 export default FlashCardVoca;

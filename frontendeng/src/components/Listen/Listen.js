@@ -16,7 +16,7 @@ const Listen = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [webviewKey, setWebviewKey] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalMessage, setModalMessage] = useState('');
+  const [modalMessage, setModalMessage] = useState({ text: '', isCorrect: false });
   const [inputValue, setInputValue] = useState('');
   const [isPaused, setIsPaused] = useState(true);  // Initially set to paused
 
@@ -101,10 +101,10 @@ const Listen = () => {
     if (normalizedAnswer === correctAnswer) {
       SoundCorrect('../../assets/audios/correct.mp3');  
       setIsPaused(false); 
-      setModalMessage('You are correct! Press OK to continue.');
+      setModalMessage({ text: 'You are correct! Press OK to continue.', isCorrect: true });
     } else {
       setIsPaused(true); 
-      setModalMessage(`Incorrect. The correct word is: ${listeningPracticeData.word}. Press OK to continue.`);
+      setModalMessage({ text: `Incorrect. The correct word is: ${listeningPracticeData.word}. Press OK to continue.`, isCorrect: false });
     }
     setModalVisible(true);
     
@@ -198,17 +198,25 @@ const Listen = () => {
           listeningPracticeData.choices.map((option, index) => (
             <TouchableOpacity
               key={index}
-              style={[styles.optionButton, answers[listeningPracticeData.questionId] === option && styles.selectedOptionButton]}
+              style={[
+                styles.optionButton,
+                answers[listeningPracticeData.questionId] === option && styles.selectedOptionButton
+              ]}
               onPress={() => handleAnswerSelection(listeningPracticeData.questionId, option)}
             >
-              <Text style={styles.optionText}>{option}</Text>
+              <Text style={[
+                styles.optionText,
+                answers[listeningPracticeData.questionId] === option && styles.selectedOptionText
+              ]}>
+                {option}
+              </Text>
             </TouchableOpacity>
           ))
         )}
       </View>
 
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitButtonText}>Submit Answer</Text>
+        <Text style={styles.submitButtonText}>Submit</Text>
       </TouchableOpacity>
 
       <Modal
@@ -217,17 +225,29 @@ const Listen = () => {
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalText}>{modalMessage}</Text>
-            <TouchableOpacity onPress={() => {
-              setModalVisible(false);  
-              setInputValue('');  
-              setIsPaused(true);  
-              fetchPractice(userId);  
-            }}>
-              <Text style={styles.modalButton}>OK</Text>
-            </TouchableOpacity>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalIconContainer}>
+                {modalMessage.isCorrect ? (
+                  <Icon name="check-circle" size={30} color="#58CC02" />
+                ) : (
+                  <Icon name="close" size={30} color="#FF4B4B" />
+                )}
+                <Text style={styles.modalText}>{modalMessage.text}</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.continueButton}
+                onPress={() => {
+                  setModalVisible(false);  
+                  setInputValue('');  
+                  setIsPaused(true);  
+                  fetchPractice(userId);  
+                }}
+              >
+                <Text style={styles.continueButtonText}>TIẾP TỤC</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -296,21 +316,37 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     marginTop: 20,
+    paddingHorizontal: 16,
   },
   optionButton: {
-    backgroundColor: '#e0e0e0',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   selectedOptionButton: {
-    backgroundColor: '#1E90FF',
+    backgroundColor: '#E5F4FF',
+    borderColor: '#1CB0F6',
   },
   optionText: {
-    textAlign: 'center',
     fontSize: 16,
-    width: '100%',
+    color: '#4B4B4B',
+    fontWeight: '500',
+  },
+  selectedOptionText: {
+    color: '#1CB0F6',
+    fontWeight: 'bold',
   },
   textInput: {
     borderColor: '#ccc',
@@ -320,15 +356,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   submitButton: {
-    backgroundColor: '#1E90FF',
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: '#1CB0F6',
+    padding: 16,
+    borderRadius: 16,
     marginTop: 20,
-    alignItems: 'center',
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
   },
   submitButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   errorText: {
     fontSize: 18,
@@ -336,32 +383,44 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
   },
+  modalOverlay: {
+    flex: 1,
+  
+    justifyContent: 'flex-end',
+  },
   modalContainer: {
-    position: 'absolute',  // Fix it at the bottom of the screen
-    bottom: 0,  // Position the modal one-third from the bottom
-    left: 0,
-    right: 0,
-    justifyContent: 'flex-end', // Align the modal content at the bottom
-    alignItems: 'center',
-    paddingBottom: 30,  // Padding to avoid clipping at the screen edge
-    backgroundColor: 'transparent',  // Remove the overlay background
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    minHeight: 200,
   },
   modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    width: '100%',  // Adjust the width to fit the content properly
     alignItems: 'center',
+  },
+  modalIconContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalText: {
     fontSize: 16,
-    marginBottom: 20,
-    textAlign:'center',
+    textAlign: 'center',
+    marginTop: 10,
+    color: '#4B4B4B',
+    width:'100%'
   },
-  modalButton: {
-    color: '#1E90FF',
-    width:200,
-    textAlign:'center',
+  continueButton: {
+    backgroundColor: '#58CC02',
+    width: '100%',
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   speechBubbleContainer: {
     backgroundColor: '#f9f9f9', 

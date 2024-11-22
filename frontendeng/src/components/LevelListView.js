@@ -63,37 +63,58 @@ const LevelListView = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.index}>
-        <Text style={styles.title}>Trình độ hiện tại của bạn</Text> 
-        <Text style={styles.subtitle}>Thông tin này để ứng dụng gợi ý những nội dung phù hợp với trình độ của bạn</Text>
-        
-        {updateStatus === 'loading' && <ActivityIndicator size="large" color="#0000ff" />}
-        {updateStatus === 'succeeded' && <Text style={styles.successText}>Level updated successfully!</Text>}
-        {updateStatus === 'failed' && <Text style={styles.errorText}>Update Error: {updateError}</Text>}
-        
+      <View style={styles.content}>
+        <Text style={styles.title}>Trình độ hiện tại của bạn</Text>
+        <Text style={styles.subtitle}>
+          Thông tin này để ứng dụng gợi ý những nội dung phù hợp với trình độ của bạn
+        </Text>
+
+        {updateStatus === 'loading' && <ActivityIndicator size="large" color="#007BFF" />}
+        {updateStatus === 'succeeded' && (
+          <Text style={styles.successText}>Level updated successfully!</Text>
+        )}
+        {updateStatus === 'failed' && (
+          <Text style={styles.errorText}>Update Error: {updateError}</Text>
+        )}
+
         <View style={styles.levelListContainer}>
           <FlatList
             data={levels}
             keyExtractor={(item) => item.Id.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity
-                onPress={() => handleItemPress(item.Id)}  // Cập nhật selectedLevelId khi nhấn vào item
-                style={[styles.item, selectedLevelId === item.Id ? styles.selectedItem : null]}
+                onPress={() => handleItemPress(item.Id)}
+                style={[
+                  styles.item,
+                  selectedLevelId === item.Id && styles.selectedItem
+                ]}
               >
-                <RadioButton
-                  value={item.Id.toString()}
-                  status={selectedLevelId === item.Id ? 'checked' : 'unchecked'}
-                  onPress={() => handleItemPress(item.Id)}  // Cập nhật selectedLevelId khi nhấn vào radio button
-                />
-                <Text style={styles.itemText}>{item.LevelName}</Text>
+                <View style={styles.radioContainer}>
+                  <RadioButton
+                    value={item.Id.toString()}
+                    status={selectedLevelId === item.Id ? 'checked' : 'unchecked'}
+                    onPress={() => handleItemPress(item.Id)}
+                    color="#007BFF"
+                  />
+                  <Text style={[
+                    styles.itemText,
+                    selectedLevelId === item.Id && styles.selectedItemText
+                  ]}>
+                    {item.LevelName}
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
           />
         </View>
 
         <TouchableOpacity
-          style={styles.confirmButton}
-          onPress={handleConfirmPress}  // Gọi hàm xác nhận khi nhấn nút
+          style={[
+            styles.confirmButton,
+            !selectedLevelId && styles.confirmButtonDisabled
+          ]}
+          onPress={handleConfirmPress}
+          disabled={!selectedLevelId}
         >
           <Text style={styles.confirmButtonText}>Xác nhận</Text>
         </TouchableOpacity>
@@ -104,82 +125,98 @@ const LevelListView = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
-    alignItems: 'center', 
-    justifyContent: 'flex-start', 
-    padding: 16,
+    flex: 1,
+    backgroundColor: '#fff',
   },
-  index: {
+  content: {
+    flex: 1,
+    padding: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,  
-    width: '100%',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 16,
-    top:'10%'
-  },
-  subtitle: { 
-    fontSize: 16, 
-    textAlign: 'center', 
-    marginBottom: 24,
-    top:'10%'
-  },
-  errorText: {
-    fontSize: 18,
-    color: 'red',
+    color: '#333',
+    marginTop: 40,
+    marginBottom: 12,
     textAlign: 'center',
   },
-  successText: {
-    fontSize: 18,
-    color: 'green',
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 30,
+    paddingHorizontal: 20,
+    lineHeight: 22,
   },
   levelListContainer: {
     width: '100%',
-    backgroundColor: '#f0f0f0', 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#ccc', 
-    marginBottom: 16,
-    top:'20%', 
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginTop: 20,
+    marginBottom: 30,
   },
   item: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  radioContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f9f9f9',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
   },
   itemText: {
     fontSize: 18,
-    color: 'black',
-    marginLeft: 10,
-    width: '100%',
+    color: '#333',
+    marginLeft: 12,
+    flex: 1,
   },
   selectedItem: {
-    backgroundColor: '#d0e0f0',
+    backgroundColor: '#f0f7ff',
+  },
+  selectedItemText: {
+    color: '#007BFF',
+    fontWeight: '500',
   },
   confirmButton: {
-    padding: 16,
     backgroundColor: '#007BFF',
-    borderRadius: 8,
-    width: 300,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 'auto',  // Đẩy nút xuống dưới cùng
-    marginBottom: 16,  // Khoảng cách dưới nút
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    marginTop: 'auto',
+    marginBottom: 20,
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.8,
   },
   confirmButtonText: {
+    color: '#fff',
     fontSize: 18,
-    color: 'white',
-    width: '100%',
+    fontWeight: '600',
     textAlign: 'center',
-  }
+  },
+  errorText: {
+    color: '#dc3545',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  successText: {
+    color: '#28a745',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
 });
 
 export default LevelListView;

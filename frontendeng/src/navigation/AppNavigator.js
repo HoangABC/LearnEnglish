@@ -25,6 +25,7 @@ import ListenPage from '../pages/ListenPage';
 import SettingsPage from '../pages/SettingsPage';
 import EditInfoPage from '../pages/EditInfoPage';
 import EditPassPage from '../pages/EditPassPage';
+import FeedbackPage from '../pages/FeedbackPage';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -32,22 +33,74 @@ const Tab = createBottomTabNavigator();
 const AppTabs = () => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
-      tabBarIcon: ({ color, size }) => {
+      tabBarIcon: ({ color, size, focused }) => {
         let iconName;
         if (route.name === 'Home') {
           iconName = 'home';
         } else if (route.name === 'Profile') {
           iconName = 'person';
         }
-        return <Icon name={iconName} size={size} color={color} />;
+        return (
+          <View style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            top: 5
+          }}>
+            <Icon name={iconName} size={24} color={focused ? '#2196F3' : color} />
+            {focused && (
+              <View
+                style={{
+                  width: 20,
+                  height: 2,
+                  backgroundColor: '#2196F3',
+                  marginTop: 4
+                }}
+              />
+            )}
+          </View>
+        );
+      },
+      tabBarStyle: {
+        height: 65,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        backgroundColor: '#FFFFFF',
+        position: 'absolute',
+        borderTopWidth: 0,
+        elevation: 15,
+        shadowColor: '#000',
+        shadowOffset: {
+          width: 0,
+          height: -4,
+        },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
       },
       tabBarLabelStyle: {
-        fontSize: 16,
+        fontSize: 13,
+        fontWeight: '600',
+        paddingBottom: 8,
       },
+      tabBarActiveTintColor: '#2196F3',
+      tabBarInactiveTintColor: '#9E9E9E',
     })}
   >
-    <Tab.Screen name="Home" component={HomePage} options={{ headerShown: false }} />
-    <Tab.Screen name="Profile" component={ProfilePage} options={{ headerShown: false }} />
+    <Tab.Screen 
+      name="Home" 
+      component={HomePage} 
+      options={{ 
+        headerShown: false,
+        tabBarLabel: 'Trang chủ'
+      }} 
+    />
+    <Tab.Screen 
+      name="Profile" 
+      component={ProfilePage} 
+      options={{ 
+        headerShown: false,
+        tabBarLabel: 'Hồ sơ'
+      }} 
+    />
   </Tab.Navigator>
 );
 
@@ -203,6 +256,11 @@ const AppNavigator = () => {
         <Stack.Screen
           name="EditPass"
           component={EditPassPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
+          name="Feedback"
+          component={FeedbackPage}
           options={{ headerTitle: '' }}
         />
         <Stack.Screen

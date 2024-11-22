@@ -106,14 +106,19 @@ export default function WordTableRow({
 
   return (
     <>
-      <TableRow hover tabIndex={-1} role="checkbox" selected={selected}>
+      <TableRow hover tabIndex={-1} role="checkbox" selected={selected} sx={{ '&:hover': { bgcolor: 'rgba(145, 158, 171, 0.08)' } }}>
         <TableCell padding="checkbox">
-          <Checkbox disableRipple checked={selected} onChange={handleClick} />
+          <Checkbox 
+            disableRipple 
+            checked={selected} 
+            onChange={handleClick}
+          
+          />
         </TableCell>
 
-        <TableCell>{QueryURL || 'N/A'}</TableCell>
-        <TableCell>{Word || 'N/A'}</TableCell>
-        <TableCell>{PartOfSpeech || 'N/A'}</TableCell>
+        <TableCell sx={{ minWidth: 120 }}>{QueryURL || 'N/A'}</TableCell>
+        <TableCell sx={{ minWidth: 120, fontWeight: 'medium' }}>{Word || 'N/A'}</TableCell>
+        <TableCell sx={{ minWidth: 100 }}>{PartOfSpeech || 'N/A'}</TableCell>
         <TableCell>
           {console.log('LevelWordId:', LevelWordId)}
           {getLevelLabel(LevelWordId)}
