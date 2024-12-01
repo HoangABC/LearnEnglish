@@ -26,6 +26,10 @@ import SettingsPage from '../pages/SettingsPage';
 import EditInfoPage from '../pages/EditInfoPage';
 import EditPassPage from '../pages/EditPassPage';
 import FeedbackPage from '../pages/FeedbackPage';
+import ForgotPassPage from '../pages/ForgotPassPage';
+import EmailSendPage from '../pages/EmailSendPage';
+import EmailOTPPage from '../pages/EmailOTPPage';
+import VoiceAIPage from '../pages/VoiceAIPage';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -239,6 +243,11 @@ const AppNavigator = () => {
           options={{ headerTitle: '' }}
         />
         <Stack.Screen
+          name="VoiceAI"
+          component={VoiceAIPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
           name="Settings"
           component={SettingsPage}
           options={{ headerTitle: '' }}
@@ -271,6 +280,21 @@ const AppNavigator = () => {
         <Stack.Screen
           name="Register"
           component={RegisterPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
+          name="ForgotPass"
+          component={ForgotPassPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
+          name="EmailSend"
+          component={EmailSendPage}
+          options={{ headerTitle: '' }}
+        />
+        <Stack.Screen
+          name="EmailOTP"
+          component={EmailOTPPage}
           options={{ headerTitle: '' }}
         />
       </Stack.Navigator>

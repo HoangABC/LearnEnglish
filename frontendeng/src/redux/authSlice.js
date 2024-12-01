@@ -118,6 +118,44 @@ export const changePassword = createAsyncThunk(
   }
 );
 
+// Thêm thunk để xử lý yêu cầu đặt lại mật khẩu
+export const requestPasswordReset = createAsyncThunk(
+  'auth/requestPasswordReset',
+  async (email, { rejectWithValue }) => {
+    try {
+      const response = await api.requestPasswordReset(email);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
+// Thêm thunk để xác thực mã reset password
+export const verifyResetToken = createAsyncThunk(
+  'auth/verifyResetToken',
+  async ({ email, token }, { rejectWithValue }) => {
+    try {
+      const response = await api.verifyResetToken(email, token);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
+// Thêm thunk để reset password
+export const resetPassword = createAsyncThunk(
+  'auth/resetPassword',
+  async ({ email, newPassword }, { rejectWithValue }) => {
+    try {
+      const response = await api.resetPassword(email, newPassword);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
 
 const authSlice = createSlice({
   name: 'auth',
@@ -233,6 +271,48 @@ const authSlice = createSlice({
       .addCase(changePassword.rejected, (state, action) => {
         state.error = action.payload;
         state.status = 'failed';
+      })
+      // Các state của requestPasswordReset
+      .addCase(requestPasswordReset.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(requestPasswordReset.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.successMessage = action.payload.message;
+        state.error = null;
+      })
+      .addCase(requestPasswordReset.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+        state.successMessage = null;
+      })
+      // Các state của verifyResetToken
+      .addCase(verifyResetToken.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(verifyResetToken.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.successMessage = action.payload.message;
+        state.error = null;
+      })
+      .addCase(verifyResetToken.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+        state.successMessage = null;
+      })
+      // Các state của resetPassword
+      .addCase(resetPassword.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(resetPassword.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.successMessage = action.payload.message;
+        state.error = null;
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+        state.successMessage = null;
       });
   },
 });

@@ -25,6 +25,8 @@ const Home = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const { getFeedbacks, feedbacks: feedbacksData } = useFeedback();
   const [feedbacks, setFeedbacks] = useState([]);
+  const [storedFeedbacks, setStoredFeedbacks] = useState([]);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -58,11 +60,52 @@ const Home = () => {
   }, [userId]);
 
   useEffect(() => {
+    const loadStoredFeedbacks = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('AdFeedback');
+        const parsedStored = stored ? JSON.parse(stored) : [];
+        setStoredFeedbacks(parsedStored);
+        const unreadCount = parsedStored.filter(feedback => feedback.viewed === 0).length;
+        setUnreadCount(unreadCount);
+      } catch (error) {
+        console.error('Error loading stored feedbacks:', error);
+      }
+    };
+
+    loadStoredFeedbacks();
+  }, [storedFeedbacks]);
+
+  useEffect(() => {
     if (feedbacksData?.data) {
       const unreadNotifications = feedbacksData.data.filter(feedback => 
         feedback.FeedbackStatus === 2
       );
       
+      const storeFeedbacks = async () => {
+        try {
+          const existingFeedbacks = await AsyncStorage.getItem('AdFeedback');
+          const parsedExisting = existingFeedbacks ? JSON.parse(existingFeedbacks) : [];
+          
+          const newFeedbacks = unreadNotifications.map(feedback => ({
+            ...feedback,
+            viewed: 0
+          }));
+
+
+          const mergedFeedbacks = [...parsedExisting];
+          newFeedbacks.forEach(newFeedback => {
+            const existingIndex = mergedFeedbacks.findIndex(f => f.FeedbackId === newFeedback.FeedbackId);
+            if (existingIndex === -1) {
+              mergedFeedbacks.push(newFeedback);
+            }
+          });
+          await AsyncStorage.setItem('AdFeedback', JSON.stringify(mergedFeedbacks));
+        } catch (error) {
+          console.error('Error storing feedbacks:', error);
+        }
+      };
+
+      storeFeedbacks();
       setFeedbacks(feedbacksData.data);
       setNotifications(unreadNotifications);
       setUnreadCount(unreadNotifications.length);
@@ -127,31 +170,76 @@ const Home = () => {
     }
   }, [mostFavoritedWords, handleToggleFavoriteWord, userId]);
   
+  const formatTime = (dateString) => {
+    const utcDate = new Date(dateString.replace('Z', ''));  
+    
+    const vnTime = utcDate.toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour12: false
+    });
+    
+    return vnTime;
+  };
+
   const renderFeedbackItem = useCallback(({ item }) => (
     <TouchableOpacity 
-      style={styles.feedbackItem}
+      style={[
+        styles.feedbackItem,
+        item.viewed === 1 && styles.viewedFeedbackItem
+      ]}
       onPress={() => handleNotificationItemPress(item)}
     >
       <View style={styles.feedbackContent}>
-        <Text style={styles.feedbackTime}>
-          {new Date(item.FeedbackCreatedAt).toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          })}
-          {' '}
-          {new Date(item.FeedbackCreatedAt).toLocaleDateString('vi-VN')}
+        <Text style={[
+          styles.feedbackTime,
+          item.viewed === 1 && styles.viewedText
+        ]}>
+          {formatTime(item.FeedbackCreatedAt)}
         </Text>
-        <Text style={styles.feedbackSender}>[TB] {item.FeedbackTitle || 'Thông báo'}</Text>
-        <Text style={styles.feedbackMessage}>{item.FeedbackText}</Text>
+        <Text style={[
+          styles.feedbackSender,
+          item.viewed === 1 && styles.viewedText
+        ]}>[TB] {item.FeedbackTitle || 'Thông báo'}</Text>
+        <Text 
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[
+            styles.feedbackMessage,
+            item.viewed === 1 && styles.viewedText
+          ]}
+        >
+          {item.FeedbackText}
+        </Text>
       </View>
     </TouchableOpacity>
   ), []);
 
-  const handleNotificationItemPress = useCallback((feedback) => {
-    setShowNotificationModal(false);
-    navigation.navigate('Feedback', { selectedFeedbackId: feedback.FeedbackId });
-  }, [navigation]);
+  const handleNotificationItemPress = useCallback(async (feedback) => {
+    try {
+    
+      const updatedFeedbacks = storedFeedbacks.map(item => 
+        item.FeedbackId === feedback.FeedbackId 
+          ? { ...item, viewed: 1 }
+          : item
+      );
+  
+      await AsyncStorage.setItem('AdFeedback', JSON.stringify(updatedFeedbacks));
+      setStoredFeedbacks(updatedFeedbacks);
+      
+      const newUnreadCount = updatedFeedbacks.filter(item => item.viewed === 0).length;
+      setUnreadCount(newUnreadCount);
+  
+      setShowNotificationModal(false);
+      navigation.navigate('Feedback', { selectedFeedbackId: feedback.FeedbackId });
+    } catch (error) {
+      console.error('Error updating feedback viewed status:', error);
+    }
+  }, [navigation, storedFeedbacks]);
 
   const renderItem = ({ item }) => (
     <View style={styles.transparentBox}>
@@ -238,7 +326,9 @@ const Home = () => {
   const handleNavigateToSettings = () => {
     navigation.navigate('Settings');
   };
-
+  const handleNavigateToVoiceAI = () => {
+    navigation.navigate('VoiceAI');
+  };
   const uniqueSearchResults = searchResults.filter(
     (item, index, self) =>
       index === self.findIndex((t) => t.Id === item.Id && t.Word.trim().toLowerCase() === item.Word.trim().toLowerCase())
@@ -272,6 +362,23 @@ const Home = () => {
   const handleNotificationPress = () => {
     setShowNotificationModal(true);
   };
+
+  const filteredFeedbacks = storedFeedbacks.filter(feedback => 
+    showAllNotifications ? true : feedback.viewed === 0
+  );
+
+  const toggleNotificationsView = () => {
+    setShowAllNotifications(!showAllNotifications);
+  };
+
+  const additionalStyles = StyleSheet.create({
+    viewedFeedbackItem: {
+      backgroundColor: '#f5f5f5',
+    },
+    viewedText: {
+      color: '#888',
+    }
+  });
 
   return (
     <TouchableWithoutFeedback onPress={handlePressOutside}>
@@ -337,7 +444,7 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             style={styles.scrollView}
           >
-            <TouchableOpacity style={styles.card} onPress={handleNavigateToFlashCard}>
+            <TouchableOpacity style={[styles.card, styles.cardBlue]} onPress={handleNavigateToFlashCard}>
               <Text style={styles.cardText}>HỌC TỪ VỰNG</Text>
               <Image
                 source={require('../assets/images/Study_Voca.png')}
@@ -357,17 +464,25 @@ const Home = () => {
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToListen}>
-              <Text style={styles.cardText}>ÔN TẬP NGHE</Text>
+            <TouchableOpacity style={[styles.card, styles.cardPurple]} onPress={handleNavigateToListen}>
+              <Text style={styles.cardText}>LUYỆN NGHE</Text>
               <Image
-                source={require('../assets/images/Study_Fav.png')}
+                source={require('../assets/images/Study_Music.png')}
                 style={styles.cardImage}
               />
               <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM VÀ TỰ LUẬN</Text>
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToTest}>
+            <TouchableOpacity style={[styles.card, styles.cardPink]} onPress={handleNavigateToVoiceAI}>
+              <Text style={styles.cardText}>LUYỆN NÓI</Text>
+              <Image
+                source={require('../assets/images/Study_Speaking.png')}
+                style={styles.cardImage}
+              />
+              <Text style={styles.cardSubText}>THÔNG QUA CHAT BOT</Text>
+              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.card, styles.cardOrange]} onPress={handleNavigateToTest}>
               <Text style={styles.cardText}>KIỂM TRA TỪ VỰNG</Text>
               <Image
                 source={require('../assets/images/Study_Fav.png')}
@@ -376,19 +491,19 @@ const Home = () => {
               <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM</Text>
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToLevelWordGuess}>
+            <TouchableOpacity style={[styles.card, styles.cardTeal]} onPress={handleNavigateToLevelWordGuess}>
               <Text style={styles.cardText}>GIẢI TRÍ</Text>
               <Image
-                source={require('../assets/images/Study_Fav.png')}
+                source={require('../assets/images/Study_Gaming.png')}
                 style={styles.cardImage}
               />
               <Text style={styles.cardSubText}>THÔNG QUA WORD GUESS</Text>
               <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToChatBot}>
-              <Text style={styles.cardText}>GIẢI ĐÁP</Text>
+            <TouchableOpacity style={[styles.card, styles.cardPink]} onPress={handleNavigateToChatBot}>
+              <Text style={styles.cardText}>GI I ĐÁP</Text>
               <Image
-                source={require('../assets/images/Study_Fav.png')}
+                source={require('../assets/images/Bot_Support.png')}
                 style={styles.cardImage}
               />
               <Text style={styles.cardSubText}>THÔNG QUA CHAT BOT</Text>
@@ -434,10 +549,20 @@ const Home = () => {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Thông báo</Text>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Thông báo</Text>
+                <TouchableOpacity
+                  style={styles.toggleButton}
+                  onPress={toggleNotificationsView}
+                >
+                  <Text style={styles.toggleButtonText}>
+                    {showAllNotifications ? 'Chỉ hiện chưa đọc' : 'Hiện tất cả'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               
               <FlatList
-                data={(feedbacksData?.data || []).filter(item => item.FeedbackStatus === 2)}
+                data={filteredFeedbacks}
                 renderItem={renderFeedbackItem}
                 keyExtractor={(item, index) => `${item.FeedbackId}_${index}`}
                 style={styles.feedbackList}

@@ -3,7 +3,6 @@ const axios = require('axios');
 const { poolPromise, sql } = require('../config/db');
 const { getIo } = require('../Module/socket');
 
-// Xác minh nghĩa của từ từ API từ điển
 const verifyWordMeaning = async (word) => {
   if (typeof word !== 'string' || word.trim().length < 1) {
     throw new Error('Invalid input: word must be at least 1 character long');
@@ -24,7 +23,6 @@ const verifyWordMeaning = async (word) => {
   }
 };
 
-// Thêm từ vào cơ sở dữ liệu
 const addWord = async (req, res) => {
   try {
     const { 
@@ -42,7 +40,6 @@ const addWord = async (req, res) => {
       queryURL
     } = req.body;
 
-    // Validate required fields
     if (!word || !partOfSpeech || !levelWordId || !definition) {
       return res.status(400).json({ 
         message: 'Missing required fields: word, partOfSpeech, levelWordId, and definition are required.' 
@@ -51,7 +48,6 @@ const addWord = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Check if levelWordId exists
     const levelWordCheck = await pool.request()
       .input('levelWordId', sql.Int, levelWordId)
       .query('SELECT Id FROM LevelWord WHERE Id = @levelWordId AND Status = 1');
@@ -62,15 +58,12 @@ const addWord = async (req, res) => {
       });
     }
 
-    // Try to verify word meaning but don't block if it fails
     try {
       await verifyWordMeaning(word);
     } catch (verifyError) {
       console.warn(`Word verification warning for "${word}":`, verifyError.message);
-      // Continue with word creation despite verification failure
     }
 
-    // Insert new word using SQL Server
     const result = await pool.request()
       .input('word', sql.NVarChar, word)
       .input('partOfSpeech', sql.NVarChar, partOfSpeech)
@@ -125,7 +118,6 @@ const addWord = async (req, res) => {
 
     const newWordId = result.recordset[0].Id;
 
-    // Emit socket event for real-time updates
     const io = getIo();
     io.emit('newWordAdded', {
       id: newWordId,
@@ -162,8 +154,6 @@ const addWord = async (req, res) => {
   }
 };
 
-
-// Lấy danh sách từ với trạng thái 1
 const getWordsByStatus1 = async (req, res) => {
   try {
     const pool = await poolPromise;
@@ -176,7 +166,6 @@ const getWordsByStatus1 = async (req, res) => {
   }
 };
 
-// Lấy danh sách từ với trạng thái 0
 const getWordsByStatus0 = async (req, res) => {
   try {
     const pool = await poolPromise;
@@ -189,7 +178,6 @@ const getWordsByStatus0 = async (req, res) => {
   }
 };
 
-// Cập nhật trạng thái từ
 const updateWordStatus = async (req, res) => {
   try {
     const { id, newStatus } = req.body;
@@ -200,7 +188,6 @@ const updateWordStatus = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Kiểm tra tồn tại của từ
     const existingWord = await pool.request()
       .input('id', sql.Int, id)
       .query('SELECT * FROM Word WHERE Id = @id');
@@ -225,10 +212,8 @@ const searchWord = async (req, res) => {
   try {
     const { keyword = '' } = req.query;
     
-    // Kết nối cơ sở dữ liệu
     const pool = await poolPromise;
     
-    // Truy vấn lấy 10 kết quả đầu tiên bắt đầu bằng từ khóa và có Status = 1
     const result = await pool.request()
       .input('keyword', sql.NVarChar, `${keyword}%`)
       .query(`
@@ -238,12 +223,10 @@ const searchWord = async (req, res) => {
         ORDER BY Word
       `);
 
-    // Kiểm tra kết quả
     if (result.recordset.length === 0) {
       return res.status(404).json({ message: 'No words found matching the keyword.' });
     }
 
-    // Trả về danh sách các từ tìm được
     return res.status(200).json(result.recordset);
   } catch (err) {
     console.error('Error searching word:', err.message);
@@ -253,36 +236,34 @@ const searchWord = async (req, res) => {
 
 const getRandomWordByLevel = async (req, res) => {
   try {
-    const { levelId } = req.query; // Nhận levelId từ query parameters
-    console.log('Received levelId:', levelId); // Kiểm tra đầu vào
+    const { levelId } = req.query;
+    console.log('Received levelId:', levelId);
 
     if (!levelId) {
-      console.log('LevelId is missing'); // Ghi log khi thiếu levelId
+      console.log('LevelId is missing');
       return res.status(400).json({ message: 'LevelId is required' });
     }
 
     const pool = await poolPromise;
 
-    // Lấy tất cả các LevelWordId từ bảng LevelMapping với LevelId cụ thể
     const levelMappingResult = await pool.request()
       .input('levelId', sql.Int, levelId)
       .query('SELECT LevelWordId FROM LevelMapping WHERE LevelId = @levelId AND Status = 1');
 
-    console.log('Level mapping result:', levelMappingResult.recordset); // Kiểm tra kết quả lấy từ bảng LevelMapping
+    console.log('Level mapping result:', levelMappingResult.recordset);
 
     const levelWordIds = levelMappingResult.recordset.map(row => row.LevelWordId);
 
     if (levelWordIds.length === 0) {
-      console.log('No words found for this level'); // Ghi log khi không tìm thấy từ nào
+      console.log('No words found for this level');
       return res.status(404).json({ message: 'No words found for this level.' });
     }
 
-    // Tạo truy vấn để lấy 10 từ ngẫu nhiên từ bảng Word với các LevelWordId đã tìm được
     const randomWordsQuery = `
       SELECT TOP 10 * 
       FROM Word 
       WHERE LevelWordId IN (${levelWordIds.map(id => `'${id}'`).join(',')}) AND Status = 1
-      ORDER BY NEWID() -- Sắp xếp ngẫu nhiên
+      ORDER BY NEWID()
     `;
 
 
@@ -302,8 +283,6 @@ const getRandomWordByLevel = async (req, res) => {
   }
 };
 
-
-// Cập nhật từ yêu thích
 const toggleFavoriteWord = async (req, res) => {
   try {
     const { userId, wordId } = req.body;
@@ -362,7 +341,6 @@ const getFavoriteWords = async (req, res) => {
   try {
     const { userId } = req.query;
 
-    // Kiểm tra đầu vào
     if (!userId) {
       return res.status(400).json({ message: 'UserId is required.' });
     }
@@ -380,12 +358,10 @@ const getFavoriteWords = async (req, res) => {
         WHERE fw.UserId = @userId AND fw.Status = 1
       `);
 
-    // Kiểm tra kết quả
     if (result.recordset.length === 0) {
       return res.status(404).json({ message: 'No favorite words found for this user.' });
     }
 
-    // Trả về danh sách các từ yêu thích với userId
     res.status(200).json(result.recordset);
   } catch (err) {
     console.error('Error fetching favorite words:', err.message);
@@ -393,45 +369,38 @@ const getFavoriteWords = async (req, res) => {
   }
 };
 
-
-// Lấy từ ngẫu nhiên để đoán
 const getRandomWordForGuess = async (req, res) => {
   try {
     const pool = await poolPromise;
 
-    // Tạo truy vấn để lấy 1 từ ngẫu nhiên từ bảng Word với trạng thái là 1 (có thể sử dụng)
     const randomWordQuery = `
-      SELECT TOP 1 Id, Word -- Lấy thêm Id
+      SELECT TOP 1 Id, Word
       FROM Word 
       WHERE Status = 1 
-      ORDER BY NEWID() -- Sắp xếp ngẫu nhiên
+      ORDER BY NEWID()
     `;
 
-    console.log('Executing random word query for guessing:', randomWordQuery); // Kiểm tra câu truy vấn
+    console.log('Executing random word query for guessing:', randomWordQuery);
 
     const randomWordResult = await pool.request().query(randomWordQuery);
 
-    console.log('Random word found for guessing:', randomWordResult.recordset); // Kiểm tra từ ngẫu nhiên tìm được
+    console.log('Random word found for guessing:', randomWordResult.recordset);
 
     if (randomWordResult.recordset.length === 0) {
-      console.log('No words found for guessing'); // Ghi log khi không tìm thấy từ nào
+      console.log('No words found for guessing');
       return res.status(404).json({ message: 'No words found for guessing.' });
     }
 
-    // Lấy từ gốc và Id
     const wordRecord = randomWordResult.recordset[0];
     const word = wordRecord.Word;
-    const id = wordRecord.Id; // Lấy Id
+    const id = wordRecord.Id;
 
-    // Loại bỏ tất cả số và các từ chứa số
-    const cleanedWord = word.replace(/\b\w*\d\w*\b/g, ''); // Loại bỏ các từ có chứa số
-    const finalCleanedWord = cleanedWord.replace(/\s+/g, ' ').trim(); // Loại bỏ khoảng trắng thừa
+    const cleanedWord = word.replace(/\b\w*\d\w*\b/g, '');
+    const finalCleanedWord = cleanedWord.replace(/\s+/g, ' ').trim();
 
-    // Chuyển đổi từ thành chữ in hoa
     const upperCaseWord = word.toUpperCase();
     const upperCaseCleanedWord = finalCleanedWord.toUpperCase();
 
-    // Trả về Id, từ ngẫu nhiên và từ đã được làm sạch
     res.status(200).json({ id: id, original: upperCaseWord, cleaned: upperCaseCleanedWord });
   } catch (err) {
     console.error('Error fetching random word for guessing:', err.message);
@@ -439,23 +408,18 @@ const getRandomWordForGuess = async (req, res) => {
   }
 };
 
-
-
 const submitWordGuessAnswer = async (req, res) => {
   try {
-    const { userId, wordId, answer } = req.body; // Nhận thông tin từ body
+    const { userId, wordId, answer } = req.body;
 
-    // Ghi lại thông tin nhận được
     console.log('Received data:', { userId, wordId, answer });
 
-    // Kiểm tra thông tin đầu vào
     if (!userId || !wordId || !answer) {
       return res.status(400).json({ message: 'UserId, WordId, and Answer are required.' });
     }
 
     const pool = await poolPromise;
 
-    // Kiểm tra số lần đã nhập đáp án cho từ này
     const countResult = await pool.request()
       .input('userId', sql.Int, userId)
       .input('wordId', sql.Int, wordId)
@@ -467,12 +431,10 @@ const submitWordGuessAnswer = async (req, res) => {
 
     const answerCount = countResult.recordset[0].AnswerCount;
 
-    // Kiểm tra số lần thử tối đa
     if (answerCount >= 6) {
       return res.status(403).json({ message: 'Game over. You have reached the maximum number of attempts (6).' });
     }
 
-    // Kiểm tra từ đúng
     const wordResult = await pool.request()
       .input('wordId', sql.Int, wordId)
       .query(`SELECT Word FROM Word WHERE Id = @wordId AND Status = 1`);
@@ -481,10 +443,9 @@ const submitWordGuessAnswer = async (req, res) => {
       return res.status(404).json({ message: 'Word not found.' });
     }
 
-    const correctAnswer = wordResult.recordset[0].Word; // Từ đúng
-    const isCorrect = correctAnswer.toUpperCase() === answer.toUpperCase(); // So sánh đáp án (chữ in hoa)
+    const correctAnswer = wordResult.recordset[0].Word;
+    const isCorrect = correctAnswer.toUpperCase() === answer.toUpperCase();
 
-    // Lưu đáp án vào bảng WordGuessAnswer
     await pool.request()
       .input('userId', sql.Int, userId)
       .input('wordId', sql.Int, wordId)
@@ -495,7 +456,6 @@ const submitWordGuessAnswer = async (req, res) => {
         VALUES (@userId, @wordId, @answer, @isCorrect, GETDATE(), GETDATE(), 1)
       `);
 
-    // Kiểm tra nếu là lần thứ 6 và sai
     if (answerCount === 5 && !isCorrect) {
       return res.status(403).json({ message: 'Game over. You have made 6 attempts and did not guess the word.' });
     }
@@ -509,7 +469,7 @@ const submitWordGuessAnswer = async (req, res) => {
 
 const getWordById = async (req, res) => {
   try {
-    const { id } = req.query; // Lấy id từ query
+    const { id } = req.query;
 
     if (!id) {
       return res.status(400).json({ message: 'Word ID is required.' });
@@ -517,7 +477,6 @@ const getWordById = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Lấy từ theo ID
     const wordByIdResult = await pool.request()
       .input('id', sql.Int, id)
       .query('SELECT * FROM Word WHERE Id = @id');
@@ -528,15 +487,12 @@ const getWordById = async (req, res) => {
 
     const word = wordByIdResult.recordset[0].Word;
 
-    // Tìm tất cả các từ trùng khớp với từ theo ID, loại bỏ các cột không cần thiết
     const duplicateWordsResult = await pool.request()
       .input('word', sql.NVarChar, word)
       .query('SELECT Id, Word, PartOfSpeech, Definition, DefinitionVI, Example, ExampleVI, CreatedAt, UpdatedAt, Status FROM Word WHERE Word = @word');
 
-    // Kết hợp cả từ theo ID và các từ trùng khớp
     const combinedResults = [wordByIdResult.recordset[0], ...duplicateWordsResult.recordset];
 
-    // Loại bỏ các từ bị trùng lặp
     const uniqueResults = combinedResults.filter(
       (item, index, self) => index === self.findIndex((w) => w.Id === item.Id)
     );
@@ -558,7 +514,6 @@ const getMostFavoritedWordsToday = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Get all LevelWordIds from LevelMapping for the specific LevelId
     const levelMappingResult = await pool.request()
       .input('levelId', sql.Int, levelId)
       .query(`
@@ -573,7 +528,6 @@ const getMostFavoritedWordsToday = async (req, res) => {
       return res.status(404).json({ message: 'No LevelWordIds found for this level.' });
     }
 
-    // Get all WordIds from Word where LevelWordId matches the ones retrieved
     const levelWordsResult = await pool.request()
       .input('levelWordIds', sql.Int, levelWordIds)
       .query(`
@@ -589,7 +543,6 @@ const getMostFavoritedWordsToday = async (req, res) => {
       return res.status(404).json({ message: 'No words found for this level.' });
     }
 
-    // Query for today's most favorited words
     const mostFavoritedWordsQuery = `
       SELECT w.Id, w.Word, COUNT(DISTINCT fw.UserId) AS FavoriteCount, 
              w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS,
@@ -606,7 +559,6 @@ const getMostFavoritedWordsToday = async (req, res) => {
     const mostFavoritedWordsResult = await pool.request().query(mostFavoritedWordsQuery);
 
     if (mostFavoritedWordsResult.recordset.length === 0) {
-      // If no favorited words for today, fetch 10 random words
       const randomWordsQuery = `
         SELECT TOP 10 w.Id, w.Word, ISNULL(COUNT(fw.WordId), 0) AS FavoriteCount,
                w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
@@ -614,7 +566,7 @@ const getMostFavoritedWordsToday = async (req, res) => {
         LEFT JOIN FavoriteWords fw ON w.Id = fw.WordId AND fw.Status = 1
         WHERE w.Status = 1
           AND w.Word NOT LIKE '%[0-9]%'  
-          AND w.LevelWordId IN (${levelWordIds.join(',')})  -- Filter by LevelWordId
+          AND w.LevelWordId IN (${levelWordIds.join(',')})
         GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
         ORDER BY NEWID();  
       `;
@@ -622,10 +574,8 @@ const getMostFavoritedWordsToday = async (req, res) => {
       return res.status(200).json(randomWordsResult.recordset);
     }
 
-    // Process most favorited words
     const favoritedWords = mostFavoritedWordsResult.recordset;
 
-    // Grouping by word and collecting all userIds for each word
     const wordsWithUserIds = favoritedWords.reduce((acc, word) => {
       const existingWord = acc.find(w => w.Id === word.Id);
       if (existingWord) {
@@ -641,19 +591,17 @@ const getMostFavoritedWordsToday = async (req, res) => {
           PhoneticUS: word.PhoneticUS,
           AudioUK: word.AudioUK,
           AudioUS: word.AudioUS,
-          userIds: [word.UserId] // Initialize with first userId
+          userIds: [word.UserId]
         });
       }
       return acc;
     }, []);
 
-    // Calculate how many more words are needed to make 10
     const remainingCount = 10 - wordsWithUserIds.length;
 
     let finalWords = wordsWithUserIds;
 
     if (remainingCount > 0) {
-      // Fetch random words to fill the remaining slots
       const randomWordsQuery = `
         SELECT TOP ${remainingCount} w.Id, w.Word, ISNULL(COUNT(fw.WordId), 0) AS FavoriteCount,
                w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
@@ -661,7 +609,7 @@ const getMostFavoritedWordsToday = async (req, res) => {
         LEFT JOIN FavoriteWords fw ON w.Id = fw.WordId AND fw.Status = 1
         WHERE w.Status = 1
           AND w.Word NOT LIKE '%[0-9]%'  
-          AND w.LevelWordId IN (${levelWordIds.join(',')})  -- Filter by LevelWordId
+          AND w.LevelWordId IN (${levelWordIds.join(',')})
         GROUP BY w.Id, w.Word, w.Definition, w.PhoneticUK, w.PhoneticUS, w.AudioUK, w.AudioUS
         ORDER BY NEWID();  
       `;
@@ -669,7 +617,6 @@ const getMostFavoritedWordsToday = async (req, res) => {
       finalWords = finalWords.concat(randomWordsResult.recordset);
     }
 
-    // Return the final list of words
     res.status(200).json(finalWords);
   } catch (err) {
     console.error('Error fetching most favorited words today:', err.message);
@@ -695,7 +642,6 @@ const editWord = async (req, res) => {
       queryURL
     } = req.body;
 
-    // Validate required fields
     if (!word || !partOfSpeech || !levelWordId || !definition) {
       return res.status(400).json({
         message: 'Missing required fields: word, partOfSpeech, levelWordId, and definition are required.'
@@ -704,7 +650,6 @@ const editWord = async (req, res) => {
 
     const pool = await poolPromise;
 
-    // Check if word exists
     const existingWord = await pool.request()
       .input('id', sql.Int, id)
       .query('SELECT * FROM Word WHERE Id = @id');
@@ -713,7 +658,6 @@ const editWord = async (req, res) => {
       return res.status(404).json({ message: 'Word not found.' });
     }
 
-    // Check if levelWordId exists
     const levelWordCheck = await pool.request()
       .input('levelWordId', sql.Int, levelWordId)
       .query('SELECT Id FROM LevelWord WHERE Id = @levelWordId AND Status = 1');
@@ -724,7 +668,6 @@ const editWord = async (req, res) => {
       });
     }
 
-    // Update word
     const result = await pool.request()
       .input('id', sql.Int, id)
       .input('word', sql.NVarChar, word)
@@ -759,7 +702,6 @@ const editWord = async (req, res) => {
         SELECT * FROM Word WHERE Id = @id;
       `);
 
-    // Emit socket event for real-time updates
     const io = getIo();
     io.emit('wordUpdated', result.recordset[0]);
 

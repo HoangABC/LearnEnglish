@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = ` https://741d-171-239-30-182.ngrok-free.app`;
+const BASE_URL = ` http://192.168.1.100:3000`;
 
 
 const apiClient = axios.create({
@@ -36,4 +36,7 @@ export const api = {
   changePassword: (userId, oldPassword, newPassword) => apiClient.put('/account/users/changePassword', { userId, oldPassword, newPassword }),
   createFeedback: (userId, feedbackText) => apiClient.post('feedback/create', { userId, feedbackText }),
   getFeedbacks: (userId) => apiClient.get(`/feedback/getfeedbacks`, { params: { userId } }),
+  requestPasswordReset: (email) => apiClient.post('/account/request-password-reset', { email }),
+  verifyResetToken: (email, token) => apiClient.post('/account/verify-reset-token', { email, token }),
+  resetPassword: (email, newPassword) => apiClient.post('/account/reset-password', { email, newPassword }),
 };

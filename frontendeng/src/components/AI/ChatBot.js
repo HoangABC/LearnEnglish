@@ -1,27 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, TextInput, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Keyboard } from 'react-native';
 import axios from 'axios';
-import ChatBubble from './ChatBubble'; // Assuming you have a ChatBubble component
+import ChatBubble from './ChatBubble'; 
 
-const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
-  const [chat, setChat] = useState([]); // Chat log
-  const [userInput, setUserInput] = useState(''); // User input
-  const [loading, setLoading] = useState(false); // Loading state
-  const [error, setError] = useState(null); // Error state
-  const API_KEY = 'AIzaSyA1qeItcA-tL9ZoxbihSC46LO-6vXphJAA'; // Replace with your API Key
-  const flatListRef = useRef(null); // Create a reference for FlatList
+const ChatBot = ({ sessionId }) => { 
+  const [chat, setChat] = useState([]); 
+  const [userInput, setUserInput] = useState(''); 
+  const [loading, setLoading] = useState(false); 
+  const [error, setError] = useState(null); 
+  const API_KEY = 'AIzaSyB-ZJr7FIGcbAyTtDCfnKXAJNPGhgH85DA';
+  const flatListRef = useRef(null); 
+  const [isResponding, setIsResponding] = useState(false);
+  const abortControllerRef = useRef(null);
 
-  // Function to handle user input
   const handleUserInput = async () => {
-    if (!userInput.trim()) return; // Ensure userInput is not empty
-
+    if (!userInput.trim()) return;
+    
+    Keyboard.dismiss();
+    
     let updatedChat = [...chat, { role: 'user', parts: [{ text: userInput }] }];
-    setChat(updatedChat); // Update chat state to show user's message
-    setUserInput(''); // Clear input box
-    setLoading(true); // Show loading spinner
-
+    setChat(updatedChat); 
+    setUserInput(''); 
+    setLoading(true); 
+    setIsResponding(true);
+    
     try {
-      const response = await makeApiCall(updatedChat, 0); // Call API with retry mechanism
+      const response = await makeApiCall(updatedChat, 0); 
       const modelResponse = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || ''; 
       if (modelResponse) {
         const newChat = [...updatedChat, { role: 'model', parts: [{ text: modelResponse }] }];
@@ -31,17 +35,17 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
       console.error('Error calling Gemini API:', error);
       setError('An error occurred. Please try again.');
     } finally {
-      setLoading(false); // Hide loading spinner
+      setLoading(false);
+      setIsResponding(false);
     }
   };
 
-  // Function to handle retry logic for API call
   const makeApiCall = async (updatedChat, retryCount) => {
     try {
       const response = await axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
         {
-          sessionId, // Include session ID for tracking
+          sessionId, 
           contents: updatedChat.map(chatItem => ({
             role: chatItem.role,
             parts: chatItem.parts.map(part => ({ text: part.text }))
@@ -51,7 +55,7 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
       return response;
     } catch (error) {
       if (error.response?.status === 429 && retryCount < 3) {
-        // Wait for 1 second and retry up to 3 times
+
         await new Promise(resolve => setTimeout(resolve, 1000));
         return makeApiCall(updatedChat, retryCount + 1);
       } else {
@@ -60,9 +64,16 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
     }
   };
 
-  // Send an initial message when the view is opened
+  const handleStopResponse = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsResponding(false);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const initialMessage = { role: 'model', parts: [{ text: 'Hello! I’m your English learning assistant. How can I help you today?' }] };
+    const initialMessage = { role: 'model', parts: [{ text: 'Xin chào! Tôi là trợ lý học tiếng Anh của bạn. Tôi có thể giúp gì cho bạn hôm nay?' }] };
     setChat([initialMessage]);
   }, []);
 
@@ -73,7 +84,6 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
     }
   }, [chat]);
 
-  // Render a single chat bubble
   const renderChatItem = ({ item }) => (
     <ChatBubble role={item.role} text={item.parts[0].text} />
   );
@@ -81,24 +91,30 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
   return (
     <View style={styles.container}>
       <Text style={styles.title}>English Learning ChatBot</Text>
-      <FlatList
-        ref={flatListRef} 
-        data={chat} 
-        renderItem={renderChatItem}
-        keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={styles.chatContainer}
-        onContentSizeChange={() => flatListRef.current.scrollToEnd({ animated: true })} 
-        style={{ flexGrow: 1 }} 
-      />
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type your message..."
-          placeholderTextColor="#aaa"
-          value={userInput}
-          onChangeText={text => setUserInput(text)} 
+      <View style={styles.chatWrapper}>
+        <FlatList
+          ref={flatListRef} 
+          data={chat} 
+          renderItem={renderChatItem}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={styles.chatContainer}
+          onContentSizeChange={() => flatListRef.current.scrollToEnd({ animated: true })} 
         />
-        <TouchableOpacity style={styles.button} onPress={handleUserInput}>
+      </View>
+      <View style={styles.inputContainer}>
+        <TextInput 
+          style={styles.input}
+          value={userInput}
+          onChangeText={setUserInput}
+          placeholder="Type your message..."
+          multiline={true}
+          numberOfLines={1}
+          maxHeight={100}
+        />
+        <TouchableOpacity 
+          style={styles.sendButton}
+          onPress={handleUserInput}
+        >
           <Text style={styles.buttonText}>Send</Text>
         </TouchableOpacity>
       </View>
@@ -108,11 +124,11 @@ const ChatBot = ({ sessionId }) => { // Pass sessionId as a prop
   );
 };
 
-// Styles for the component
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB', // Màu nền nhẹ nhàng
+    backgroundColor: '#F5F7FB', 
     padding: 16,
   },
   title: {
@@ -124,39 +140,48 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.5,
   },
+  chatWrapper: {
+    flex: 1,
+    marginBottom: 60,
+  },
   chatContainer: {
     flexGrow: 1,
     paddingBottom: 16,
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
+    alignItems: 'flex-end',
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    backgroundColor: 'white',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   input: {
     flex: 1,
-    height: 50,
-    marginRight: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 25,
-    fontSize: 18,
-    color: '#1F2937',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    marginRight: 10,
+    padding: 10,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    minHeight: 40,
+    maxHeight: 100,
   },
-  button: {
-    height: 50,
-    width: 50,
-    backgroundColor: '#4F46E5',
-    borderRadius: 25,
+  sendButton: {
+    backgroundColor: '#4B5563',
+    borderRadius: 20,
+    padding: 10,
+    minWidth: 70,
     justifyContent: 'center',
     alignItems: 'center',
+    height: 40,
   },
   buttonText: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   loading: {
     position: 'absolute',
@@ -169,6 +194,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
     fontSize: 14,
+  },
+  stopButton: {
+    backgroundColor: '#DC2626', 
   },
 });
 

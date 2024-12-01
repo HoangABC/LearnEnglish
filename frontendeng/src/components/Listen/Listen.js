@@ -343,6 +343,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4B4B4B',
     fontWeight: '500',
+    width:'100%',
+    textAlign:'center'
   },
   selectedOptionText: {
     color: '#1CB0F6',

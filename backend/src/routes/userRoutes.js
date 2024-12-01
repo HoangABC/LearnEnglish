@@ -24,4 +24,8 @@ router.get('/users/status0', userController.getUsersByStatus0);
 
 router.get('/verify/:token', userController.confirmEmail);
 
+router.post('/request-password-reset', userController.requestPasswordReset);
+router.post('/verify-reset-token', userController.verifyResetToken);
+router.post('/reset-password', userController.resetPassword);
+
 module.exports = router;

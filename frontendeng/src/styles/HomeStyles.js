@@ -102,14 +102,28 @@ const styles = StyleSheet.create({
   card: {
     width: 200,
     aspectRatio: 3 / 4,
-    backgroundColor: '#007bff',
     borderRadius: 15,
     padding: 16,
     marginHorizontal: 8,
     justifyContent: 'space-between',
   },
+  cardBlue: {
+    backgroundColor: '#007bff',
+  },
   cardGreen: {
     backgroundColor: '#28a745',
+  },
+  cardPurple: {
+    backgroundColor: '#6f42c1',
+  },
+  cardOrange: {
+    backgroundColor: '#fd7e14',
+  },
+  cardTeal: {
+    backgroundColor: '#20c997',
+  },
+  cardPink: {
+    backgroundColor: '#e83e8c',
   },
   cardText: {
     fontSize: 18,
@@ -143,7 +157,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    width: '100%',
+    marginBottom: 15,
+    paddingHorizontal: 5,
   },
   wordText: {
     fontSize: 24,
@@ -395,12 +411,10 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: 'white',
-    borderRadius: 10,
+    borderRadius: 20,
     padding: 20,
-    width: '95%',
-    maxHeight: '90%',
-    alignItems: 'center',
-    
+    width: '90%',
+    maxHeight: '80%',
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: {
@@ -413,7 +427,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
     color: '#333',
   },
   emptyNotificationContainer: {
@@ -426,14 +439,25 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
     marginTop: 20,
+    width: '100%',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   closeButtonText: {
     color: 'white',
     fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
   },
   notificationList: {
     maxHeight: 300,
@@ -471,17 +495,20 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   feedbackItem: {
-    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    backgroundColor: 'white',
-    width: '100%',
   },
-  
   feedbackContent: {
-    gap: 4,
+    flex: 1,
   },
   
+  deleteButton: {
+    padding: 10,
+  },
   feedbackTime: {
     fontSize: 12,
     color: '#666',
@@ -519,6 +546,47 @@ const styles = StyleSheet.create({
   feedbackList: {
     width: '100%',
     maxHeight: '85%',
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 15,
+  },
+
+  markAllReadButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+  },
+
+  markAllReadText: {
+    color: 'white',
+    fontSize: 12,
+  },
+
+  toggleButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+
+  toggleButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

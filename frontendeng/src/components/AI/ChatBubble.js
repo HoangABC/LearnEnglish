@@ -1,71 +1,48 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Markdown from 'react-native-markdown-display';
 
-const ChatBubble = ({ role, text }) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-
-  useEffect(() => {
-    if (role === 'model') {
-      setIsTyping(true);
-      setDisplayedText('');
-      let index = 0;
-      
-      const intervalId = setInterval(() => {
-        if (index < text.length) {
-          setDisplayedText(prev => prev + text.charAt(index));
-          index++;
-        } else {
-          setIsTyping(false);
-          clearInterval(intervalId);
-        }
-      }, 30); // Tốc độ typing, có thể điều chỉnh số 30 để thay đổi tốc độ
-
-      return () => clearInterval(intervalId);
-    } else {
-      setDisplayedText(text);
-    }
-  }, [text, role]);
-
-  return (
-    <View
-      style={[
-        styles.chatItem,
-        role === "user" ? styles.userChatItem : styles.modelChatItem,
-      ]}
-    >
-      {role === "user" ? (
-        <Text style={styles.chatText}>{text}</Text>
-      ) : (
-        <>
-          <Markdown style={styles.chatText}>{displayedText}</Markdown>
-          {isTyping && <Text style={styles.typingIndicator}>▋</Text>}
-        </>
-      )}
+const ChatBubble = ({ role, text }) => (
+  <View style={styles.bubbleContainer}>
+    <View style={[styles.chatItem, role === "user" ? styles.userChatItem : styles.modelChatItem]}>
+      <Markdown style={styles.markdown} selectable>
+        {text}
+      </Markdown>
     </View>
-  );
-};
+  </View>
+);
 
 const styles = StyleSheet.create({
+  bubbleContainer: {
+    width: '100%',
+    paddingHorizontal: 10,
+    marginVertical: 5,
+  },
   chatItem: {
-    marginBottom: 16,
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
-    maxWidth: "80%",
+    maxWidth: '100%',
+    paddingRight: 16,
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
   },
   userChatItem: {
     alignSelf: "flex-end",
     backgroundColor: "#FFEFD5",
+    minWidth: 50,
+    maxWidth: '80%',
+    paddingHorizontal: 16,
   },
   modelChatItem: {
     alignSelf: "flex-start",
     backgroundColor: "transparent",
   },
   chatText: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 16,
     color: "#1F2937",
+    flexShrink: 1,
+    flex: 1,
   },
   typingIndicator: {
     color: "#1F2937",
@@ -74,7 +51,23 @@ const styles = StyleSheet.create({
     bottom: 16,
     right: 16,
     opacity: 0.5,
-  }
+  },
+  markdown: {
+    body: {
+      fontSize: 16,
+      lineHeight: 24,
+      color: '#1F2937',
+      paddingRight: 4,
+    },
+    paragraph: {
+      fontSize: 16,
+      lineHeight: 24,
+      marginVertical: 4,
+    },
+    bullet_list: {
+      fontSize: 16,
+    },
+  },
 });
 
 export default ChatBubble;

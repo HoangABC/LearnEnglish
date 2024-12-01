@@ -111,6 +111,10 @@ const Login = () => {
     navigation.navigate('Register');
   };
 
+  const navigateToForgotPassword = () => {
+    navigation.navigate('EmailSend');
+  };
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Image source={require('../assets/images/logo.png')} style={styles.logo} />
@@ -143,6 +147,10 @@ const Login = () => {
               <Feather name={secureText ? 'eye-off' : 'eye'} size={20} color="#666" />
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity onPress={navigateToForgotPassword} style={styles.forgotPasswordContainer}>
+            <Text style={styles.forgotPasswordText}>Quên mật khẩu ?</Text>
+          </TouchableOpacity>
 
           {loading ? (
             <ActivityIndicator size="large" color="#007bff" style={styles.loader} />
@@ -309,6 +317,17 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginVertical: 20,
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+    minWidth: 100,
+    width:'100%',
+  },
+  forgotPasswordText: {
+    color: '#007bff',
+    fontSize: 14,
+    textAlign: 'right',
   },
 });
 

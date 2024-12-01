@@ -400,33 +400,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   phoneticContainer: {
-    width: '100%',
-    paddingHorizontal: 20,
+    flexDirection: 'column', 
+    justifyContent: 'flex-start', 
+    alignItems: 'center',  
+    marginBottom: 10,
+    width: '100%'
   },
   phoneticItem: {
-    marginBottom: 20,
-  },
-  regionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
+    flexDirection: 'row',  
+    alignItems: 'center',  
+    justifyContent: 'center',
+    marginBottom: 10,  
   },
   phoneticText: {
-    fontSize: 18,
-    color: '#FFF',
-    fontWeight: '600',
-    marginRight: 10,
-  },
-  soundButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 8,
-    borderRadius: 20,
+    fontSize: 16,
+    color: 'white',
+    marginRight: 5,
   },
   phonetic: {
-    fontSize: 22,
-    color: '#FFF',
-    opacity: 0.9,
-    marginLeft: 5,
+    fontSize: 20,
+    color: 'white',
+    width: 125
   },
   cardBack: {
     backgroundColor: '#FFF',
@@ -461,6 +455,26 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
   },
+  soundIcon: {
+    marginHorizontal: 10,
+    alignItems: 'center',
+  },
+  soundButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 8,
+    borderRadius: 20,
+  },
+  regionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  soundIconContainer: {
+    flexDirection: 'row', // Xếp hàng ngang
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10, // Khoảng cách trên dưới giữa các nút
+  },
   scrollView: {
     width: '100%',
   },
@@ -494,49 +508,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-  },
-  favoriteIcon: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-  },
-  soundIcon: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-  },
-  soundIconContainer: {
-    flexDirection: 'row', // Xếp hàng ngang
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10, // Khoảng cách trên dưới giữa các nút
-  },
-  phoneticContainer: {
-    flexDirection: 'column', 
-    justifyContent: 'flex-start', 
-    alignItems: 'center',  
-    marginBottom: 10,
-    width:'100%'
-  },
-  phoneticItem: {
-    flexDirection: 'row',  
-    alignItems: 'center',  
-    justifyContent: 'center',
-    marginBottom: 10,  
-  },
-  phoneticText: {
-    fontSize: 16,
-    color: 'white',
-    marginRight: 5,
-  },
-  soundIcon: {
-    marginHorizontal: 10,
-    alignItems: 'center',
-  },
-  phonetic: {
-    fontSize: 20,
-    color: 'white',
-    width:120
   },
 });
 
