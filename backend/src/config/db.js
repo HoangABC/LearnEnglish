@@ -1,18 +1,22 @@
-const sql = require('mssql/msnodesqlv8');
-const { DB_USER, DB_PASSWORD, DB_SERVER, DB_DATABASE } = require('dotenv').config().parsed;
+const sql = require('mssql');
+require('dotenv').config();
 
 const config = {
-  server: DB_SERVER,
-  database: DB_DATABASE,
-  driver: 'msnodesqlv8',
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  server: process.env.DB_SERVER,
+  database: process.env.DB_DATABASE,
   options: {
     encrypt: false,
-    trustedConnection: true,
-    instanceName: 'SQLEXPRESS'
+    trustServerCertificate: true,
+    enableArithAbort: true
   },
-  requestTimeout: 300000, 
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  }
 };
-
 
 const poolPromise = new sql.ConnectionPool(config)
   .connect()
@@ -22,7 +26,7 @@ const poolPromise = new sql.ConnectionPool(config)
   })
   .catch(err => {
     console.error('Database connection failed:', err);
-    process.exit(1);
+    throw err;
   });
 
 module.exports = { poolPromise, sql };

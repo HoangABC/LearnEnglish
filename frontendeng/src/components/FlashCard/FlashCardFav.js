@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'; 
-import { View, Text, ActivityIndicator, StyleSheet, FlatList, Dimensions, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react'; 
+import { View, Text, ActivityIndicator, StyleSheet, FlatList, Dimensions, ScrollView, ImageBackground, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import useWordActions from '../../hooks/useWordActions';
@@ -8,6 +8,7 @@ import { Appbar } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialIcons'; 
 import LinearGradient from 'react-native-linear-gradient';
 import { WebView } from 'react-native-webview';
+import RNFetchBlob from 'rn-fetch-blob';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +20,9 @@ const FlashCardFav = () => {
   const [webviewKey, setWebviewKey] = useState(0);
   const [autoPlay, setAutoPlay] = useState(false); 
   const [soundRegion, setSoundRegion] = useState('UK'); 
+  const [playedCards, setPlayedCards] = useState(new Set());
+  const [scrollDirection, setScrollDirection] = useState(null);
+  const lastOffset = useRef(0);
 
   const {
     status,
@@ -30,7 +34,6 @@ const FlashCardFav = () => {
 
   const navigation = useNavigation();
 
-  // Fetch userId once on component mount
   useEffect(() => {
     const fetchUserId = async () => {
       try {
@@ -45,36 +48,97 @@ const FlashCardFav = () => {
     };
 
     fetchUserId();
-
   }, []);
 
   useEffect(() => {
     const fetchSettingsAndFavoriteWords = async () => {
       try {
-        // Fetch Auto Play Settings
         const autoPlaySound = await AsyncStorage.getItem('autoPlaySound');
         if (autoPlaySound) {
           const { isEnabled, region } = JSON.parse(autoPlaySound);
           setAutoPlay(isEnabled);
-          setSoundRegion(region); // Cập nhật vùng phát âm
+          setSoundRegion(region);
         }
-        
-        // Fetch Favorite Words (nếu đã có userId)
+
         if (userId) {
-          handleFetchFavoriteWords(userId);
+          const offlineData = await AsyncStorage.getItem(`favoriteWords_${userId}`);
+          if (offlineData) {
+            const localFavorites = JSON.parse(offlineData);
+            if (Array.isArray(localFavorites) && localFavorites.length > 0) {
+              processAndSetExampleTexts(localFavorites);
+              await preloadAllAudios(localFavorites);
+              await handleFetchFavoriteWords(userId);
+            }
+          }
+
+          const checkNetwork = async () => {
+            try {
+              const response = await fetch('https://www.google.com', { 
+                method: 'HEAD',
+                mode: 'no-cors',
+                timeout: 5000
+              });
+              return true;
+            } catch (error) {
+              return false;
+            }
+          };
+
+          const hasNetwork = await checkNetwork();
+
+          if (hasNetwork) {
+            console.log('Using online data');
+            try {
+              await handleFetchFavoriteWords(userId);
+              const onlineData = favoriteWords;
+              
+              if (Array.isArray(onlineData) && onlineData.length > 0) {
+                await AsyncStorage.setItem(
+                  `favoriteWords_${userId}`, 
+                  JSON.stringify(onlineData)
+                );
+                processAndSetExampleTexts(onlineData);
+                await preloadAllAudios(onlineData);
+              }
+            } catch (error) {
+              console.log('Failed to fetch online data, using offline data');
+              if (offlineData) {
+                const localFavorites = JSON.parse(offlineData);
+                if (Array.isArray(localFavorites) && localFavorites.length > 0) {
+                  processAndSetExampleTexts(localFavorites);
+                  await handleFetchFavoriteWords(userId);
+                }
+              }
+            }
+          } else {
+            console.log('Using offline data');
+            if (offlineData) {
+              const localFavorites = JSON.parse(offlineData);
+              if (Array.isArray(localFavorites) && localFavorites.length > 0) {
+                processAndSetExampleTexts(localFavorites);
+                await handleFetchFavoriteWords(userId);
+              }
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to load settings or favorite words:', error);
+        try {
+          const offlineData = await AsyncStorage.getItem(`favoriteWords_${userId}`);
+          if (offlineData) {
+            const localFavorites = JSON.parse(offlineData);
+            if (Array.isArray(localFavorites) && localFavorites.length > 0) {
+              processAndSetExampleTexts(localFavorites);
+              await handleFetchFavoriteWords(userId);
+            }
+          }
+        } catch (offlineError) {
+          console.error('Failed to load offline data:', offlineError);
+        }
       }
     };
-  
+
     fetchSettingsAndFavoriteWords();
-  }, [userId]);  // Chạy lại khi userId thay đổi
-  
-  useEffect(() => {
-    if (userId) {
-      handleFetchFavoriteWords(userId);
-    }
   }, [userId]);
 
   useEffect(() => {
@@ -106,36 +170,94 @@ const FlashCardFav = () => {
     }
   }, [favoriteWords]);
 
-  const handleScroll = (event) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const currentIndex = Math.round(offsetX / (width * 0.9));
-    setCurrentCardIndex(currentIndex);
-  
-    const currentWord = favoriteWords[currentIndex];
-  
-    // If autoPlay is enabled and there is a current word, play the sound
-    if (autoPlay && currentWord) {
-      const soundUrl = soundRegion === 'US' ? currentWord.AudioUS : currentWord.AudioUK;
+
+  useEffect(() => {
+    if (favoriteWords.length > 0 && autoPlay && !playedCards.has(0)) {
+      const firstWord = favoriteWords[0];
+      const soundUrl = soundRegion === 'US' ? firstWord.AudioUS : firstWord.AudioUK;
       if (soundUrl) {
         playSound(soundUrl);
+        setPlayedCards(prev => new Set(prev).add(0));
+      }
+    }
+  }, [favoriteWords, autoPlay, soundRegion]);
+
+  const handleScroll = (event) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(offsetX / (width * 0.9));
+    
+
+    const currentDirection = offsetX > lastOffset.current ? 'forward' : 'backward';
+
+    if (currentDirection !== scrollDirection) {
+      setScrollDirection(currentDirection);
+      setPlayedCards(new Set());
+    }
+
+    lastOffset.current = offsetX;
+
+    const safeIndex = Math.min(newIndex, favoriteWords.length - 1);
+
+    if (
+      (currentCardIndex === favoriteWords.length - 1 && safeIndex === 0) ||
+      (currentCardIndex === 0 && safeIndex === favoriteWords.length - 1)
+    ) {
+      setPlayedCards(new Set());
+    }
+
+    if (safeIndex !== currentCardIndex) {
+      setCurrentCardIndex(safeIndex);
+
+      if (autoPlay && !playedCards.has(safeIndex)) {
+        const currentWord = favoriteWords[safeIndex];
+        if (currentWord) {
+          const soundUrl = soundRegion === 'US' ? currentWord.AudioUS : currentWord.AudioUK;
+          if (soundUrl) {
+            playSound(soundUrl);
+            setPlayedCards(prev => new Set(prev).add(safeIndex));
+          }
+        }
       }
     }
   };
   
   const handleToggleFavoriteWordWithLogging = async (wordId) => {
-    if (!userId || !wordId) return;
-  
+    if (!userId) {
+      console.error('User not found');
+      return;
+    }
+
     try {
-      const updatedFavoriteWords = favoriteWords.map(word => (
-        word.Id === wordId ? { ...word, isFavorite: false } : word
-      ));
-
-      await AsyncStorage.setItem(`wordsArray_userId_${userId}`, JSON.stringify(updatedFavoriteWords));
-      console.log('update', updatedFavoriteWords)
-
+      const response = await fetch('https://www.google.com', { 
+        method: 'HEAD',
+        mode: 'no-cors',
+        timeout: 5000
+      });
+      
       await handleToggleFavoriteWord(userId, wordId);
+      await handleFetchFavoriteWords(userId);
+
+      try {
+        const vocaWordsJson = await AsyncStorage.getItem(`wordsArray_${userId}`);
+        if (vocaWordsJson) {
+          const vocaWords = JSON.parse(vocaWordsJson);
+          const updatedVocaWords = vocaWords.map(word =>
+            word.Id === wordId ? { ...word, isFavorite: false } : word
+          );
+          
+          await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(updatedVocaWords));
+          console.log('Updated favorite status in FlashCardVoca local storage');
+        }
+      } catch (error) {
+        console.error('Error updating FlashCardVoca local storage:', error);
+      }
+
     } catch (error) {
-      console.error('Failed to toggle favorite word:', error);
+      Alert.alert(
+        'Chế độ Ngoại tuyến',
+        'Bạn đang ở chế độ ngoại tuyến. Vui lòng kết nối internet để thực hiện thao tác này.',
+        [{ text: 'Đồng ý', onPress: () => console.log('OK Pressed') }]
+      );
     }
   };
   
@@ -164,16 +286,122 @@ const FlashCardFav = () => {
   };
 
 
-  const playSound = (audioUrl) => {
+  const playSound = async (audioUrl) => {
     if (!audioUrl) return;
-  
-    // Update soundUrl and reset WebView
-    setSoundUrl(audioUrl);
-  
-    // Create a new key to reload WebView
-    setWebviewKey(prevKey => prevKey + 1);
+
+    try {
+
+      const audioKey = `audio_${audioUrl.split('/').pop()}`;
+      const localAudioBase64 = await AsyncStorage.getItem(audioKey);
+
+      if (localAudioBase64) {
+
+        console.log('Playing from local storage');
+        const base64Audio = `data:audio/mp3;base64,${localAudioBase64}`;
+        setSoundUrl(base64Audio);
+        setWebviewKey(prev => prev + 1);
+      } else {
+
+        try {
+          await fetch('https://www.google.com', { mode: 'no-cors' });
+
+          console.log('Playing and downloading');
+          setSoundUrl(audioUrl);
+          setWebviewKey(prev => prev + 1);
+
+          const response = await RNFetchBlob.fetch('GET', audioUrl);
+          if (response.info().status === 200) {
+            const base64Data = response.base64();
+            await AsyncStorage.setItem(audioKey, base64Data);
+          }
+        } catch (error) {
+          console.log('Offline - no audio available');
+        }
+      }
+    } catch (error) {
+      console.error('Error playing sound:', error);
+    }
   };
-  
+
+
+  const preloadAudios = async (words) => {
+    try {
+      for (const word of words) {
+        const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
+        const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
+
+ 
+        if (word.AudioUK && !(await AsyncStorage.getItem(ukAudioKey))) {
+          const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
+          if (ukResponse.info().status === 200) {
+            const base64Data = ukResponse.base64();
+            await AsyncStorage.setItem(ukAudioKey, base64Data);
+          }
+        }
+
+
+        if (word.AudioUS && !(await AsyncStorage.getItem(usAudioKey))) {
+          const usResponse = await RNFetchBlob.fetch('GET', word.AudioUS);
+          if (usResponse.info().status === 200) {
+            const base64Data = usResponse.base64();
+            await AsyncStorage.setItem(usAudioKey, base64Data);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error preloading audios:', error);
+    }
+  };
+
+
+  const preloadAllAudios = async (words) => {
+    try {
+      console.log(`Starting to preload ${words.length * 2} audio files...`);
+      
+      for (const word of words) {
+        if (word.AudioUK) {
+          const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
+          try {
+            const existingUKAudio = await AsyncStorage.getItem(ukAudioKey);
+            if (!existingUKAudio) {
+              console.log(`Downloading UK audio for: ${word.Word}`);
+              const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
+              if (ukResponse.info().status === 200) {
+                const ukBase64Data = ukResponse.base64();
+                await AsyncStorage.setItem(ukAudioKey, ukBase64Data);
+                console.log(`Successfully saved UK audio for: ${word.Word}`);
+              }
+            }
+          } catch (ukError) {
+            console.error(`Failed to download UK audio for ${word.Word}:`, ukError);
+          }
+        }
+
+        if (word.AudioUS) {
+          const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
+          try {
+            const existingUSAudio = await AsyncStorage.getItem(usAudioKey);
+            if (!existingUSAudio) {
+              console.log(`Downloading US audio for: ${word.Word}`);
+              const usResponse = await RNFetchBlob.fetch('GET', word.AudioUS);
+              if (usResponse.info().status === 200) {
+                const usBase64Data = usResponse.base64();
+                await AsyncStorage.setItem(usAudioKey, usBase64Data);
+                console.log(`Successfully saved US audio for: ${word.Word}`);
+              }
+            }
+          } catch (usError) {
+            console.error(`Failed to download US audio for ${word.Word}:`, usError);
+          }
+        }
+      }
+
+      console.log('Audio preload process completed');
+    } catch (error) {
+      console.error('Error in preloadAllAudios:', error);
+    }
+  };
+
   const renderItem = ({ item, index }) => {
     return (
       <View style={styles.flipCardContainer}>
@@ -199,7 +427,7 @@ const FlashCardFav = () => {
             </TouchableOpacity>
             <Text style={styles.word}>{item.Word}</Text>
   
-            {/* Phonetic sections */}
+
             <View style={styles.phoneticContainer}>
               <View style={styles.phoneticItem}>
                 <View style={styles.regionContainer}>
@@ -252,6 +480,73 @@ const FlashCardFav = () => {
   
   const wordsArrayLength = favoriteWords.length;
 
+  const handleRefresh = async () => {
+    if (userId) {
+      try {
+
+        const offlineFavorites = await AsyncStorage.getItem(`favoriteWords_${userId}`);
+        if (offlineFavorites) {
+          const favWords = JSON.parse(offlineFavorites);
+          if (Array.isArray(favWords) && favWords.length > 0) {
+            return;
+          }
+        }
+ 
+        await handleFetchFavoriteWords(userId);
+      } catch (error) {
+        console.error('Failed to refresh favorite words:', error);
+      }
+    }
+  };
+
+
+  const processAndSetExampleTexts = (words) => {
+    const processedTexts = words.map(word => ({
+      en: (word.Example || 'No example available')
+        .replace(/<\/?li[^>]*>/g, '')
+        .replace(/<[^>]+>/g, '')
+        .split(';')
+        .filter(Boolean)
+        .map(item => `- ${item.trim()}`)
+        .join('\n'),
+      vi: (word.ExampleVI || 'Không có ví dụ')
+        .replace(/<\/?li[^>]*>/g, '')
+        .replace(/<[^>]+>/g, '')
+        .split(';')
+        .filter(Boolean)
+        .map(item => `- ${item.trim()}`)
+        .join('\n')
+    }));
+    setExampleTexts(processedTexts);
+  };
+
+
+  useEffect(() => {
+    if (autoPlay || soundRegion) {
+      setPlayedCards(new Set());
+      setScrollDirection(null);
+      lastOffset.current = 0;
+    }
+  }, []);
+
+
+  if (!favoriteWords || favoriteWords.length === 0) {
+    return (
+      <ImageBackground
+        source={require('../../assets/images/background_flashcard.jpg')}
+        style={styles.backgroundImage}
+      >
+        <View style={styles.container}>
+          <Appbar.Header style={styles.header}>
+            <Appbar.BackAction onPress={() => navigation.goBack()} />
+            <Appbar.Content title="Favorite Words" />
+          </Appbar.Header>
+         
+        </View>
+      </ImageBackground>
+    );
+  }
+
   return (
     <ImageBackground
       source={require('../../assets/images/background_flashcard.jpg')}
@@ -264,7 +559,7 @@ const FlashCardFav = () => {
             title={
               <View style={styles.progressContainer}>
                 <Text style={styles.progressText}>
-                  {currentCardIndex + 1}/{wordsArrayLength}
+                  {Math.min(currentCardIndex + 1, favoriteWords.length)}/{favoriteWords.length}
                 </Text>
               </View>
             }
@@ -274,7 +569,12 @@ const FlashCardFav = () => {
         <View style={styles.progressBarWrapper}>
           <View style={styles.progressBarBackground}>
             <View
-              style={[styles.progressBarFill, { width: `${((currentCardIndex + 1) / (wordsArrayLength || 1)) * 100}%` }]}
+              style={[
+                styles.progressBarFill, 
+                { 
+                  width: `${(Math.min(currentCardIndex + 1, favoriteWords.length) / favoriteWords.length) * 100}%` 
+                }
+              ]}
             />
           </View>
         </View>
@@ -297,11 +597,6 @@ const FlashCardFav = () => {
         {!status && (
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color="#ffffff" />
-          </View>
-        )}
-        {status === 'failed' && error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
@@ -366,13 +661,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'red',
   },
   flipCardContainer: {
-    justifyContent: 'center', // Căn giữa theo chiều dọc
-    alignItems: 'center', // Căn giữa theo chiều ngang
+    justifyContent: 'center', 
+    alignItems: 'center',
     width: width * 0.9, 
-    height: '100%', // Đảm bảo chiều cao đầy đủ để căn giữa
+    height: '100%', 
   },
   flipCard: {
-    marginStart: 9,
     height: 450,
     width: width * 0.85,
     borderRadius: 15,
@@ -416,11 +710,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
     marginRight: 5,
+    
   },
   phonetic: {
     fontSize: 20,
     color: 'white',
-    width: 125
+    width: 125,
+    width:'50%'
   },
   cardBack: {
     backgroundColor: '#FFF',
@@ -470,10 +766,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   soundIconContainer: {
-    flexDirection: 'row', // Xếp hàng ngang
+    flexDirection: 'row', 
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10, // Khoảng cách trên dưới giữa các nút
+    marginTop: 10, 
   },
   scrollView: {
     width: '100%',

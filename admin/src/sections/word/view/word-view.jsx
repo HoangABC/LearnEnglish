@@ -68,6 +68,7 @@ export default function WordPage() {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [openEditModal, setOpenEditModal] = useState(false);
   const [editingWord, setEditingWord] = useState(null);
+  const [levelFilter, setLevelFilter] = useState('');
 
   const filteredWords = React.useMemo(() => {
     console.log('Current words:', words);
@@ -79,16 +80,16 @@ export default function WordPage() {
       filterName,
     });
   
-    console.log('After applyFilter:', filtered);
-    
-    const statusFiltered = filtered.filter(word => {
+    const levelFiltered = levelFilter ? filtered.filter(word => word.LevelWordId === Number(levelFilter)) : filtered;
+  
+    const statusFiltered = levelFiltered.filter(word => {
       const wordStatus = Number(word.Status);
       return tabValue === 0 ? wordStatus === 1 : wordStatus === 0;
     });
   
     console.log('After status filter:', statusFiltered);
     return statusFiltered;
-  }, [words, order, orderBy, filterName, tabValue]);
+  }, [words, order, orderBy, filterName, tabValue, levelFilter]);
   useEffect(() => {
     const fetchWords = async () => {
       setLoading(true);
@@ -398,6 +399,8 @@ export default function WordPage() {
           tabValue={tabValue}
           onTabChange={handleTabChange}
           onOpenAddModal={handleOpenAddModal}
+          levelFilter={levelFilter}
+          setLevelFilter={setLevelFilter}
         />
 
         <div>
@@ -579,17 +582,54 @@ export default function WordPage() {
                 fullWidth
                 label="Audio UK URL"
                 margin="normal"
-                value={newWord.audioUK}
+                value={newWord.audioUK || ''}
                 onChange={(e) => setNewWord({ ...newWord, audioUK: e.target.value })}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    height: 'auto',
+                    overflow: 'visible',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'normal',
+                    padding: '8px 14px'
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    alignItems: 'flex-start'
+                  },
+                  '& .MuiInputLabel-root': {
+                    position: 'relative',
+                    transform: 'none',
+                    marginBottom: '4px'
+                  }
+                }}
               />
               <input
                 accept="audio/*"
                 style={{ display: 'none' }}
                 id="audio-uk-file"
                 type="file"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files[0];
-                  setNewWord({ ...newWord, audioUKFile: file });
+                  if (file) {
+                    try {
+                      const response = await api.uploadAudio(file);
+                      const audioUrl = response.data.url;
+                      
+                      setNewWord({ 
+                        ...newWord, 
+                        audioUKFile: file,
+                        audioUK: audioUrl 
+                      });
+
+                      setSnackbarMessage('Audio file uploaded successfully');
+                      setSnackbarSeverity('success');
+                      setOpenSnackbar(true);
+                    } catch (error) {
+                      console.error('Failed to upload audio file:', error);
+                      setSnackbarMessage('Failed to upload audio file. Please try again.');
+                      setSnackbarSeverity('error');
+                      setOpenSnackbar(true);
+                    }
+                  }
                 }}
               />
               <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
@@ -620,7 +660,7 @@ export default function WordPage() {
                   <Typography variant="subtitle2">UK Audio Preview:</Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <audio controls style={{ flex: 1 }}>
-                      <source src={newWord.audioUKFile ? URL.createObjectURL(newWord.audioUKFile) : newWord.audioUK} />
+                      <source src={newWord.audioUK} />
                       Your browser does not support the audio element.
                     </audio>
                     <IconButton 
@@ -642,17 +682,54 @@ export default function WordPage() {
                 fullWidth
                 label="Audio US URL"
                 margin="normal"
-                value={newWord.audioUS}
+                value={newWord.audioUS || ''}
                 onChange={(e) => setNewWord({ ...newWord, audioUS: e.target.value })}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    height: 'auto',
+                    overflow: 'visible',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'normal',
+                    padding: '8px 14px'
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    alignItems: 'flex-start'
+                  },
+                  '& .MuiInputLabel-root': {
+                    position: 'relative',
+                    transform: 'none',
+                    marginBottom: '4px'
+                  }
+                }}
               />
               <input
                 accept="audio/*"
                 style={{ display: 'none' }}
                 id="audio-us-file"
                 type="file"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files[0];
-                  setNewWord({ ...newWord, audioUSFile: file });
+                  if (file) {
+                    try {
+                      const response = await api.uploadAudio(file);
+                      const audioUrl = response.data.url;
+                      
+                      setNewWord({ 
+                        ...newWord, 
+                        audioUSFile: file,
+                        audioUS: audioUrl
+                      });
+
+                      setSnackbarMessage('Audio file uploaded successfully');
+                      setSnackbarSeverity('success');
+                      setOpenSnackbar(true);
+                    } catch (error) {
+                      console.error('Failed to upload audio file:', error);
+                      setSnackbarMessage('Failed to upload audio file. Please try again.');
+                      setSnackbarSeverity('error');
+                      setOpenSnackbar(true);
+                    }
+                  }
                 }}
               />
               <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
@@ -683,7 +760,7 @@ export default function WordPage() {
                   <Typography variant="subtitle2">US Audio Preview:</Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <audio controls style={{ flex: 1 }}>
-                      <source src={newWord.audioUSFile ? URL.createObjectURL(newWord.audioUSFile) : newWord.audioUS} />
+                      <source src={newWord.audioUS} />
                       Your browser does not support the audio element.
                     </audio>
                     <IconButton 
@@ -805,17 +882,54 @@ export default function WordPage() {
                     fullWidth
                     label="Audio UK URL"
                     margin="normal"
-                    value={editingWord.audioUK}
+                    value={editingWord.audioUK || ''}
                     onChange={(e) => setEditingWord({ ...editingWord, audioUK: e.target.value })}
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        height: 'auto',
+                        overflow: 'visible',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'normal',
+                        padding: '8px 14px'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        alignItems: 'flex-start'
+                      },
+                      '& .MuiInputLabel-root': {
+                        position: 'relative',
+                        transform: 'none',
+                        marginBottom: '4px'
+                      }
+                    }}
                   />
                   <input
                     accept="audio/*"
                     style={{ display: 'none' }}
                     id="audio-uk-file"
                     type="file"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files[0];
-                      setEditingWord({ ...editingWord, audioUKFile: file });
+                      if (file) {
+                        try {
+                          const response = await api.uploadAudio(file);
+                          const audioPath = response.data.url; // Giờ sẽ nhận được đường dẫn dạng /src/public/audio/filename.mp3
+                          
+                          setEditingWord({ 
+                            ...editingWord, 
+                            audioUKFile: file,
+                            audioUK: audioPath // Lưu đường dẫn tương đối
+                          });
+
+                          setSnackbarMessage('Audio file uploaded successfully');
+                          setSnackbarSeverity('success');
+                          setOpenSnackbar(true);
+                        } catch (error) {
+                          console.error('Failed to upload audio file:', error);
+                          setSnackbarMessage('Failed to upload audio file. Please try again.');
+                          setSnackbarSeverity('error');
+                          setOpenSnackbar(true);
+                        }
+                      }
                     }}
                   />
                   <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
@@ -846,7 +960,7 @@ export default function WordPage() {
                       <Typography variant="subtitle2">UK Audio Preview:</Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <audio controls style={{ flex: 1 }}>
-                          <source src={editingWord.audioUKFile ? URL.createObjectURL(editingWord.audioUKFile) : editingWord.audioUK} />
+                          <source src={editingWord.audioUK} />
                           Your browser does not support the audio element.
                         </audio>
                         <IconButton 
@@ -868,17 +982,54 @@ export default function WordPage() {
                     fullWidth
                     label="Audio US URL"
                     margin="normal"
-                    value={editingWord.audioUS}
+                    value={editingWord.audioUS || ''}
                     onChange={(e) => setEditingWord({ ...editingWord, audioUS: e.target.value })}
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        height: 'auto',
+                        overflow: 'visible',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'normal',
+                        padding: '8px 14px'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        alignItems: 'flex-start'
+                      },
+                      '& .MuiInputLabel-root': {
+                        position: 'relative',
+                        transform: 'none',
+                        marginBottom: '4px'
+                      }
+                    }}
                   />
                   <input
                     accept="audio/*"
                     style={{ display: 'none' }}
                     id="audio-us-file"
                     type="file"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files[0];
-                      setEditingWord({ ...editingWord, audioUSFile: file });
+                      if (file) {
+                        try {
+                          const response = await api.uploadAudio(file);
+                          const audioPath = response.data.url;
+                          
+                          setEditingWord({ 
+                            ...editingWord, 
+                            audioUSFile: file,
+                            audioUS: audioPath
+                          });
+
+                          setSnackbarMessage('Audio file uploaded successfully');
+                          setSnackbarSeverity('success');
+                          setOpenSnackbar(true);
+                        } catch (error) {
+                          console.error('Failed to upload audio file:', error);
+                          setSnackbarMessage('Failed to upload audio file. Please try again.');
+                          setSnackbarSeverity('error');
+                          setOpenSnackbar(true);
+                        }
+                      }
                     }}
                   />
                   <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
@@ -909,7 +1060,7 @@ export default function WordPage() {
                       <Typography variant="subtitle2">US Audio Preview:</Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <audio controls style={{ flex: 1 }}>
-                          <source src={editingWord.audioUSFile ? URL.createObjectURL(editingWord.audioUSFile) : editingWord.audioUS} />
+                          <source src={editingWord.audioUS} />
                           Your browser does not support the audio element.
                         </audio>
                         <IconButton 

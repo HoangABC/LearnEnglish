@@ -2,6 +2,15 @@ const Word = require('../models/Word');
 const axios = require('axios');
 const { poolPromise, sql } = require('../config/db');
 const { getIo } = require('../Module/socket');
+const path = require('path');
+const fs = require('fs');
+
+const uploadDir = path.join(__dirname, '../public/audio');
+
+// Tạo thư mục nếu chưa tồn tại
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const verifyWordMeaning = async (word) => {
   if (typeof word !== 'string' || word.trim().length < 1) {
@@ -40,6 +49,39 @@ const addWord = async (req, res) => {
       queryURL
     } = req.body;
 
+    const processAudioUrl = async (audioData) => {
+      if (!audioData) return null;
+      
+      try {
+        // Nếu là Base64
+        if (audioData.startsWith('data:audio')) {
+          const base64Data = audioData.split(';base64,').pop();
+          const fileName = `${Date.now()}-${word}.mp3`;
+          const filePath = path.join(__dirname, '../public/audio', fileName);
+          
+          // Lưu file
+          await fs.writeFile(filePath, base64Data, 'base64');
+          
+          // Trả về đường dẫn tương đối
+          return `/src/public/audio/${fileName}`;
+        }
+        
+        // Nếu là URL từ nguồn khác, giữ nguyên
+        return audioData;
+      } catch (error) {
+        console.error('Error processing audio:', error);
+        return null;
+      }
+    };
+
+    const processedAudioUK = await processAudioUrl(audioUK);
+    const processedAudioUS = await processAudioUrl(audioUS);
+
+    console.log('Original audioUK:', audioUK);
+    console.log('Processed audioUK:', processedAudioUK);
+    console.log('Original audioUS:', audioUS);
+    console.log('Processed audioUS:', processedAudioUS);
+
     if (!word || !partOfSpeech || !levelWordId || !definition) {
       return res.status(400).json({ 
         message: 'Missing required fields: word, partOfSpeech, levelWordId, and definition are required.' 
@@ -72,8 +114,8 @@ const addWord = async (req, res) => {
       .input('definitionVI', sql.NVarChar, definitionVI || null)
       .input('phoneticUK', sql.NVarChar, phoneticUK || null)
       .input('phoneticUS', sql.NVarChar, phoneticUS || null)
-      .input('audioUK', sql.NVarChar, audioUK || null)
-      .input('audioUS', sql.NVarChar, audioUS || null)
+      .input('audioUK', sql.NVarChar, processedAudioUK)
+      .input('audioUS', sql.NVarChar, processedAudioUS)
       .input('example', sql.NVarChar, example || null)
       .input('exampleVI', sql.NVarChar, exampleVI || null)
       .input('queryURL', sql.NVarChar, queryURL || null)
@@ -236,8 +278,8 @@ const searchWord = async (req, res) => {
 
 const getRandomWordByLevel = async (req, res) => {
   try {
-    const { levelId } = req.query;
-    console.log('Received levelId:', levelId);
+    const { levelId, userId } = req.query;
+    console.log('Received levelId:', levelId, 'userId:', userId);
 
     if (!levelId) {
       console.log('LevelId is missing');
@@ -260,14 +302,23 @@ const getRandomWordByLevel = async (req, res) => {
     }
 
     const randomWordsQuery = `
-      SELECT TOP 10 * 
-      FROM Word 
-      WHERE LevelWordId IN (${levelWordIds.map(id => `'${id}'`).join(',')}) AND Status = 1
+      SELECT TOP 10 w.* 
+      FROM Word w
+      WHERE w.LevelWordId IN (${levelWordIds.map(id => `'${id}'`).join(',')}) 
+      AND w.Status = 1
+      AND NOT EXISTS (
+        SELECT 1 
+        FROM FavoriteWords fw 
+        WHERE fw.WordId = w.Id 
+        AND fw.UserId = @userId 
+        AND fw.Status = 1
+      )
       ORDER BY NEWID()
     `;
 
-
-    const randomWordsResult = await pool.request().query(randomWordsQuery);
+    const randomWordsResult = await pool.request()
+      .input('userId', sql.Int, userId)
+      .query(randomWordsQuery);
 
     console.log('Random words found:', randomWordsResult.recordset); 
 
@@ -529,7 +580,6 @@ const getMostFavoritedWordsToday = async (req, res) => {
     }
 
     const levelWordsResult = await pool.request()
-      .input('levelWordIds', sql.Int, levelWordIds)
       .query(`
         SELECT Id 
         FROM Word 
@@ -715,6 +765,26 @@ const editWord = async (req, res) => {
   }
 };
 
+const uploadAudio = async (req, res) => {
+  try {
+    if (!req.files || !req.files.audio) {
+      return res.status(400).json({ message: 'No audio file uploaded' });
+    }
+
+    const audioFile = req.files.audio;
+    const fileName = `${Date.now()}-${audioFile.name}`;
+    const uploadPath = path.join(__dirname, '../public/audio', fileName);
+
+    await audioFile.mv(uploadPath);
+
+    const relativePath = `${process.env.BASE_URL}/src/public/audio/${fileName}`;
+    res.json({ url: relativePath });
+  } catch (err) {
+    console.error('Upload audio error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   addWord,
   getWordsByStatus1,
@@ -729,4 +799,5 @@ module.exports = {
   getWordById,
   getMostFavoritedWordsToday,
   editWord,
+  uploadAudio,
 };

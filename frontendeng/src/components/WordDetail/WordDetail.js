@@ -3,17 +3,24 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'rea
 import { useRoute } from '@react-navigation/native';
 import useWordActions from '../../hooks/useWordActions';
 import { WebView } from 'react-native-webview';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch, useSelector } from 'react-redux';
+import { mostFavoritedWords } from '../../redux/wordsSlice';
 
 const WordDetail = () => {
   const route = useRoute();
-  const { wordId } = route.params;
-  const { handleGetWord, wordDetail } = useWordActions();
+  const dispatch = useDispatch();
+  const { wordId, isSaved } = route.params;
+  const { handleGetWord, wordDetail, handleToggleFavoriteWord } = useWordActions();
+  const [userId, setUserId] = useState(null);
+  const [isFavorited, setIsFavorited] = useState(isSaved || false);
 
   const [soundUrl, setSoundUrl] = useState(null);
   const [webviewKey, setWebviewKey] = useState(0);
 
-  // Quản lý trạng thái số lượng ví dụ hiển thị cho mỗi từ theo chỉ mục
   const [visibleExamples, setVisibleExamples] = useState({});
+
+  const mostFavoritedWords = useSelector((state) => state.words.mostFavoritedWords);
 
   useEffect(() => {
     if (wordId) {
@@ -21,13 +28,66 @@ const WordDetail = () => {
     }
   }, [wordId]);
 
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const user = await AsyncStorage.getItem('user');
+        if (user) {
+          const { Id } = JSON.parse(user);
+          setUserId(Id);
+          if (wordDetail && wordDetail[0]) {
+            setIsFavorited(wordDetail[0].userIds?.includes(Id) || isSaved);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load user data:', error);
+      }
+    };
+    loadUserData();
+  }, [wordDetail, isSaved]);
+
+  useEffect(() => {
+    setIsFavorited(isSaved);
+  }, [isSaved]);
+
+  const handleToggleFavorite = async () => {
+    if (!userId) return;
+    try {
+      await handleToggleFavoriteWord(userId, wordId);
+      setIsFavorited(!isFavorited);
+      
+      if (mostFavoritedWords) {
+        const updatedWords = mostFavoritedWords.map(word =>
+          word.Id === wordId 
+            ? { 
+                ...word, 
+                userIds: !isFavorited
+                  ? [...(word.userIds || []), userId]
+                  : word.userIds?.filter(id => id !== userId),
+                FavoriteCount: !isFavorited
+                  ? (word.FavoriteCount || 0) + 1
+                  : (word.FavoriteCount || 1) - 1
+              }
+            : word
+        );
+        
+        dispatch({
+          type: 'words/fetchMostFavoritedWordsToday/fulfilled',
+          payload: updatedWords
+        });
+      }
+
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+    }
+  };
+
   const playSound = (audioUrl) => {
     if (!audioUrl) return;
     setSoundUrl(audioUrl);
     setWebviewKey(prevKey => prevKey + 1);
   };
 
-  // Tạo hàm xử lý cho mỗi phần riêng biệt, truyền theo chỉ số index
   const formatExamplesWithTranslations = (example, exampleVI, index) => {
     if (!example || !exampleVI) return null;
 
@@ -56,7 +116,7 @@ const WordDetail = () => {
               <Image source={require('../../assets/images/VN.png')} style={styles.flag} />
               <Text style={styles.exampleText}>{examplePair.vietnamese}</Text>
             </View>
-            {/* Đường gạch ngang giữa các cặp câu ví dụ */}
+    
             <View style={styles.divider} />
           </View>
         ))}
@@ -81,7 +141,25 @@ const WordDetail = () => {
     <ScrollView contentContainerStyle={styles.container}>
       {wordDetail && Array.isArray(wordDetail) ? (
         <View>
-          <Text style={styles.wordText}>{capitalizeFirstLetter(wordDetail[0].Word)}</Text>
+          <View style={styles.wordHeader}>
+            <Text style={styles.wordText}>
+              {capitalizeFirstLetter(wordDetail[0].Word)}
+            </Text>
+            <TouchableOpacity 
+              style={[
+                styles.favoriteButton,
+                isFavorited ? styles.favorited : styles.notFavorited
+              ]}
+              onPress={handleToggleFavorite}
+            >
+              <Text style={[
+                styles.favoriteButtonText,
+                isFavorited ? styles.favoritedText : styles.notFavoritedText
+              ]}>
+                {isFavorited ? "ĐÃ LƯU" : "LƯU TỪ"}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.phoneticsContainer}>
             <Text style={styles.phoneticText}>UK: {capitalizeFirstLetter(wordDetail[0].PhoneticUK)}</Text>
             <TouchableOpacity onPress={() => playSound(wordDetail[0].AudioUK)}>
@@ -187,6 +265,60 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#ccc',
     marginVertical: 10,
+  },
+  wordHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  favoriteButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+
+  notFavorited: {
+    backgroundColor: '#FFC107',
+  },
+
+  favorited: {
+    backgroundColor: '#4CAF50',
+  },
+
+  favoriteButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  notFavoritedText: {
+    color: '#000',
+  },
+
+  favoritedText: {
+    color: '#fff',
+  },
+
+  savedIndicator: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+  },
+  
+  savedText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

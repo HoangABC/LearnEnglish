@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { TableRow, TableCell } from '@mui/material';
+import { TableRow } from '@mui/material';
 
 export default function TableNoData({ isNotFound, query }) {
   return (

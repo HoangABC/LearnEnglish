@@ -55,10 +55,7 @@ const Login = () => {
         if (user.LevelId === null) {
           navigation.navigate('LevelListView');
         } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'AppTabs' }],
-          });
+          navigation.replace('AppTabs');
         }
         showMessage({ message: "Đăng nhập thành công!", type: "success" });
       } else {
@@ -88,10 +85,7 @@ const Login = () => {
         if (user.LevelId === null) {
           navigation.navigate('LevelListView');
         } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'AppTabs' }],
-          });
+          navigation.replace('AppTabs');
         }
         showMessage({ message: "Đăng nhập thành công!", type: "success" });
       } else {

@@ -29,4 +29,14 @@ export const api = {
   updateUserStatus: (userId, status) => apiClient.put('/account/update-user-status', { userId, status }),
   getUsersByStatus1: () => apiClient.get('/account/users/status1'),
   getUsersByStatus0: () => apiClient.get('/account/users/status0'),
+  uploadAudio: (audioFile) => {
+    const formData = new FormData();
+    formData.append('audio', audioFile);
+    
+    return apiClient.post('/api/upload-audio', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };

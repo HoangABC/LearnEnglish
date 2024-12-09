@@ -1,6 +1,6 @@
 // utils.js
 
-export function applyFilter({ inputData, comparator, filterName }) {
+export function applyFilter({ inputData, comparator, filterName, statusFilter }) {
   if (!Array.isArray(inputData)) {
     return [];
   }
@@ -16,12 +16,18 @@ export function applyFilter({ inputData, comparator, filterName }) {
   inputData = stabilizedThis.map((el) => el[0]);
 
   if (filterName) {
-    return inputData.filter(
-      (item) => item.FeedbackText.toLowerCase().indexOf(filterName.toLowerCase()) !== -1
+    inputData = inputData.filter(
+      (item) => 
+        item.UserName.toLowerCase().indexOf(filterName.toLowerCase()) !== -1 ||
+        item.FeedbackText.toLowerCase().indexOf(filterName.toLowerCase()) !== -1
     );
   }
 
-  return stabilizedThis.map((el) => el[0]);
+  if (statusFilter !== '') {
+    inputData = inputData.filter((item) => item.Status === statusFilter);
+  }
+
+  return inputData;
 }
 
 export function getComparator(order, orderBy) {

@@ -3,8 +3,7 @@ import { Button, Text, View, StyleSheet, TouchableOpacity, ActivityIndicator, Sc
 import Voice from '@wdragon/react-native-voice';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Tts from 'react-native-tts';
-
-const API_KEY = 'AIzaSyB-ZJr7FIGcbAyTtDCfnKXAJNPGhgH85DA'; // Replace with your Gemini API key
+import { GEMINI_API_KEY, GEMINI_API_URL } from '@env';
 
 const VoiceAI = () => {
   const [recognizedText, setRecognizedText] = useState('');
@@ -54,15 +53,13 @@ const VoiceAI = () => {
       Voice.onSpeechStart = null;
       Voice.onSpeechEnd = null;
       Voice.onSpeechResults = null;
-      
-      // Chỉ dừng TTS nếu đang phát
+
       if (isSpeaking) {
         Tts.stop();
       }
     };
   }, []);
 
-  // Thêm useEffect riêng để xử lý trạng thái speaking
   useEffect(() => {
     const handleTtsFinish = () => {
       setIsSpeaking(false);
@@ -78,7 +75,6 @@ const VoiceAI = () => {
     };
   }, [isSpeaking]);
 
-  // Thêm useEffect để tự động phát TTS khi có feedback mới
   useEffect(() => {
     if (feedback && !isLoading && ttsReady) {
       const timer = setTimeout(() => {
@@ -100,7 +96,7 @@ const VoiceAI = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
+        `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: {
@@ -109,7 +105,7 @@ const VoiceAI = () => {
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `You are a friendly pronunciation coach. Your student just said: "${text}"
+                text: `You are a professional, friendly and fun pronunciation coach. Your student just said: "${text}"
 
                 Response requirements:
                 1. Focus on pronunciation only, using simple English
@@ -165,7 +161,7 @@ const VoiceAI = () => {
   const translateFeedback = async (englishText) => {
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
+        `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: {
@@ -226,40 +222,43 @@ const VoiceAI = () => {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // Nếu là hướng dẫn phát âm (có chứa [PRONOUNCE]), thêm dấu chấm để tạo khoảng dừng
+      setIsSpeaking(true);
+
+      // Nếu là hướng dẫn phát âm (có chứa [PRONOUNCE])
       if (text.includes('[PRONOUNCE]')) {
         // Tách các câu và thêm khoảng dừng
         const sentences = text.split('\n').map(sentence => sentence.trim());
-        setIsSpeaking(true);
 
         for (const sentence of sentences) {
-          // Dừng TTS nếu đang phát
           if (isSpeaking) {
             await Tts.stop();
           }
 
           // Thêm khoảng dừng dài hơn cho phần hướng dẫn phát âm
           if (sentence.includes('[PRONOUNCE]')) {
-            await Tts.setDefaultRate(0.4); // Chậm hơn cho phần phát âm mẫu
-            await Tts.speak(sentence.replace('[PRONOUNCE]', ''));
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Dừng 1 giây
+            await Tts.setDefaultRate(0.4);
+            await Tts.speak(sentence.replace('[PRONOUNCE]', ''), {
+              onDone: () => setIsSpeaking(false),
+              onError: () => setIsSpeaking(false)
+            });
+            await new Promise(resolve => setTimeout(resolve, 1000));
           } else {
-            await Tts.setDefaultRate(0.45); // Hơi nhanh hơn cho phần giải thích
-            await Tts.speak(sentence);
-            await new Promise(resolve => setTimeout(resolve, 500)); // Dừng 0.5 giây
+            await Tts.setDefaultRate(0.45);
+            await Tts.speak(sentence, {
+              onDone: () => setIsSpeaking(false),
+              onError: () => setIsSpeaking(false)
+            });
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
       } else {
-        // Với text bình thường, giữ nguyên tốc độ
+        // Với text bình thường
         await Tts.setDefaultRate(0.48);
-        await Tts.speak(text);
+        await Tts.speak(text, {
+          onDone: () => setIsSpeaking(false),
+          onError: () => setIsSpeaking(false)
+        });
       }
-
-      setIsSpeaking(true);
-      Tts.speak(text, {
-        onDone: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false)
-      });
 
     } catch (error) {
       console.error('TTS Error:', error);

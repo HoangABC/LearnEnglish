@@ -2,6 +2,7 @@ require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { poolPromise, sql } = require('../config/db');
 const nodemailer = require('nodemailer');
+const { emitFeedbackResponse } = require('../Module/socket');
 
 const saltRounds = 10;
 
@@ -108,9 +109,14 @@ const getAllFeedbacks = async (req, res) => {
               ORDER BY f.CreatedAt DESC
           `);
       
+      const feedbacks = result.recordset;
+      
+      // Emit socket event với dữ liệu mới nhất
+      req.app.get('io').emit('feedbacks_updated', feedbacks);
+      
       res.status(200).json({
           success: true,
-          data: result.recordset
+          data: feedbacks
       });
   } catch (error) {
       console.error('Error getting feedbacks:', error);
@@ -257,6 +263,16 @@ const respondToFeedback = async (req, res) => {
                 SET Status = 2
                 WHERE Id = @feedbackId
             `);
+
+        // Sau khi lưu thành công, emit sự kiện
+        const updatedFeedback = {
+            Id: feedbackId,
+            AdminResponse: responseText,
+            Status: 2,
+            ResponseDate: new Date().toISOString()
+        };
+        
+        emitFeedbackResponse(updatedFeedback);
 
         res.status(200).json({
             success: true,

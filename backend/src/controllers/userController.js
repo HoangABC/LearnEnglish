@@ -1,4 +1,3 @@
-require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { poolPromise, sql } = require('../config/db');
 const nodemailer = require('nodemailer');
@@ -17,9 +16,8 @@ const register = async (req, res) => {
   const { name, username, email, password } = req.body;
   
   if (!name || !username || !email || !password) {
-    return res.status(400).json({ message: 'Tên, tên đăng nhập, email và mật khẩu là bắt buộc' });
+    return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin' });
   }
-
 
   if (name.length < 5) {
     return res.status(400).json({ message: 'Tên phải có ít nhất 5 ký tự' });
@@ -83,9 +81,9 @@ const register = async (req, res) => {
       .input('Status', sql.Int, 0)
       .query('INSERT INTO [User] (LevelId, GoogleId, Name, Username, Email, Password, ConfirmationToken, Status) VALUES (@LevelId, @GoogleId, @Name, @Username, @Email, @Password, @ConfirmationToken, @Status)');
 
-    const confirmationUrl = `https://741d-171-239-30-182.ngrok-free.app/account/verify/${confirmationToken}`;
+    const confirmationUrl = `${process.env.BASE_URL}/account/verify/${confirmationToken}`;
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: '"EasyEnglish" <' + process.env.EMAIL_USER + '>',
       to: email,
       subject: 'Xác nhận tài khoản của bạn',
       html: `
@@ -164,12 +162,6 @@ const register = async (req, res) => {
               <div class="warning">
                 ⚠️ Liên kết này sẽ hết hạn sau 5 phút.
               </div>
-              
-              <p>Nếu nút không hoạt động, bạn có thể copy và paste đường dẫn sau vào trình duyệt:</p>
-              <div class="url-fallback">
-                ${confirmationUrl}
-              </div>
-              
               <p>Nếu bạn không tạo tài khoản này, vui lòng bỏ qua email.</p>
             </div>
             <div class="footer">
@@ -598,7 +590,7 @@ const requestPasswordReset = async (req, res) => {
 
     // Gửi email chứa mã xác nhận
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: '"EasyEnglish Support" <' + process.env.EMAIL_USER + '>',
       to: email,
       subject: 'Mã xác nhận đặt lại mật khẩu',
       html: `
@@ -759,7 +751,7 @@ const resetPassword = async (req, res) => {
     // Mã hóa mật khẩu mới
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
-    // Cập nhật mật khẩu mới và xóa token
+    // Cập nhật mật khẩu m��i và xóa token
     await pool.request()
       .input('Email', sql.VarChar, email)
       .input('Password', sql.NVarChar, hashedPassword)

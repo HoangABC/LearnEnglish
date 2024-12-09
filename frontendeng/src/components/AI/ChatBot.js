@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Keyboard } from 'react-native';
 import axios from 'axios';
 import ChatBubble from './ChatBubble'; 
+import { GEMINI_API_KEY, GEMINI_API_URL } from '@env';
 
 const ChatBot = ({ sessionId }) => { 
   const [chat, setChat] = useState([]); 
   const [userInput, setUserInput] = useState(''); 
   const [loading, setLoading] = useState(false); 
   const [error, setError] = useState(null); 
-  const API_KEY = 'AIzaSyB-ZJr7FIGcbAyTtDCfnKXAJNPGhgH85DA';
   const flatListRef = useRef(null); 
   const [isResponding, setIsResponding] = useState(false);
   const abortControllerRef = useRef(null);
@@ -43,23 +43,40 @@ const ChatBot = ({ sessionId }) => {
   const makeApiCall = async (updatedChat, retryCount) => {
     try {
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
+        `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
         {
-          sessionId, 
-          contents: updatedChat.map(chatItem => ({
-            role: chatItem.role,
-            parts: chatItem.parts.map(part => ({ text: part.text }))
-          }))
+          contents: [
+            {
+              role: 'model',
+              parts: [{
+                text: `Bạn là một trợ lý học tiếng Anh thân thiện và chuyên nghiệp. 
+                
+                Quy tắc trả lời:
+                1. CHỈ trả lời các câu hỏi liên quan đến học tiếng Anh
+                2. Nếu câu hỏi KHÔNG liên quan đến tiếng Anh, trả lời: "Xin lỗi, tôi chỉ có thể giúp bạn với các vấn đề học tiếng Anh. Bạn có thể hỏi về từ vựng, ngữ pháp, phát âm hoặc các chủ đề học tiếng Anh khác."
+                3. Trả lời bằng tiếng Việt để người học dễ hiểu
+                4. Giải thích ngắn gọn, rõ ràng và đưa ra ví dụ cụ thể
+  
+                Phạm vi hỗ trợ:
+                - Từ vựng và cách sử dụng
+                - Ngữ pháp và cấu trúc câu
+                - Giải thích thành ngữ`
+              }]
+            },
+            ...updatedChat.map(chatItem => ({
+              role: chatItem.role,
+              parts: chatItem.parts.map(part => ({ text: part.text }))
+            }))
+          ]
         }
       );
       return response;
     } catch (error) {
       if (error.response?.status === 429 && retryCount < 3) {
-
         await new Promise(resolve => setTimeout(resolve, 1000));
         return makeApiCall(updatedChat, retryCount + 1);
       } else {
-        throw error; 
+        throw error;
       }
     }
   };

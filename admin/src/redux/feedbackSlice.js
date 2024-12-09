@@ -84,6 +84,27 @@ const feedbackSlice = createSlice({
       state.userFeedbacks = [];
       state.error = null;
     },
+    addNewFeedback: (state, action) => {
+      if (state.feedbacks?.data) {
+        const exists = state.feedbacks.data.some(f => f.Id === action.payload.Id);
+        if (!exists) {
+          state.feedbacks.data = [action.payload, ...state.feedbacks.data];
+        }
+      }
+    },
+    updateFeedback: (state, action) => {
+      if (state.feedbacks?.data) {
+        state.feedbacks.data = state.feedbacks.data.map(feedback =>
+          feedback.Id === action.payload.Id ? action.payload : feedback
+        );
+      }
+    },
+    setAllFeedbacks: (state, action) => {
+      state.feedbacks = {
+        success: true,
+        data: action.payload
+      };
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -166,5 +187,10 @@ const feedbackSlice = createSlice({
   },
 });
 
-export const { clearFeedbacks } = feedbackSlice.actions;
+export const { 
+  clearFeedbacks, 
+  addNewFeedback, 
+  updateFeedback,
+  setAllFeedbacks 
+} = feedbackSlice.actions;
 export default feedbackSlice.reducer;

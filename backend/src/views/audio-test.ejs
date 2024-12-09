@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Test</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .audio-input {
+            width: 100%;
+            padding: 10px;
+            margin: 20px 0;
+        }
+        .audio-player {
+            margin: 20px 0;
+            width: 100%;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio URL Test</h1>
+        
+        <input type="text" 
+               id="audioUrl" 
+               class="audio-input" 
+               placeholder="Nhập URL audio (ví dụ: https://example.com/audio.mp3)"
+               value="">
+
+        <button onclick="loadAudio()">Test Audio</button>
+
+        <div class="audio-player" id="playerContainer" style="display: none;">
+            <h3>Audio Player</h3>
+            <audio id="audioPlayer" controls>
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const audioPlayer = document.getElementById('audioPlayer');
+        const playerContainer = document.getElementById('playerContainer');
+        const statusDiv = document.getElementById('status');
+        const urlInput = document.getElementById('audioUrl');
+
+        function loadAudio() {
+            const url = urlInput.value.trim();
+            if (!url) {
+                statusDiv.textContent = 'Vui lòng nhập URL audio';
+                return;
+            }
+
+            audioPlayer.src = url;
+            playerContainer.style.display = 'block';
+            
+            audioPlayer.load();
+            audioPlayer.play()
+                .then(() => {
+                    statusDiv.textContent = 'Đang phát...';
+                })
+                .catch(error => {
+                    statusDiv.textContent = 'Lỗi: ' + error.message;
+                    console.error('Lỗi phát audio:', error);
+                });
+        }
+
+        // Log any errors
+        audioPlayer.addEventListener('error', (e) => {
+            console.error('Lỗi audio:', e);
+            statusDiv.textContent = 'Không thể tải file audio';
+        });
+    </script>
+</body>
+</html> 

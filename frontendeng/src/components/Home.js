@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image, ImageBackground, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback, Keyboard, Image, ImageBackground, FlatList, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import styles from '../styles/HomeStyles';
@@ -8,10 +8,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 import useFeedback from '../hooks/useFeedback'
 import { useDispatch, useSelector } from 'react-redux';
+import NetInfo from '@react-native-community/netinfo';
 
 const Home = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const [isOnline, setIsOnline] = useState(true);
   const [keyword, setKeyword] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [userId, setUserId] = useState(null);
@@ -27,6 +29,18 @@ const Home = () => {
   const [feedbacks, setFeedbacks] = useState([]);
   const [storedFeedbacks, setStoredFeedbacks] = useState([]);
   const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [hiddenFeedbacks, setHiddenFeedbacks] = useState([]);
+  const [filteredFeedbacks, setFilteredFeedbacks] = useState([]);
+  const [viewedFeedbacks, setViewedFeedbacks] = useState(new Set());
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOnline(state.isConnected);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -49,68 +63,83 @@ const Home = () => {
     const checkNotifications = async () => {
       try {
         await getFeedbacks(userId);
+        await loadStoredFeedbacks();
       } catch (error) {
         console.error('Failed to check notifications:', error);
       }
     };
 
     checkNotifications();
-    const interval = setInterval(checkNotifications, 300000);
+    const interval = setInterval(checkNotifications, 10000);
     return () => clearInterval(interval);
   }, [userId]);
 
-  useEffect(() => {
-    const loadStoredFeedbacks = async () => {
-      try {
-        const stored = await AsyncStorage.getItem('AdFeedback');
-        const parsedStored = stored ? JSON.parse(stored) : [];
-        setStoredFeedbacks(parsedStored);
-        const unreadCount = parsedStored.filter(feedback => feedback.viewed === 0).length;
-        setUnreadCount(unreadCount);
-      } catch (error) {
-        console.error('Error loading stored feedbacks:', error);
-      }
-    };
+  const loadStoredFeedbacks = async () => {
+    try {
+      if (!userId) return;
+      const stored = await AsyncStorage.getItem(`AdFeedback_${userId}`);
+      const parsedStored = stored ? JSON.parse(stored) : [];
+      setStoredFeedbacks(parsedStored);
+      const unreadCount = parsedStored.filter(feedback => 
+        feedback.viewed === 0 && feedback.UserId === userId
+      ).length;
+      setUnreadCount(unreadCount);
+    } catch (error) {
+      console.error('Error loading stored feedbacks:', error);
+    }
+  };
 
-    loadStoredFeedbacks();
-  }, [storedFeedbacks]);
-
   useEffect(() => {
-    if (feedbacksData?.data) {
-      const unreadNotifications = feedbacksData.data.filter(feedback => 
-        feedback.FeedbackStatus === 2
+    if (feedbacksData?.data && userId) {
+      const userNotifications = feedbacksData.data.filter(feedback => 
+        feedback.UserId === userId && feedback.FeedbackStatus === 2
       );
       
       const storeFeedbacks = async () => {
         try {
-          const existingFeedbacks = await AsyncStorage.getItem('AdFeedback');
+          const existingFeedbacks = await AsyncStorage.getItem(`AdFeedback_${userId}`);
           const parsedExisting = existingFeedbacks ? JSON.parse(existingFeedbacks) : [];
           
-          const newFeedbacks = unreadNotifications.map(feedback => ({
-            ...feedback,
-            viewed: 0
-          }));
-
-
-          const mergedFeedbacks = [...parsedExisting];
-          newFeedbacks.forEach(newFeedback => {
-            const existingIndex = mergedFeedbacks.findIndex(f => f.FeedbackId === newFeedback.FeedbackId);
-            if (existingIndex === -1) {
-              mergedFeedbacks.push(newFeedback);
-            }
+          const existingMap = new Map(
+            parsedExisting.map(feedback => [feedback.FeedbackId, feedback])
+          );
+          
+          const mergedFeedbacks = userNotifications.map(newFeedback => {
+            const existing = existingMap.get(newFeedback.FeedbackId);
+            return {
+              ...newFeedback,
+              viewed: existing ? existing.viewed : 0
+            };
           });
-          await AsyncStorage.setItem('AdFeedback', JSON.stringify(mergedFeedbacks));
+
+          await AsyncStorage.setItem(`AdFeedback_${userId}`, JSON.stringify(mergedFeedbacks));
+          await loadStoredFeedbacks();
         } catch (error) {
           console.error('Error storing feedbacks:', error);
         }
       };
 
       storeFeedbacks();
-      setFeedbacks(feedbacksData.data);
-      setNotifications(unreadNotifications);
-      setUnreadCount(unreadNotifications.length);
+      setFeedbacks(userNotifications);
+      setNotifications(userNotifications);
     }
-  }, [feedbacksData]);
+  }, [feedbacksData, userId]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (isOnline && userId) {
+        try {
+          await getFeedbacks(userId);
+          await handleSearchWord('');
+          setIsDataLoaded(true);
+        } catch (error) {
+          console.error('Failed to reload data:', error);
+        }
+      }
+    };
+
+    loadData();
+  }, [isOnline]);
 
   const handleSearch = useCallback((text) => {
     handleSearchWord(text);
@@ -141,34 +170,59 @@ const Home = () => {
     }
 
     try {
-      const updatedWords = mostFavoritedWords.map(word =>
-        word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
-      );
-
       await handleToggleFavoriteWord(userId, wordId);
 
-      setWordsArray(updatedWords);
-
-      const previousWords = await AsyncStorage.getItem(`wordsArray_${userId}`);
-      let wordsToStore = [];
-
-      if (previousWords) {
-        wordsToStore = JSON.parse(previousWords);
-      }
-
-      const updatedWordsToStore = wordsToStore.map(word =>
-        word.Id === wordId ? { ...word, isFavorite: !word.isFavorite } : word
+      const updatedWords = mostFavoritedWords.map(word =>
+        word.Id === wordId 
+          ? { 
+              ...word, 
+              userIds: word.userIds?.includes(userId)
+                ? word.userIds.filter(id => id !== userId)
+                : [...(word.userIds || []), userId],
+              FavoriteCount: word.userIds?.includes(userId)
+                ? word.FavoriteCount - 1
+                : word.FavoriteCount + 1
+            }
+          : word
       );
 
-      if (!updatedWordsToStore.some(word => word.Id === wordId)) {
-        const newWord = updatedWords.find(word => word.Id === wordId);
-        updatedWordsToStore.push(newWord);
+      dispatch({
+        type: 'words/fetchMostFavoritedWordsToday/fulfilled',
+        payload: updatedWords
+      });
+
+      try {
+        const storedWords = await AsyncStorage.getItem(`wordsArray_${userId}`);
+        let wordsToStore = storedWords ? JSON.parse(storedWords) : [];
+        
+        const updatedStoredWords = wordsToStore.map(word =>
+          word.Id === wordId
+            ? {
+                ...word,
+                userIds: word.userIds?.includes(userId)
+                  ? word.userIds.filter(id => id !== userId)
+                  : [...(word.userIds || []), userId],
+                FavoriteCount: word.userIds?.includes(userId)
+                  ? word.FavoriteCount - 1
+                  : word.FavoriteCount + 1
+              }
+            : word
+        );
+
+        await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(updatedStoredWords));
+      } catch (storageError) {
+        console.error('Failed to update local storage:', storageError);
       }
-      await AsyncStorage.setItem(`wordsArray_userId_${userId}`, JSON.stringify(updatedWordsToStore));
+
     } catch (error) {
-      console.error('Failed to update favorite status:', error);
+      console.error('Failed to toggle favorite:', error);
+      Alert.alert(
+        'Lỗi',
+        'Không thể cập nhật trạng thái yêu thích. Vui lòng thử lại sau.',
+        [{ text: 'OK' }]
+      );
     }
-  }, [mostFavoritedWords, handleToggleFavoriteWord, userId]);
+  }, [mostFavoritedWords, handleToggleFavoriteWord, userId, dispatch]);
   
   const formatTime = (dateString) => {
     const utcDate = new Date(dateString.replace('Z', ''));  
@@ -193,6 +247,7 @@ const Home = () => {
         item.viewed === 1 && styles.viewedFeedbackItem
       ]}
       onPress={() => handleNotificationItemPress(item)}
+      activeOpacity={0.7}
     >
       <View style={styles.feedbackContent}>
         <Text style={[
@@ -216,30 +271,60 @@ const Home = () => {
           {item.FeedbackText}
         </Text>
       </View>
+      {showAllNotifications && (
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={() => handleHideFeedback(item.FeedbackId)}
+        >
+          <Icon name="close" size={20} style={styles.deleteIcon} />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
-  ), []);
+  ), [handleNotificationItemPress, showAllNotifications]);
 
   const handleNotificationItemPress = useCallback(async (feedback) => {
     try {
-    
-      const updatedFeedbacks = storedFeedbacks.map(item => 
-        item.FeedbackId === feedback.FeedbackId 
-          ? { ...item, viewed: 1 }
-          : item
+      if (feedback.UserId !== userId) return;
+
+      setViewedFeedbacks(prev => new Set([...prev, feedback.FeedbackId]));
+
+      const existingData = await AsyncStorage.getItem(`AdFeedback_${userId}`);
+      const currentFeedbacks = existingData ? JSON.parse(existingData) : [];
+
+      const feedbackMap = new Map(
+        currentFeedbacks.map(item => [item.FeedbackId, item])
       );
-  
-      await AsyncStorage.setItem('AdFeedback', JSON.stringify(updatedFeedbacks));
+
+      feedbackMap.set(feedback.FeedbackId, {
+        ...feedback,
+        viewed: 1
+      });
+
+      const updatedFeedbacks = Array.from(feedbackMap.values());
+
+      await AsyncStorage.setItem(`AdFeedback_${userId}`, JSON.stringify(updatedFeedbacks));
+      
       setStoredFeedbacks(updatedFeedbacks);
       
-      const newUnreadCount = updatedFeedbacks.filter(item => item.viewed === 0).length;
+      const newUnreadCount = updatedFeedbacks.filter(item => 
+        item.viewed === 0 && item.UserId === userId
+      ).length;
       setUnreadCount(newUnreadCount);
-  
+
       setShowNotificationModal(false);
-      navigation.navigate('Feedback', { selectedFeedbackId: feedback.FeedbackId });
+      
+      setTimeout(() => {
+        navigation.navigate('Feedback', { 
+          selectedFeedbackId: feedback.FeedbackId,
+          feedback: feedback
+        });
+      }, 300);
+
     } catch (error) {
-      console.error('Error updating feedback viewed status:', error);
+      console.error('Error handling notification press:', error);
+      Alert.alert('Lỗi', 'Không thể xử lý thông báo. Vui lòng thử lại.');
     }
-  }, [navigation, storedFeedbacks]);
+  }, [navigation, userId, viewedFeedbacks]);
 
   const renderItem = ({ item }) => (
     <View style={styles.transparentBox}>
@@ -248,7 +333,10 @@ const Home = () => {
         <TouchableOpacity
           style={styles.detailButton}
           onPress={() => {
-            navigation.navigate('WordDetail', { wordId: item.Id });
+            navigation.navigate('WordDetail', { 
+              wordId: item.Id,
+              isSaved: item.userIds?.includes(userId)
+            });
           }}
         >
           <Text style={styles.ButtonDetail}>
@@ -278,19 +366,37 @@ const Home = () => {
             <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
           </View>
       </View>
-      <ScrollView style={styles.definitionScrollView}>
-        <Text style={styles.definitionText}>{item.Definition}</Text>
-      </ScrollView>
+      <View style={styles.definitionContainer}>
+        <ScrollView 
+          style={styles.definitionScrollView}
+          contentContainerStyle={styles.definitionContentContainer}
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
+          scrollEventThrottle={16}
+          removeClippedSubviews={true}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.definitionText} numberOfLines={0}>
+            {item.Definition}
+          </Text>
+        </ScrollView>
+      </View>
       <View style={styles.divider} />
   
       <View style={styles.footer}>
-        <Text style={styles.saveCount}>{item.FavoriteCount} lượt lưu</Text>
+        <Text style={styles.saveCount}>{item.FavoriteCount || 0} lượt lưu</Text>
         <TouchableOpacity
-          style={[styles.saveButton, item.userIds && item.userIds.includes(userId) ? styles.savedButton : styles.defaultButton]}
+          style={[
+            styles.saveButton,
+            item.userIds?.includes(userId) ? styles.savedButton : styles.defaultButton
+          ]}
           onPress={() => handleToggleFavorite(item.Id)}
         >
-          <Text style={[styles.saveButtonText, item.userIds && item.userIds.includes(userId) ? styles.savedText : styles.defaultText]}>
-            {item.userIds && item.userIds.includes(userId) ? "ĐÃ LƯU" : "LƯU TỪ"}
+          <Text style={[
+            styles.saveButtonText,
+            item.userIds?.includes(userId) ? styles.savedText : styles.defaultText
+          ]}>
+            {item.userIds?.includes(userId) ? "ĐÃ LƯU" : "LƯU TỪ"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -299,8 +405,7 @@ const Home = () => {
 
   const playSound = (audioUrl) => {
     if (!audioUrl) return;
-  
-    // Đổi soundUrl và reset WebView
+
     setSoundUrl(audioUrl);
     setWebviewKey(prevKey => prevKey + 1);
   };
@@ -363,10 +468,6 @@ const Home = () => {
     setShowNotificationModal(true);
   };
 
-  const filteredFeedbacks = storedFeedbacks.filter(feedback => 
-    showAllNotifications ? true : feedback.viewed === 0
-  );
-
   const toggleNotificationsView = () => {
     setShowAllNotifications(!showAllNotifications);
   };
@@ -380,6 +481,271 @@ const Home = () => {
     }
   });
 
+  const renderStudyCards = () => {
+    const cards = [
+      {
+        style: [styles.card, styles.cardBlue],
+        text: "HỌC TỪ VỰNG",
+        subText: "THÔNG QUA FLASHCARD",
+        image: require('../assets/images/Study_Voca.png'),
+        onPress: handleNavigateToFlashCard,
+        requiresNetwork: true
+      },
+      {
+        style: [styles.card, styles.cardGreen],
+        text: "TỪ VỰNG CỦA TÔI",
+        subText: "THÔNG QUA FLASHCARD",
+        image: require('../assets/images/Study_Fav.png'),
+        onPress: handleNavigateToFlashCardFav,
+        requiresNetwork: false
+      },
+      {
+        style: [styles.card, styles.cardPurple],
+        text: "LUYỆN NGHE",
+        subText: "THÔNG QUA TRẮC NGHIỆM VÀ TỰ LUẬN",
+        image: require('../assets/images/Study_Music.png'),
+        onPress: handleNavigateToListen,
+        requiresNetwork: true
+      },
+      {
+        style: [styles.card, styles.cardPink],
+        text: "LUYỆN NÓI",
+        subText: "THÔNG QUA CHAT BOT",
+        image: require('../assets/images/Study_Speaking.png'),
+        onPress: handleNavigateToVoiceAI,
+        requiresNetwork: true
+      },
+      {
+        style: [styles.card, styles.cardOrange],
+        text: "KIỂM TRA TỪ VỰNG",
+        subText: "THÔNG QUA TRẮC NGHIỆM",
+        image: require('../assets/images/Study_Fav.png'),
+        onPress: handleNavigateToTest,
+        requiresNetwork: true
+      },
+      {
+        style: [styles.card, styles.cardTeal],
+        text: "GIẢI TRÍ",
+        subText: "THÔNG QUA WORD GUESS",
+        image: require('../assets/images/Study_Gaming.png'),
+        onPress: handleNavigateToLevelWordGuess,
+        requiresNetwork: true
+      },
+      {
+        style: [styles.card, styles.cardPink],
+        text: "GIẢI ĐÁP",
+        subText: "THÔNG QUA CHAT BOT",
+        image: require('../assets/images/Bot_Support.png'),
+        onPress: handleNavigateToChatBot,
+        requiresNetwork: true
+      }
+    ];
+
+    return cards.map((card, index) => {
+      if (!isOnline && card.requiresNetwork) {
+        return (
+          <TouchableOpacity 
+            key={index}
+            style={[...card.style, { opacity: 0.5 }]}
+            disabled={true}
+          >
+            <Text style={styles.cardText}>{card.text}</Text>
+            <Image source={card.image} style={styles.cardImage} />
+            <Text style={styles.cardSubText}>{card.subText}</Text>
+            <Text style={{
+              color: 'red',
+              fontSize: 12,
+              textAlign: 'center',
+              marginTop: 5,
+              position: 'absolute',
+              bottom: 40,
+              left: 0,
+              right: 0,
+              backgroundColor: 'rgba(255,255,255,0.8)',
+              padding: 5
+            }}>
+              Tính năng không khả dụng khi offline
+            </Text>
+            <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
+          </TouchableOpacity>
+        );
+      }
+
+      return (
+        <TouchableOpacity 
+          key={index}
+          style={card.style}
+          onPress={card.onPress}
+        >
+          <Text style={styles.cardText}>{card.text}</Text>
+          <Image source={card.image} style={styles.cardImage} />
+          <Text style={styles.cardSubText}>{card.subText}</Text>
+          <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
+        </TouchableOpacity>
+      );
+    });
+  };
+
+  const renderPopularWords = () => {
+    if (!isOnline) {
+      return (
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: '100%',
+          height: '100%',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.3)',
+        }}>
+          <Text style={{
+            color: 'white',
+            textAlign: 'center',
+            fontSize: 18,
+            fontWeight: '500',
+            padding: 20,
+            textShadowColor: 'rgba(0, 0, 0, 0.75)',
+            textShadowOffset: {width: -1, height: 1},
+            textShadowRadius: 10
+          }}>
+            Bạn đang offline. Vui lòng kết nối mạng để xem từ vựng đ xuất.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={uniqueMostFavoritedWords}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.Id.toString()}
+        horizontal
+        contentContainerStyle={styles.flatListContainer}
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToAlignment="center"
+        pagingEnabled
+      />
+    );
+  };
+
+  const handleHideFeedback = async (feedbackId) => {
+    try {
+      const updatedHidden = [...hiddenFeedbacks, feedbackId];
+      setHiddenFeedbacks(updatedHidden);
+      await AsyncStorage.setItem(`HiddenFeedbacks_${userId}`, JSON.stringify(updatedHidden));
+    } catch (error) {
+      console.error('Error hiding feedback:', error);
+    }
+  };
+
+  const handleHideAllFeedbacks = async () => {
+    try {
+      const allFeedbackIds = storedFeedbacks.map(feedback => feedback.FeedbackId);
+      setHiddenFeedbacks(allFeedbackIds);
+      await AsyncStorage.setItem(`HiddenFeedbacks_${userId}`, JSON.stringify(allFeedbackIds));
+    } catch (error) {
+      console.error('Error hiding all feedbacks:', error);
+    }
+  };
+
+  useEffect(() => {
+    const loadHiddenFeedbacks = async () => {
+      try {
+        const hidden = await AsyncStorage.getItem(`HiddenFeedbacks_${userId}`);
+        if (hidden) {
+          setHiddenFeedbacks(JSON.parse(hidden));
+        }
+      } catch (error) {
+        console.error('Error loading hidden feedbacks:', error);
+      }
+    };
+    
+    if (userId) {
+      loadHiddenFeedbacks();
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    const newFilteredFeedbacks = storedFeedbacks
+      .filter(feedback => !hiddenFeedbacks.includes(feedback.FeedbackId))
+      .filter(feedback => {
+        if (showAllNotifications) {
+          return true;
+        } else {
+          return feedback.viewed === 0;
+        }
+      })
+      .sort((a, b) => new Date(b.FeedbackCreatedAt) - new Date(a.FeedbackCreatedAt));
+      
+    setFilteredFeedbacks(newFilteredFeedbacks);
+
+    const newUnreadCount = storedFeedbacks.filter(
+      feedback => feedback.viewed === 0 && feedback.UserId === userId
+    ).length;
+    setUnreadCount(newUnreadCount);
+  }, [storedFeedbacks, showAllNotifications, hiddenFeedbacks, userId]);
+
+  useEffect(() => {
+    const loadStoredFeedbacks = async () => {
+      try {
+        if (!userId) return;
+        const stored = await AsyncStorage.getItem(`AdFeedback_${userId}`);
+        const parsedStored = stored ? JSON.parse(stored) : [];
+        setStoredFeedbacks(parsedStored);
+        const unreadCount = parsedStored.filter(feedback => 
+          feedback.viewed === 0 && feedback.UserId === userId
+        ).length;
+        setUnreadCount(unreadCount);
+      } catch (error) {
+        console.error('Error loading stored feedbacks:', error);
+      }
+    };
+
+    if (userId) {
+      loadStoredFeedbacks();
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    const loadViewedFeedbacks = async () => {
+      try {
+        if (!userId) return;
+        const stored = await AsyncStorage.getItem(`ViewedFeedbacks_${userId}`);
+        if (stored) {
+          const viewedIds = new Set(JSON.parse(stored));
+          setViewedFeedbacks(viewedIds);
+        }
+      } catch (error) {
+        console.error('Error loading viewed feedbacks:', error);
+      }
+    };
+
+    loadViewedFeedbacks();
+  }, [userId]);
+
+  useEffect(() => {
+    const saveViewedFeedbacks = async () => {
+      try {
+        if (!userId) return;
+        await AsyncStorage.setItem(
+          `ViewedFeedbacks_${userId}`, 
+          JSON.stringify([...viewedFeedbacks])
+        );
+      } catch (error) {
+        console.error('Error saving viewed feedbacks:', error);
+      }
+    };
+
+    if (viewedFeedbacks.size > 0) {
+      saveViewedFeedbacks();
+    }
+  }, [viewedFeedbacks, userId]);
+
   return (
     <TouchableWithoutFeedback onPress={handlePressOutside}>
       <View style={styles.container}>
@@ -387,9 +753,15 @@ const Home = () => {
           <Text style={styles.languageText}>EasyEnglish</Text>
           <TouchableOpacity onPress={handleNotificationPress} style={styles.notificationContainer}>
             <Icon name="notifications" size={24} color="gray" style={styles.bellIcon} />
-            {unreadCount > 0 && (
+            {storedFeedbacks.filter(feedback => 
+              feedback.viewed === 0 && feedback.UserId === userId
+            ).length > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
+                <Text style={styles.badgeText}>
+                  {storedFeedbacks.filter(feedback => 
+                    feedback.viewed === 0 && feedback.UserId === userId
+                  ).length}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -444,86 +816,12 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             style={styles.scrollView}
           >
-            <TouchableOpacity style={[styles.card, styles.cardBlue]} onPress={handleNavigateToFlashCard}>
-              <Text style={styles.cardText}>HỌC TỪ VỰNG</Text>
-              <Image
-                source={require('../assets/images/Study_Voca.png')}
-                style={styles.cardImage}
-              />
-              <Text style={styles.cardSubText}>THÔNG QUA FLASHCARD</Text>
-              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.card, styles.cardGreen]} onPress={handleNavigateToFlashCardFav}>
-              <Text style={styles.cardText}>TỪ VỰNG CỦA TÔI</Text>
-              <Image
-                source={require('../assets/images/Study_Fav.png')}
-                style={styles.cardImage}
-              />
-              <Text style={styles.cardSubText}>THÔNG QUA FLASHCARD</Text>
-              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.card, styles.cardPurple]} onPress={handleNavigateToListen}>
-              <Text style={styles.cardText}>LUYỆN NGHE</Text>
-              <Image
-                source={require('../assets/images/Study_Music.png')}
-                style={styles.cardImage}
-              />
-              <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM VÀ TỰ LUẬN</Text>
-              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.card, styles.cardPink]} onPress={handleNavigateToVoiceAI}>
-              <Text style={styles.cardText}>LUYỆN NÓI</Text>
-              <Image
-                source={require('../assets/images/Study_Speaking.png')}
-                style={styles.cardImage}
-              />
-              <Text style={styles.cardSubText}>THÔNG QUA CHAT BOT</Text>
-              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.card, styles.cardOrange]} onPress={handleNavigateToTest}>
-              <Text style={styles.cardText}>KIỂM TRA TỪ VỰNG</Text>
-              <Image
-                source={require('../assets/images/Study_Fav.png')}
-                style={styles.cardImage}
-              />
-              <Text style={styles.cardSubText}>THÔNG QUA TRẮC NGHIỆM</Text>
-              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.card, styles.cardTeal]} onPress={handleNavigateToLevelWordGuess}>
-              <Text style={styles.cardText}>GIẢI TRÍ</Text>
-              <Image
-                source={require('../assets/images/Study_Gaming.png')}
-                style={styles.cardImage}
-              />
-              <Text style={styles.cardSubText}>THÔNG QUA WORD GUESS</Text>
-              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.card, styles.cardPink]} onPress={handleNavigateToChatBot}>
-              <Text style={styles.cardText}>GI I ĐÁP</Text>
-              <Image
-                source={require('../assets/images/Bot_Support.png')}
-                style={styles.cardImage}
-              />
-              <Text style={styles.cardSubText}>THÔNG QUA CHAT BOT</Text>
-              <Icon name="arrow-forward" size={24} color="white" style={styles.cardIcon} />
-            </TouchableOpacity>
+            {renderStudyCards()}
           </ScrollView>
           <View style={styles.popularWordContainer}>
             <ImageBackground source={background} style={styles.backImage}>
               <Text style={styles.popularWordText}>ĐANG ĐƯỢC ĐỀ XUẤT HÔM NAY</Text>
-              <FlatList
-                data={uniqueMostFavoritedWords}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.Id.toString()}
-                horizontal
-                contentContainerStyle={styles.flatListContainer}
-                showsHorizontalScrollIndicator={false}
-                decelerationRate="fast"
-                snapToAlignment="center"
-                pagingEnabled
-              />
+              {renderPopularWords()}
             </ImageBackground>
           </View>
           </View>
@@ -551,14 +849,24 @@ const Home = () => {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Thông báo</Text>
-                <TouchableOpacity
-                  style={styles.toggleButton}
-                  onPress={toggleNotificationsView}
-                >
-                  <Text style={styles.toggleButtonText}>
-                    {showAllNotifications ? 'Chỉ hiện chưa đọc' : 'Hiện tất cả'}
-                  </Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {showAllNotifications && filteredFeedbacks.length > 0 && (
+                    <TouchableOpacity
+                      style={styles.deleteAllButton}
+                      onPress={handleHideAllFeedbacks}
+                    >
+                      <Text style={styles.deleteAllText}>Xóa tất cả</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={styles.toggleButton}
+                    onPress={toggleNotificationsView}
+                  >
+                    <Text style={styles.toggleButtonText}>
+                      {showAllNotifications ? 'Chỉ hiện chưa đọc' : 'Hiện tất cả'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
               
               <FlatList
@@ -567,7 +875,11 @@ const Home = () => {
                 keyExtractor={(item, index) => `${item.FeedbackId}_${index}`}
                 style={styles.feedbackList}
                 ListEmptyComponent={
-                  <Text style={styles.emptyText}>Không có thông báo mới</Text>
+                  <Text style={styles.emptyText}>
+                    {showAllNotifications 
+                      ? 'Không có thông báo nào'
+                      : 'Không có thông báo mới'}
+                  </Text>
                 }
               />
 

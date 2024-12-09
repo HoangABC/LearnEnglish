@@ -105,6 +105,9 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 const passport = require('passport');
 const http = require('http');
+const path = require('path');
+const fileUpload = require('express-fileupload');
+const socketIO = require('socket.io');
 require('dotenv').config();
 require('./src/config/passport');
 
@@ -119,9 +122,15 @@ app.set('views', './src/views');
 
 createTablesIfNotExists();
 
-// Hardcode Wi-Fi IP address
 const localIP = '192.168.1.100';
 console.log('IP:', localIP);
+
+app.use(fileUpload({
+  createParentPath: true,
+  limits: {
+    fileSize: 10 * 1024 * 1024 
+  }
+}));
 
 app.use(cors({
   origin: [
@@ -150,7 +159,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Define routes
-app.use('/games', require('./src/routes/gameRoutes')); // Moved to top for priority
+app.use('/games', require('./src/routes/gameRoutes')); 
 app.use('/ad', require('./src/routes/adminRoutes'));
 app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api', require('./src/routes/wordRoutes'));
@@ -159,8 +168,17 @@ app.use('/test', require('./src/routes/testRoutes'));
 app.use('/listen', require('./src/routes/listenRoutes'));
 app.use('/statistics', require('./src/routes/statisticsRoutes'));
 app.use('/feedback', require('./src/routes/feedbackRoutes'));
-// Setup WebSocket
-setupSocket(server);
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/src/public', express.static(path.join(__dirname, 'src/public')));
+
+// Add new route for audio test page
+app.get('/audio-test', (req, res) => {
+    res.render('audio-test');
+});
+
+// Khởi tạo socket.io và lưu vào app
+const io = setupSocket(server);
+app.set('io', io);
 
 // Start server
 const PORT = process.env.PORT || 3000; 

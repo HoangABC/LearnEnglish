@@ -14,36 +14,32 @@ const findOne = async (condition) => {
     .query(query);
 
   if (result.recordset.length > 0) {
-    return result.recordset[0];  // Trả về người dùng đầu tiên tìm thấy
+    return result.recordset[0];  
   } else {
-    return null;  // Trả về null nếu không tìm thấy người dùng
+    return null;  
   }
 };
 
-// Hàm tạo người dùng mới
+
 const create = async (user) => {
   const pool = await poolPromise;
-  // Thêm người dùng vào cơ sở dữ liệu
-  await pool.request()
+
+  const result = await pool.request()
     .input('googleId', sql.NVarChar, user.googleId)
     .input('name', sql.NVarChar, user.name)
     .input('email', sql.NVarChar, user.email)
     .input('levelId', sql.Int, user.levelId || null)
-    .input('image', sql.NVarChar, user.image || null) 
+    .input('image', sql.NVarChar, user.image)
     .query(`
       INSERT INTO [User] (GoogleId, Name, Email, LevelId, Image)
-      VALUES (@googleId, @name, @email, @levelId, @image)
+      VALUES (@googleId, @name, @email, @levelId, @image);
+      SELECT SCOPE_IDENTITY() AS Id;
     `);
 
-
-  const result = await pool.request()
-    .input('googleId', sql.NVarChar, user.googleId)
-    .query('SELECT Id FROM [User] WHERE GoogleId = @googleId');
-
-  return result.recordset[0].Id; 
+  return result.recordset[0].Id;
 };
 
-// Hàm cập nhật GoogleId của người dùng
+
 const updateGoogleId = async (email, googleId, image) => {
   const pool = await poolPromise;
   await pool.request()

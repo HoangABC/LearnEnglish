@@ -9,6 +9,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Label from '../../components/label';
 import Iconify from '../../components/iconify';
 import './WordTableRow.css';
+import Tooltip from '@mui/material/Tooltip';
+import Box from '@mui/material/Box';
 
 // Helper function to format date
 const formatDate = (date) => {
@@ -104,68 +106,101 @@ export default function WordTableRow({
     handleCloseMenu();
   };
 
+  const wordInfo = (
+    <Box sx={{ 
+      p: 1,
+      bgcolor: 'background.paper',
+      border: '1px solid',
+      borderColor: 'divider',
+      borderRadius: 1,
+      fontSize: '14px',
+      lineHeight: 1.8,
+    }}>
+      <div><strong>Word:</strong> {Word}</div>
+     
+    </Box>
+  );
+
   return (
     <>
-      <TableRow hover tabIndex={-1} role="checkbox" selected={selected} sx={{ '&:hover': { bgcolor: 'rgba(145, 158, 171, 0.08)' } }}>
-        <TableCell padding="checkbox">
-          <Checkbox 
-            disableRipple 
-            checked={selected} 
-            onChange={handleClick}
-          
-          />
-        </TableCell>
+      <Tooltip 
+        title={wordInfo}
+        placement="right"
+        componentsProps={{
+          tooltip: {
+            sx: {
+              bgcolor: 'background.paper',
+              color: 'text.primary',
+              '& .MuiTooltip-arrow': {
+                color: 'background.paper',
+              },
+              boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+              maxWidth: 'none',
+            }
+          }
+        }}
+      >
+        <TableRow hover tabIndex={-1} role="checkbox" selected={selected} sx={{ '&:hover': { bgcolor: 'rgba(145, 158, 171, 0.08)' } }}>
+          <TableCell padding="checkbox">
+            <Checkbox 
+              disableRipple 
+              checked={selected} 
+              onChange={handleClick}
+            
+            />
+          </TableCell>
 
-        <TableCell sx={{ minWidth: 120 }}>{QueryURL || 'N/A'}</TableCell>
-        <TableCell sx={{ minWidth: 120, fontWeight: 'medium' }}>{Word || 'N/A'}</TableCell>
-        <TableCell sx={{ minWidth: 100 }}>{PartOfSpeech || 'N/A'}</TableCell>
-        <TableCell>
-          {console.log('LevelWordId:', LevelWordId)}
-          {getLevelLabel(LevelWordId)}
-        </TableCell>
-        <TableCell className="definition-cell">{Definition || 'N/A'}</TableCell>
-        <TableCell className="definition-cell">{DefinitionVI || 'N/A'}</TableCell>
-        <TableCell>{PhoneticUK || 'N/A'}</TableCell>
-        <TableCell>{PhoneticUS || 'N/A'}</TableCell>
-        <TableCell>{AudioUK || 'N/A'}</TableCell>
-        <TableCell>{AudioUS || 'N/A'}</TableCell>
-        <TableCell className="example-cell">
-          <div dangerouslySetInnerHTML={{ __html: cleanExampleText(Example) || 'N/A' }} />
-        </TableCell>
-        <TableCell className="example-cell">
-          <div dangerouslySetInnerHTML={{ __html: cleanExampleText(ExampleVI) || 'N/A' }} />
-        </TableCell>
-        <TableCell>{formatDate(new Date(CreatedAt))}</TableCell>
-        <TableCell>{formatDate(new Date(UpdatedAt))}</TableCell>
+          <TableCell sx={{ minWidth: 120 }}>{QueryURL || 'N/A'}</TableCell>
+          <TableCell sx={{ minWidth: 120, fontWeight: 'medium' }}>{Word || 'N/A'}</TableCell>
+          <TableCell sx={{ minWidth: 100 }}>{PartOfSpeech || 'N/A'}</TableCell>
+          <TableCell>
+            {console.log('LevelWordId:', LevelWordId)}
+            {getLevelLabel(LevelWordId)}
+          </TableCell>
+          <TableCell className="definition-cell">{Definition || 'N/A'}</TableCell>
+          <TableCell className="definition-cell">{DefinitionVI || 'N/A'}</TableCell>
+          <TableCell>{PhoneticUK || 'N/A'}</TableCell>
+          <TableCell>{PhoneticUS || 'N/A'}</TableCell>
+          <TableCell>{AudioUK || 'N/A'}</TableCell>
+          <TableCell>{AudioUS || 'N/A'}</TableCell>
+          <TableCell className="example-cell">
+            <div dangerouslySetInnerHTML={{ __html: cleanExampleText(Example) || 'N/A' }} />
+          </TableCell>
+          <TableCell className="example-cell">
+            <div dangerouslySetInnerHTML={{ __html: cleanExampleText(ExampleVI) || 'N/A' }} />
+          </TableCell>
+          <TableCell>{formatDate(new Date(CreatedAt))}</TableCell>
+          <TableCell>{formatDate(new Date(UpdatedAt))}</TableCell>
 
-        <TableCell align="center">
-        <Label color={(Status === 1 || Status === 'Active') ? 'success' : 'error'}>
-          {(Status === 1 || Status === 'Active') ? 'Active' : 'Inactive'}
-        </Label>
-        </TableCell>
+          <TableCell align="center">
+          <Label color={(Status === 1 || Status === 'Active') ? 'success' : 'error'}>
+            {(Status === 1 || Status === 'Active') ? 'Active' : 'Inactive'}
+          </Label>
+          </TableCell>
 
-        <TableCell align="right">
-          <IconButton onClick={handleOpenMenu}>
-            <Iconify icon="eva:more-vertical-fill" />
-          </IconButton>
-          <Popover
-            open={Boolean(open)}
-            anchorEl={open}
-            onClose={handleCloseMenu}
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          >
-            {tabValue === 0 ? (
-              <MenuItem onClick={() => handleStatusChange(0)}>Inactive</MenuItem>
-            ) : (
-              <>
-                <MenuItem onClick={() => handleStatusChange(1)}>Active</MenuItem>
-                <MenuItem onClick={handleEdit}>Edit</MenuItem>
-              </>
-            )}
-          </Popover>
-        </TableCell>
-      </TableRow>
+          <TableCell align="right">
+            <IconButton onClick={handleOpenMenu}>
+              <Iconify icon="eva:more-vertical-fill" />
+            </IconButton>
+            <Popover
+              open={Boolean(open)}
+              anchorEl={open}
+              onClose={handleCloseMenu}
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+              {tabValue === 0 ? (
+                <MenuItem onClick={() => handleStatusChange(0)}>Inactive</MenuItem>
+              ) : (
+                <>
+                  <MenuItem onClick={() => handleStatusChange(1)}>Active</MenuItem>
+                  <MenuItem onClick={handleEdit}>Edit</MenuItem>
+                </>
+              )}
+            </Popover>
+          </TableCell>
+        </TableRow>
+      </Tooltip>
     </>
   );
 }

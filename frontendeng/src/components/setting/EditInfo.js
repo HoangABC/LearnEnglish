@@ -85,10 +85,11 @@ const EditInfo = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerBackground}>
         <View style={styles.logoContainer}>
-          <Image 
-            source={require('../../assets/images/EE.png')} 
-            style={styles.logo}
-          />
+          {userDetails.image ? (
+              <Image source={{ uri: userDetails.image }} style={styles.logo} />
+            ) : (
+              <Image source={require('../../assets/images/EE.png')} style={styles.logo} />
+            )}
         </View>
       </View>
 

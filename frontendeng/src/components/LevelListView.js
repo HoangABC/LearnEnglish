@@ -36,11 +36,11 @@ const LevelListView = () => {
   }
 
   const handleItemPress = (levelId) => {
-    setSelectedLevelId(levelId); // Cập nhật selectedLevelId khi nhấn vào item
+    setSelectedLevelId(levelId); 
   };
 
   const handleConfirmPress = async () => {
-    if (!Id || !selectedLevelId) {  // Kiểm tra nếu Id hoặc selectedLevelId bị thiếu
+    if (!Id || !selectedLevelId) {  
       console.error('Id or LevelId is missing');
       return;
     }
@@ -53,9 +53,9 @@ const LevelListView = () => {
       }
 
       const user = JSON.parse(userData);
-      user.LevelId = selectedLevelId;  // Cập nhật LevelId cho người dùng
+      user.LevelId = selectedLevelId; 
       await AsyncStorage.setItem('user', JSON.stringify(user));
-      await setUserLevel(Id, selectedLevelId);  // Cập nhật trình độ cho người dùng
+      await setUserLevel(Id, selectedLevelId);
     } catch (error) {
       console.error('Error updating level:', error);
     }
@@ -132,6 +132,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     alignItems: 'center',
+    marginTop: '30%'
   },
   title: {
     fontSize: 28,

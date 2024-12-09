@@ -32,9 +32,9 @@ export const searchWord = createAsyncThunk(
 // Thunk for fetching random words by level
 export const fetchRandomWordsByLevel = createAsyncThunk(
   'words/fetchRandomWordsByLevel',
-  async (levelId, { rejectWithValue }) => {
+  async ({ levelId, userId }, { rejectWithValue }) => {
     try {
-      const response = await api.fetchRandomWordsByLevel(levelId);
+      const response = await api.fetchRandomWordsByLevel(levelId, userId);
       return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       return rejectWithValue(handleError(error, 'An error occurred while fetching random words'));
@@ -127,6 +127,9 @@ const wordSlice = createSlice({
     resetMostFavoritedWords: (state) => {
       state.mostFavoritedWords = [];
     },
+    setFavoriteWords: (state, action) => {
+      state.favoriteWords = action.payload;
+    }
   },
   extraReducers: (builder) => {
     const handlePending = (state) => {

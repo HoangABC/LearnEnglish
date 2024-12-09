@@ -11,6 +11,86 @@ import { WebView } from 'react-native-webview';
 
 const { width } = Dimensions.get('window');
 
+const FlashCard = React.memo(({ item, index, handleToggleFavorite, playSound, soundRegion, exampleTexts }) => (
+  <View style={styles.flipCardContainer}>
+    <FlipCard
+      key={item.Id}
+      style={styles.flipCard}
+      friction={8}
+      perspective={1000}
+      flipHorizontal={true}
+      flipVertical={false}
+    >
+      <LinearGradient
+        colors={['#2C3E50', '#3498DB']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.cardFront}
+      >
+        <TouchableOpacity
+          style={styles.favoriteIcon}
+          onPress={() => handleToggleFavorite(item.Id)}
+        >
+          <Icon
+            name={item.isFavorite ? 'star' : 'star-border'}
+            size={24}
+            color={item.isFavorite ? '#FFD700' : '#E0E0E0'}
+          />
+        </TouchableOpacity>
+        <Text style={styles.word}>{item.Word}</Text>
+
+        <View style={styles.phoneticContainer}>
+          <View style={styles.phoneticItem}>
+            <View style={styles.regionContainer}>
+              <Text style={styles.phoneticText}>UK</Text>
+              <TouchableOpacity
+                style={styles.soundButton}
+                onPress={() => playSound(item.AudioUK)}
+              >
+                <Icon name="volume-up" size={22} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
+          </View>
+
+          <View style={styles.phoneticItem}>
+            <View style={styles.regionContainer}>
+              <Text style={styles.phoneticText}>US</Text>
+              <TouchableOpacity
+                style={styles.soundButton}
+                onPress={() => playSound(item.AudioUS)}
+              >
+                <Icon name="volume-up" size={22} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.cardBack}>
+        <ScrollView style={styles.scrollView}>
+          <Text style={styles.sectionTitle}>Definition:</Text>
+          <Text style={styles.definitionText}>
+            - {item.Definition?.replace(/<[^>]+>/g, '')}
+          </Text>
+          
+          <Text style={styles.sectionTitle}>Vietnamese Definition:</Text>
+          <Text style={styles.definitionText}>
+            - {item.DefinitionVI?.replace(/<[^>]+>/g, '')}
+          </Text>
+          
+          <Text style={styles.sectionTitle}>Example:</Text>
+          <Text style={styles.exampleText}>{exampleTexts[index]?.en}</Text>
+          
+          <Text style={styles.sectionTitle}>Vietnamese Example:</Text>
+          <Text style={styles.exampleText}>{exampleTexts[index]?.vi}</Text>
+        </ScrollView>
+      </View>
+    </FlipCard>
+  </View>
+));
+
 const FlashCardVoca = ({ route }) => {
   const { randomWords, handleFetchRandomWordsByLevel, handleToggleFavoriteWord, handleFetchFavoriteWords } = useWordActions();
   const navigation = useNavigation();
@@ -29,6 +109,9 @@ const FlashCardVoca = ({ route }) => {
   const wordsArrayRef = useRef([]);
   const [autoPlay, setAutoPlay] = useState(false); 
   const [soundRegion, setSoundRegion] = useState('UK'); 
+  const [playedCards, setPlayedCards] = useState(new Set());
+  const [scrollDirection, setScrollDirection] = useState(null);
+  const lastOffset = useRef(0);
   
   useEffect(() => {
     const fetchUserId = async () => {
@@ -128,7 +211,7 @@ const FlashCardVoca = ({ route }) => {
         setIsLoaded(true);
         setCurrentCardIndex(0);
       } else {
-        // Nếu không có từ khóa trong bộ nhớ, hãy gọi để lấy từ khóa
+        
         fetchWords();
       }
     } catch (error) {
@@ -140,7 +223,7 @@ const FlashCardVoca = ({ route }) => {
   const fetchWords = useCallback(async () => {
     if (dataFetched.current) return;
 
-    if (!levelId) {
+    if (!levelId || !userId) {
       setIsLoaded(false);
       return;
     }
@@ -158,6 +241,9 @@ const FlashCardVoca = ({ route }) => {
 
       setWordsArray(wordsWithFavorites);
       wordsArrayRef.current = wordsWithFavorites;
+      setPlayedCards(new Set());
+      setScrollDirection(null);
+      lastOffset.current = 0;
       await AsyncStorage.setItem(`wordsArray_${userId}`, JSON.stringify(wordsWithFavorites)); 
     } catch (error) {
       setIsLoaded(false);
@@ -217,102 +303,51 @@ const FlashCardVoca = ({ route }) => {
     );
   };
 
-  const renderItem = ({ item, index }) => (
-    <View style={styles.flipCardContainer}>
-      <FlipCard
-        key={item.Id}
-        style={styles.flipCard}
-        friction={8}
-        perspective={1000}
-        flipHorizontal={true}
-        flipVertical={false}
-      >
-        {/* Front Card */}
-        <LinearGradient
-          colors={['#2C3E50', '#3498DB']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.cardFront}
-        >
-          <TouchableOpacity
-            style={styles.favoriteIcon}
-            onPress={() => handleToggleFavorite(item.Id)}
-          >
-            <Icon
-              name={item.isFavorite ? 'star' : 'star-border'}
-              size={24}
-              color={item.isFavorite ? '#FFD700' : '#E0E0E0'}
-            />
-          </TouchableOpacity>
-          <Text style={styles.word}>{item.Word}</Text>
-
-          {/* Phonetic sections */}
-          <View style={styles.phoneticContainer}>
-            <View style={styles.phoneticItem}>
-              <View style={styles.regionContainer}>
-                <Text style={styles.phoneticText}>UK</Text>
-                <TouchableOpacity
-                  style={styles.soundButton}
-                  onPress={() => playSound(item.AudioUK)}
-                >
-                  <Icon name="volume-up" size={22} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.phonetic}>{item.PhoneticUK}</Text>
-            </View>
-
-            <View style={styles.phoneticItem}>
-              <View style={styles.regionContainer}>
-                <Text style={styles.phoneticText}>US</Text>
-                <TouchableOpacity
-                  style={styles.soundButton}
-                  onPress={() => playSound(item.AudioUS)}
-                >
-                  <Icon name="volume-up" size={22} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.phonetic}>{item.PhoneticUS}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* Back Card */}
-        <View style={styles.cardBack}>
-          <ScrollView style={styles.scrollView}>
-            <Text style={styles.sectionTitle}>Definition:</Text>
-            <Text style={styles.definitionText}>
-              - {item.Definition?.replace(/<[^>]+>/g, '')}
-            </Text>
-            
-            <Text style={styles.sectionTitle}>Vietnamese Definition:</Text>
-            <Text style={styles.definitionText}>
-              - {item.DefinitionVI?.replace(/<[^>]+>/g, '')}
-            </Text>
-            
-            <Text style={styles.sectionTitle}>Example:</Text>
-            <Text style={styles.exampleText}>{exampleTexts[index]?.en}</Text>
-            
-            <Text style={styles.sectionTitle}>Vietnamese Example:</Text>
-            <Text style={styles.exampleText}>{exampleTexts[index]?.vi}</Text>
-          </ScrollView>
-        </View>
-      </FlipCard>
-    </View>
-  );
-  
+  const renderItem = useCallback(({ item, index }) => (
+    <FlashCard
+      item={item}
+      index={index}
+      handleToggleFavorite={handleToggleFavorite}
+      playSound={playSound}
+      soundRegion={soundRegion}
+      exampleTexts={exampleTexts}
+    />
+  ), [handleToggleFavorite, playSound, soundRegion, exampleTexts]);
 
   const handleScroll = (event) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const currentIndex = Math.round(offsetX / (width * 0.9));
-    setCurrentCardIndex(currentIndex);
-  
-    const currentWord = wordsArray[currentIndex];
-  
-    // Nếu tự động phát âm thanh được bật và có từ
-    if (autoPlay && currentWord) {
-      const soundUrl = soundRegion === 'US' ? currentWord.AudioUS : currentWord.AudioUK;
-      if (soundUrl) {
-        playSound(soundUrl);
+    const newIndex = Math.round(offsetX / (width * 0.9));
+    
+    const currentDirection = offsetX > lastOffset.current ? 'forward' : 'backward';
+    
+    if (currentDirection !== scrollDirection) {
+      setScrollDirection(currentDirection);
+      setPlayedCards(new Set());
+    }
+    
+    lastOffset.current = offsetX;
+    
+    const safeIndex = Math.min(newIndex, wordsArray.length - 1);
+    
+    if (
+      (currentCardIndex === wordsArray.length - 1 && safeIndex === 0) ||
+      (currentCardIndex === 0 && safeIndex === wordsArray.length - 1)
+    ) {
+      setPlayedCards(new Set());
+    }
+    
+    if (safeIndex !== currentCardIndex) {
+      setCurrentCardIndex(safeIndex);
+      
+      if (autoPlay && !playedCards.has(safeIndex)) {
+        const currentWord = wordsArray[safeIndex];
+        if (currentWord) {
+          const soundUrl = soundRegion === 'US' ? currentWord.AudioUS : currentWord.AudioUK;
+          if (soundUrl) {
+            playSound(soundUrl);
+            setPlayedCards(prev => new Set(prev).add(safeIndex));
+          }
+        }
       }
     }
   };
@@ -321,12 +356,10 @@ const FlashCardVoca = ({ route }) => {
   const playSound = (audioUrl) => {
     if (!audioUrl) return;
   
-    // Đổi soundUrl và reset WebView
     setSoundUrl(audioUrl);
     setWebviewKey(prevKey => prevKey + 1);
   };
 
-  // Thêm useEffect để xử lý examples
   useEffect(() => {
     if (wordsArray.length) {
       const processedTexts = wordsArray.map(word => {
@@ -337,12 +370,12 @@ const FlashCardVoca = ({ route }) => {
         
         return {
           en: examples.en
-            .replace(/<\/?li[^>]*>/g, '')  // Xóa thẻ li
-            .replace(/<[^>]+>/g, '')       // Xóa các thẻ HTML khác
-            .split(';')                    // Tách các ví dụ
-            .filter(Boolean)               // Lọc bỏ chuỗi rỗng
-            .map(item => `- ${item.trim()}`)  // Thêm dấu gạch đầu dòng
-            .join('\n'),                   // Nối với xuống dòng
+            .replace(/<\/?li[^>]*>/g, '')  
+            .replace(/<[^>]+>/g, '')      
+            .split(';')                  
+            .filter(Boolean)              
+            .map(item => `- ${item.trim()}`)  
+            .join('\n'),                  
           vi: examples.vi
             .replace(/<\/?li[^>]*>/g, '')
             .replace(/<[^>]+>/g, '')
@@ -355,6 +388,41 @@ const FlashCardVoca = ({ route }) => {
       setExampleTexts(processedTexts);
     }
   }, [wordsArray]);
+
+  const shuffleArray = useCallback(() => {
+    const shuffled = [...wordsArray].sort(() => Math.random() - 0.5);
+    setWordsArray(shuffled);
+    setCurrentCardIndex(0);
+    setPlayedCards(new Set());
+    setScrollDirection(null);
+    lastOffset.current = 0;
+  }, [wordsArray]);
+
+  const playInitialSound = () => {
+    if (autoPlay && wordsArray.length > 0 && !playedCards.has(0)) {
+      const firstWord = wordsArray[0];
+      const soundUrl = soundRegion === 'US' ? firstWord.AudioUS : firstWord.AudioUK;
+      if (soundUrl) {
+        playSound(soundUrl);
+        setPlayedCards(prev => new Set(prev).add(0));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (wordsArray.length > 0) {
+      playInitialSound();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (wordsArray.length > 0) {
+      setPlayedCards(new Set());
+      setScrollDirection(null);
+      lastOffset.current = 0;
+      playInitialSound();
+    }
+  }, [autoPlay, soundRegion]);
 
 const wordsArrayLength = favoriteWords.length;
   return (
@@ -386,23 +454,39 @@ const wordsArrayLength = favoriteWords.length;
           </View>
         </View>
 
-        <TouchableOpacity style={styles.refreshButton} onPress={fetchWords}>
-          <Text style={styles.refreshButtonText}>Làm mới</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.actionButton} onPress={fetchWords}>
+            <Icon name="refresh" size={20} color="#fff" style={styles.buttonIcon} />
+            <Text style={styles.actionButtonText}>Làm mới</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={shuffleArray}>
+            <Icon name="shuffle" size={20} color="#fff" style={styles.buttonIcon} />
+            <Text style={styles.actionButtonText}>Xáo trộn</Text>
+          </TouchableOpacity>
+        </View>
   
         <View style={styles.flashCardContainer}>
           <FlatList
             data={wordsArray.slice(0, 10)}
             renderItem={renderItem}
-            keyExtractor={(item) => item.Id.toString()}
+            keyExtractor={useCallback((item) => item.Id.toString(), [])}
             horizontal
             showsHorizontalScrollIndicator={false}
             pagingEnabled
             onScroll={handleScroll}
-            contentContainerStyle={styles.flatListContentContainer} 
-            snapToInterval={width * 0.9} 
-            decelerationRate="fast" 
-            snapToAlignment="center" 
+            contentContainerStyle={styles.flatListContentContainer}
+            snapToInterval={width * 0.9}
+            decelerationRate="fast"
+            snapToAlignment="center"
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={3}
+            windowSize={5}
+            initialNumToRender={2}
+            getItemLayout={useCallback((data, index) => ({
+              length: width * 0.9,
+              offset: width * 0.9 * index,
+              index,
+            }), [])}
           />
         </View>
 
@@ -475,7 +559,7 @@ const styles = StyleSheet.create({
     height: '100%', 
   },
   flipCard: {
-    marginStart: 9,
+    
     height: 450,
     width: width * 0.85,
     borderRadius: 15,
@@ -490,7 +574,7 @@ const styles = StyleSheet.create({
   },
   cardFront: {
     borderRadius: 15,
-    padding: 20,
+    padding: 15,
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
@@ -650,6 +734,31 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 12,
     paddingHorizontal: 5,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 20,
+  },
+  actionButton: {
+    backgroundColor: '#4caf50',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    width: '40%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    width: '100%',
+    textAlign: 'center',
   },
 });
 

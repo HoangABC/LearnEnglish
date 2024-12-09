@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = ` http://192.168.1.100:3000`;
+const BASE_URL = `https://386a-171-239-205-196.ngrok-free.app`;
 
 
 const apiClient = axios.create({
@@ -21,7 +21,7 @@ export const api = {
   searchWord: (keyword) => apiClient.get('/api/search', { params: { keyword } }),
   updateUserLevel: (id, levelId) => apiClient.put(`/account/users/${id}/level`, { levelId }),
   fetchLevels: () => apiClient.get('/account/levels'),
-  fetchRandomWordsByLevel: (levelId) => apiClient.get('/api/random-words', { params: { levelId } }),
+  fetchRandomWordsByLevel: (levelId, userId) => apiClient.get('/api/random-words', { params: { levelId, userId } }),
   toggleFavoriteWord: (userId, wordId) => apiClient.post('/api/toggle-favorite-word', { userId, wordId }),
   fetchFavoriteWords: (userId) => apiClient.get('/api/favorite-words', { params: { userId } }),
   fetchTests: (userId) => apiClient.get('/test/quiz', { params: { userId } }),

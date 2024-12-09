@@ -12,7 +12,16 @@ export const register = createAsyncThunk(
         message: response.data.message,
       };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+      if (error.response) {
+        return rejectWithValue({
+          message: error.response.data.message,
+          status: error.response.status
+        });
+      }
+      return rejectWithValue({
+        message: 'Đã có lỗi xảy ra. Vui lòng thử lại sau.',
+        status: 500
+      });
     }
   }
 );
@@ -161,7 +170,7 @@ const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
-    levels: [], // Thêm state để lưu danh sách levels
+    levels: [], 
     error: null,
     status: 'idle',
     successMessage: null,

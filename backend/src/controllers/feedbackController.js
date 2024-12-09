@@ -1,4 +1,6 @@
 const { poolPromise } = require('../config/db');
+const sql = require('mssql');
+const { emitFeedbackUpdate } = require('../Module/socket');
 
 // Gửi feedback từ user
 const createFeedback = async (req, res) => {
@@ -8,16 +10,43 @@ const createFeedback = async (req, res) => {
     const pool = await poolPromise;
     const request = pool.request();
 
+    // Sử dụng tham số để tránh SQL injection
+    request
+      .input('userId', sql.Int, userId)
+      .input('feedbackText', sql.NVarChar, feedbackText);
+
     const result = await request.query(`
-      INSERT INTO UserFeedback (UserId, FeedbackText)
-      VALUES (${userId}, N'${feedbackText}');
+      INSERT INTO UserFeedback (UserId, FeedbackText, Status, CreatedAt)
+      VALUES (@userId, @feedbackText, 1, GETDATE());
+      
+      SELECT 
+        UF.Id as FeedbackId,
+        UF.UserId,
+        U.Name as UserName,
+        UF.FeedbackText,
+        UF.CreatedAt as FeedbackCreatedAt,
+        UF.Status as FeedbackStatus
+      FROM UserFeedback UF
+      JOIN [User] U ON UF.UserId = U.Id
+      WHERE UF.Id = SCOPE_IDENTITY();
     `);
+
+    const newFeedback = result.recordset[0];
+
+    // Emit socket event để refresh danh sách feedback
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('refresh_feedbacks');
+      console.log('Emitted refresh_feedbacks signal');
+    }
 
     res.status(201).json({ 
       success: true, 
-      message: 'Feedback đã được gửi thành công' 
+      message: 'Feedback đã được gửi thành công',
+      data: newFeedback
     });
   } catch (error) {
+    console.error('Create feedback error:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Lỗi khi gửi feedback', 
@@ -27,9 +56,8 @@ const createFeedback = async (req, res) => {
 };
 
 const getUserFeedbacks = async (req, res) => {
-    let { userId } = req.query;  // or req.params if using URL params
+    let { userId } = req.query;
   
-    // Ensure the userId is a valid integer and trim any extra spaces or newline characters
     userId = userId ? userId.trim() : null;
   
     if (!userId || isNaN(userId)) {
@@ -43,12 +71,12 @@ const getUserFeedbacks = async (req, res) => {
       const pool = await poolPromise;
       const request = pool.request();
   
-      // Ensure userId is an integer before passing to the query
       request.input('userId', parseInt(userId));
   
       const feedbacks = await request.query(`
         SELECT 
           UF.Id as FeedbackId,
+          UF.UserId,
           UF.FeedbackText,
           UF.CreatedAt as FeedbackCreatedAt,
           UF.Status as FeedbackStatus,

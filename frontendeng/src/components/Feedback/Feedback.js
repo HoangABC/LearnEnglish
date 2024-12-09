@@ -3,6 +3,8 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import useFeedback from '../../hooks/useFeedback'
 import { showMessage } from 'react-native-flash-message';
+import LottieView from 'lottie-react-native';
+import { useSocket } from '../../hooks/useSocket';
 
 const Feedback = () => {
   const [loading, setLoading] = useState(false);
@@ -11,6 +13,7 @@ const Feedback = () => {
   const [userId, setUserId] = useState(null);
   const { handleCreateFeedback, getFeedbacks, feedbacks: feedbacksData } = useFeedback();
   const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const socket = useSocket();
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -37,6 +40,33 @@ const Feedback = () => {
     }
   }, [feedbacksData]);
 
+  useEffect(() => {
+    if (socket) {
+      // Lắng nghe khi admin phản hồi
+      socket.on('feedback_updated', (updatedFeedback) => {
+        setFeedbacks(prevFeedbacks => 
+          prevFeedbacks.map(feedback =>
+            feedback.FeedbackId === updatedFeedback.Id 
+              ? {
+                  ...feedback,
+                  AdminResponse: updatedFeedback.AdminResponse,
+                  ResponseCreatedAt: updatedFeedback.ResponseDate,
+                  Status: updatedFeedback.Status,
+                  AdminName: updatedFeedback.AdminName
+                }
+              : feedback
+          )
+        );
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('feedback_updated');
+      }
+    };
+  }, [socket]);
+
   const handleSubmit = async () => {
     if (!feedbackText.trim()) return;
     
@@ -45,7 +75,8 @@ const Feedback = () => {
       const success = await handleCreateFeedback(userId, feedbackText);
       if (success) {
         setFeedbackText(''); 
-        await getFeedbacks(userId); 
+        await getFeedbacks(userId);
+        await new Promise(resolve => setTimeout(resolve, 3000));
         showMessage({
           message: "Thành công",
           description: "Phản hồi của bạn đã được gửi",
@@ -169,7 +200,12 @@ const Feedback = () => {
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <Text>Loading...</Text>
+          <LottieView
+            source={require('../../assets/animations/SendFeedback.json')}
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+          />
         </View>
       ) : (
         <>
@@ -412,7 +448,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontStyle: 'italic',
-  }
+  },
+  lottieAnimation: {
+    width: 200,
+    height: 200,
+  },
 })
 
 export default Feedback;

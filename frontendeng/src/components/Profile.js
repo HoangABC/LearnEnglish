@@ -8,7 +8,8 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Entypo from 'react-native-vector-icons/Entypo';
-import { showMessage } from 'react-native-flash-message'; // Đảm bảo bạn đã cài đặt thư viện này
+import { showMessage } from 'react-native-flash-message'; 
+import NetInfo from '@react-native-community/netinfo';
 
 const Profile = () => {
   const dispatch = useDispatch();
@@ -16,8 +17,8 @@ const Profile = () => {
   const [userId, setUserId] = useState(null);
   const [userDetails, setUserDetails] = useState({});
   const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(true);
 
-  // Fetch user data from AsyncStorage
   const fetchUserData = async () => {
     try {
       const user = await AsyncStorage.getItem('user');
@@ -39,7 +40,26 @@ const Profile = () => {
     fetchUserData(); 
   });
 
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const handleLogout = async () => {
+    if (!isConnected) {
+      showMessage({
+        message: "Bạn đang ngoại tuyến",
+        description: "Vui lòng kiểm tra kết nối mạng và thử lại",
+        type: "warning",
+        icon: "warning",
+        duration: 3000,
+      });
+      return;
+    }
+    
     try {
       await AsyncStorage.removeItem('user');
       if (userId) {
@@ -79,10 +99,31 @@ const Profile = () => {
   }
 
   const handleNavigateToEditInfo = () => {
+    if (!isConnected) {
+      showMessage({
+        message: "Bạn đang ngoại tuyến",
+        description: "Vui lòng kiểm tra kết nối mạng và thử lại",
+        type: "warning",
+        icon: "warning",
+        duration: 3000,
+      });
+      return;
+    }
     navigation.navigate('EditInfo');
   };
 
   const handleNavigateToEditPass = async () => {
+    if (!isConnected) {
+      showMessage({
+        message: "Bạn đang ngoại tuyến",
+        description: "Vui lòng kiểm tra kết nối mạng và thử lại",
+        type: "warning",
+        icon: "warning",
+        duration: 3000,
+      });
+      return;
+    }
+    
     try {
       const user = await AsyncStorage.getItem('user');
       if (user) {
@@ -109,6 +150,16 @@ const Profile = () => {
   };
 
   const handleNavigateToFeedback = () => {
+    if (!isConnected) {
+      showMessage({
+        message: "Bạn đang ngoại tuyến",
+        description: "Vui lòng kiểm tra kết nối mạng và thử lại",
+        type: "warning",
+        icon: "warning",
+        duration: 3000,
+      });
+      return;
+    }
     navigation.navigate('Feedback');
   };
   
@@ -256,7 +307,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   bottomPadding: {
-    height: 60, // Adjust this value based on your navigation bar height
+    height: 60, 
   }
 });
 

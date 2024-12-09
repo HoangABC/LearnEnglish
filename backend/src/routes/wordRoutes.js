@@ -39,4 +39,6 @@ router.get('/most-favorited-words-today', wordController.getMostFavoritedWordsTo
 
 router.put('/words/edit/:id', wordController.editWord);
 
+router.post('/upload-audio', wordController.uploadAudio);
+
 module.exports = router;

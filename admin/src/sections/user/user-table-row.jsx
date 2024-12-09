@@ -10,7 +10,9 @@ import Popover from '@mui/material/Popover';
 import MenuItem from '@mui/material/MenuItem';
 import Label from '../../components/label';
 import Iconify from '../../components/iconify';
+import Tooltip from '@mui/material/Tooltip'; // Added import
 import { api } from '../../apis/api';
+import Box from '@mui/material/Box';
 
 // Helper function to format date
 const formatDate = (date) => {
@@ -54,58 +56,97 @@ export default function UserTableRow({
     }
   };
 
+  const userInfo = (
+    <Box sx={{ 
+      p: 1,
+      bgcolor: 'background.paper',
+      border: '1px solid',
+      borderColor: 'divider',
+      borderRadius: 1,
+      fontSize: '14px',
+      lineHeight: 1.8,
+    }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+        User Information
+      </Typography>
+      <div><strong>Name:</strong> {Name}</div>
+      <div><strong>Username:</strong> {Username}</div>
+      <div><strong>Email:</strong> {Email}</div>
+      <div><strong>Status:</strong> {Status}</div>
+      <div><strong>Created:</strong> {formatDate(new Date(CreatedAt))}</div>
+    </Box>
+  );
+
   return (
     <>
-      <TableRow hover tabIndex={-1} role="checkbox" selected={selected}>
-        <TableCell padding="checkbox">
-          <Checkbox disableRipple checked={selected} onChange={handleClick} />
-        </TableCell>
+      <Tooltip 
+        title={userInfo}
+        placement="right"
+        componentsProps={{
+          tooltip: {
+            sx: {
+              bgcolor: 'background.paper',
+              color: 'text.primary',
+              '& .MuiTooltip-arrow': {
+                color: 'background.paper',
+              },
+              boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+              maxWidth: 'none',
+            }
+          }
+        }}
+      >
+        <TableRow hover tabIndex={-1} role="checkbox" selected={selected}>
+          <TableCell padding="checkbox">
+            <Checkbox disableRipple checked={selected} onChange={handleClick} />
+          </TableCell>
 
-        <TableCell component="th" scope="row" padding="none">
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Typography variant="subtitle2" noWrap>
-              {Name}
-            </Typography>
-          </Stack>
-        </TableCell>
+          <TableCell component="th" scope="row" padding="none">
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Typography variant="subtitle2" noWrap>
+                {Name}
+              </Typography>
+            </Stack>
+          </TableCell>
 
-        <TableCell>{Username || 'N/A'}</TableCell>
+          <TableCell>{Username || 'N/A'}</TableCell>
 
-        <TableCell>{Email || 'N/A'}</TableCell>
+          <TableCell>{Email || 'N/A'}</TableCell>
 
-        <TableCell>{GoogleId || 'N/A'}</TableCell>
+          <TableCell>{GoogleId || 'N/A'}</TableCell>
 
-        <TableCell>{Password || 'N/A'}</TableCell>
+          <TableCell>{Password || 'N/A'}</TableCell>
 
-        <TableCell>{formatDate(new Date(CreatedAt))}</TableCell>
+          <TableCell>{formatDate(new Date(CreatedAt))}</TableCell>
 
-        <TableCell>{formatDate(new Date(UpdatedAt))}</TableCell>
+          <TableCell>{formatDate(new Date(UpdatedAt))}</TableCell>
 
-        <TableCell align="center">
-          <Label color={Status === 'Active' ? 'success' : 'error'}>
-            {Status}
-          </Label>
-        </TableCell>
+          <TableCell align="center">
+            <Label color={Status === 'Active' ? 'success' : 'error'}>
+              {Status}
+            </Label>
+          </TableCell>
 
-        <TableCell align="right">
-          <IconButton onClick={handleOpenMenu}>
-            <Iconify icon="eva:more-vertical-fill" />
-          </IconButton>
-          <Popover
-            open={Boolean(open)}
-            anchorEl={open}
-            onClose={() => setOpen(null)}
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          >
-            {userType === 'user1' ? (
-              <MenuItem onClick={handleCloseMenu}>Inactive</MenuItem>
-            ) : (
-              <MenuItem onClick={handleCloseMenu}>Active</MenuItem>
-            )}
-          </Popover>
-        </TableCell>
-      </TableRow>
+          <TableCell align="right">
+            <IconButton onClick={handleOpenMenu}>
+              <Iconify icon="eva:more-vertical-fill" />
+            </IconButton>
+            <Popover
+              open={Boolean(open)}
+              anchorEl={open}
+              onClose={() => setOpen(null)}
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+              {userType === 'user1' ? (
+                <MenuItem onClick={handleCloseMenu}>Inactive</MenuItem>
+              ) : (
+                <MenuItem onClick={handleCloseMenu}>Active</MenuItem>
+              )}
+            </Popover>
+          </TableCell>
+        </TableRow>
+      </Tooltip>
     </>
   );
 }

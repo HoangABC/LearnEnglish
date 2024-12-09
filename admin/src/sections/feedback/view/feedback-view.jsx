@@ -26,6 +26,7 @@ import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import { useSocket } from '../../../routes/hooks/useSocket';
 
 export default function FeedbackPage() {
   const [page, setPage] = useState(0);
@@ -34,7 +35,7 @@ export default function FeedbackPage() {
   const [orderBy, setOrderBy] = useState('CreatedAt');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue] = useState(0);
   const [feedbacks, setFeedbacks] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
@@ -42,6 +43,9 @@ export default function FeedbackPage() {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const socket = useSocket();
 
   const { 
     feedbacks: feedbacksData, 
@@ -52,7 +56,44 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     handleGetAllFeedbacks();
-  }, [handleGetAllFeedbacks]);
+
+    if (socket) {
+      socket.on('refresh_feedbacks', async () => {
+        console.log('Received new feedback notification, reloading data...');
+        setIsRefreshing(true);
+        
+        try {
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          
+          const newData = await handleGetAllFeedbacks();
+          
+          setFeedbacks(prevFeedbacks => {
+            if (newData?.data) {
+              const currentIds = new Set(prevFeedbacks.map(f => f.Id));
+              const newFeedbacks = newData.data.filter(f => !currentIds.has(f.Id));
+              
+              if (newFeedbacks.length > 0) {
+                return [...newFeedbacks, ...prevFeedbacks];
+              }
+            }
+            return prevFeedbacks;
+          });
+        } catch (error) {
+          console.error('Error fetching new feedbacks:', error);
+        }
+
+        setTimeout(() => {
+          setIsRefreshing(false);
+        }, 1000);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('refresh_feedbacks');
+      }
+    };
+  }, [socket, handleGetAllFeedbacks]);
 
   useEffect(() => {
     if (feedbacksData && feedbacksData.data) {
@@ -71,6 +112,28 @@ export default function FeedbackPage() {
       setFeedbacks(uniqueFeedbacks);
     }
   }, [feedbacksData]);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('feedback_updated', async (updatedFeedback) => {
+        console.log('Received updated feedback:', updatedFeedback);
+        
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        
+        setFeedbacks(prevFeedbacks => {
+          const newFeedbacks = prevFeedbacks.map(feedback =>
+            feedback.Id === updatedFeedback.Id ? updatedFeedback : feedback
+          );
+          console.log('Updated feedbacks:', newFeedbacks);
+          return newFeedbacks;
+        });
+      });
+
+      return () => {
+        socket.off('feedback_updated');
+      };
+    }
+  }, [socket]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -125,6 +188,7 @@ export default function FeedbackPage() {
     inputData: feedbacks || [],
     comparator: getComparator(order, orderBy),
     filterName,
+    statusFilter,
   });
 
   const isNotFound = !filteredFeedbacks.length && !!filterName;
@@ -148,7 +212,25 @@ export default function FeedbackPage() {
       }
       
       await handleRespondToFeedback(selectedFeedback.Id, adminResponse);
-      await handleGetAllFeedbacks(); // Refresh the data after response
+      
+      const updatedFeedback = {
+        ...selectedFeedback,
+        AdminResponse: adminResponse,
+        Status: 2,
+        ResponseDate: new Date().toISOString()
+      };
+
+      setFeedbacks(prevFeedbacks => 
+        prevFeedbacks.map(feedback =>
+          feedback.Id === selectedFeedback.Id ? updatedFeedback : feedback
+        )
+      );
+
+      socket?.emit('admin_response', {
+        feedbackId: selectedFeedback.Id,
+        response: adminResponse
+      });
+
       handleCloseDialog();
       setSnackbarMessage('Phản hồi đã được gửi thành công');
       setSnackbarSeverity('success');
@@ -168,8 +250,9 @@ export default function FeedbackPage() {
           numSelected={selected.length}
           filterName={filterName}
           onFilterName={handleFilterByName}
-          tabValue={tabValue}
-          onTabChange={(e, newValue) => setTabValue(newValue)}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(e) => setStatusFilter(e.target.value)}
+          isRefreshing={isRefreshing}
         />
 
         {tabValue === 0 && (

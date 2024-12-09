@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     flex: 1,  
     marginRight: 10,
     marginTop:'25%', 
-
+    width: '100%',
   },
   webViewContainer: {
     flex: 1,  

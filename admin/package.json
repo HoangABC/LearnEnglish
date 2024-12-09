@@ -33,6 +33,7 @@
     "redux": "^5.0.1",
     "simplebar": "^6.2.7",
     "simplebar-react": "^3.2.6",
+    "socket.io-client": "^4.8.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -58,5 +59,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
   }
 }

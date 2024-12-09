@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { poolPromise } = require('../config/db'); // Đảm bảo đường dẫn đúng tới db.js
+const { poolPromise } = require('../config/db'); 
 
-// Endpoint để lấy dữ liệu khách hàng
+
 router.get('/customers', async (req, res) => {
   try {
     const pool = await poolPromise;

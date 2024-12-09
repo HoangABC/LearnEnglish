@@ -12,13 +12,13 @@ import {
   ScrollView,
 } from 'react-native';
 import FlashMessage from 'react-native-flash-message';
-import useRegister from '../hooks/useRegister'; // Import hook
+import useRegister from '../hooks/useRegister'; 
 import { useNavigation } from '@react-navigation/native';
 
 const Register = () => {
   const navigation = useNavigation();
   
-  // Lấy các giá trị và hàm từ hook useRegister
+  
   const {
     name,
     setName,
@@ -30,10 +30,10 @@ const Register = () => {
     setPassword,
     confirmPassword,
     setConfirmPassword,
-    handleRegister, // Hàm handleRegister ở đây
+    handleRegister, 
     loading,
   } = useRegister(() => {
-    navigation.navigate('Login'); // Điều hướng đến Login khi đăng ký thành công
+    navigation.navigate('Login'); 
   });
   
 

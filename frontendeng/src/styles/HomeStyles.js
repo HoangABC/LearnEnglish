@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -94,10 +94,12 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     paddingHorizontal: 16,
+    bottom:'5%'
   },
   cardContainer: {
     flexDirection: 'row',
-    padding:'5%'
+    padding:'5%',
+    
   },
   card: {
     width: 200,
@@ -157,9 +159,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    marginBottom: 15,
-    paddingHorizontal: 5,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   wordText: {
     fontSize: 24,
@@ -236,6 +238,7 @@ const styles = StyleSheet.create({
     marginBottom: '5%',
     width: '100%',
     alignItems: 'center',
+    marginTop:0
   },
   backImage: {
     width: '100%',
@@ -255,8 +258,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   transparentBox: {
-    width: 429.8, 
-    height: 320, 
+    width: Dimensions.get('window').width - 40,
+    height: 'auto',
+    minHeight: 320,
     backgroundColor: 'rgba(0, 0, 0, 0.3)', 
     borderRadius: 10,
     borderWidth: 1, 
@@ -376,8 +380,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   definitionScrollView: {
-    maxHeight: 100,
-    marginVertical: 5,
+    flex: 1,
+  },
+  definitionContentContainer: {
+    padding: 10,
+    flexGrow: 1,
+  },
+  definitionText: {
+    color: 'white',
+    fontSize: 16,
+    lineHeight: 24,
   },
   notificationContainer: {
     position: 'relative',
@@ -417,15 +429,12 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     elevation: 5,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -440,18 +449,9 @@ const styles = StyleSheet.create({
   closeButton: {
     backgroundColor: '#007AFF',
     paddingVertical: 12,
-    paddingHorizontal: 30,
     borderRadius: 25,
-    marginTop: 20,
+    marginTop: 15,
     width: '100%',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
   closeButtonText: {
     color: 'white',
@@ -498,33 +498,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 10,
+    padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    backgroundColor: 'white',
   },
   feedbackContent: {
     flex: 1,
+    marginRight: 10,
   },
   
   deleteButton: {
-    padding: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ffebee',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteIcon: {
+    color: '#ff4444',
+  },
+  deleteAllButton: {
+    backgroundColor: '#ff4444',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+  },
+  deleteAllText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   feedbackTime: {
     fontSize: 12,
     color: '#666',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   
   feedbackSender: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#333',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   
   feedbackMessage: {
     fontSize: 14,
-    color: '#444',
+    color: '#666',
     lineHeight: 20,
   },
 
@@ -587,6 +618,77 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  offlineContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  offlineText: {
+    color: '#666',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  disabledCard: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: '#999',
+  },
+  disabledImage: {
+    opacity: 0.5,
+  },
+  offlineCardText: {
+    color: 'red',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  feedbackItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 10,
+  },
+  deleteIcon: {
+    color: '#ff4444',
+  },
+  deleteAllButton: {
+    backgroundColor: '#ff4444',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    marginLeft: 10,
+  },
+  deleteAllText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 16,
+    marginTop: 20,
+    fontStyle: 'italic',
+  },
+  feedbackList: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  definitionContainer: {
+    height: 100,
+    marginVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
 });
 

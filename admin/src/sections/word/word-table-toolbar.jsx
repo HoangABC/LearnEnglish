@@ -3,7 +3,6 @@ import {
   Toolbar,
   Tooltip,
   IconButton,
-  Typography,
   OutlinedInput,
   InputAdornment,
   Select,
@@ -21,8 +20,14 @@ export default function WordTableToolbar({
   onFilterName,
   tabValue,
   onTabChange,
-  onOpenAddModal
+  onOpenAddModal,
+  levelFilter,
+  setLevelFilter
 }) {
+  const handleLevelChange = (event) => {
+    setLevelFilter(event.target.value);
+  };
+
   return (
     <Toolbar
       sx={{
@@ -81,6 +86,53 @@ export default function WordTableToolbar({
           }}
         />
 
+        <FormControl 
+          sx={{ 
+            minWidth: 150,
+            '& .MuiOutlinedInput-root': {
+              height: '40px',
+              backgroundColor: '#F9FAFB',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                backgroundColor: '#F4F6F8',
+                boxShadow: '0 2px 8px 0 rgba(0,0,0,0.1)',
+              },
+            },
+            '& .MuiSelect-select': {
+              display: 'flex',
+              alignItems: 'center',
+              height: '40px !important',
+              padding: '0 14px !important',
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#E0E3E7',
+            },
+            '& .MuiInputLabel-root': {
+              transform: 'translate(14px, 11px)',
+              '&.Mui-focused, &.MuiFormLabel-filled': {
+                transform: 'translate(14px, -9px) scale(0.75)',
+              },
+            },
+          }}
+        >
+          <InputLabel id="level-select-label">Select Level</InputLabel>
+          <Select
+            labelId="level-select-label"
+            value={levelFilter}
+            onChange={handleLevelChange}
+            label="Select Level"
+          >
+            <MenuItem value="">All Levels</MenuItem>
+            <MenuItem value="1">A1</MenuItem>
+            <MenuItem value="2">A2</MenuItem>
+            <MenuItem value="3">B1</MenuItem>
+            <MenuItem value="4">B2</MenuItem>
+            <MenuItem value="5">B2+</MenuItem>
+            <MenuItem value="6">C1</MenuItem>
+            <MenuItem value="7">D</MenuItem>
+          </Select>
+        </FormControl>
+
         {numSelected > 0 ? (
           <Tooltip title="Delete">
             <IconButton>
@@ -120,4 +172,6 @@ WordTableToolbar.propTypes = {
   tabValue: PropTypes.number.isRequired,
   onTabChange: PropTypes.func.isRequired,
   onOpenAddModal: PropTypes.func.isRequired,
+  levelFilter: PropTypes.string.isRequired,
+  setLevelFilter: PropTypes.func.isRequired,
 };
