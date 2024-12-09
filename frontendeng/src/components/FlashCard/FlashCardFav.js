@@ -324,34 +324,34 @@ const FlashCardFav = () => {
   };
 
 
-  const preloadAudios = async (words) => {
-    try {
-      for (const word of words) {
-        const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
-        const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
+  // const preloadAudios = async (words) => {
+  //   try {
+  //     for (const word of words) {
+  //       const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
+  //       const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
 
  
-        if (word.AudioUK && !(await AsyncStorage.getItem(ukAudioKey))) {
-          const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
-          if (ukResponse.info().status === 200) {
-            const base64Data = ukResponse.base64();
-            await AsyncStorage.setItem(ukAudioKey, base64Data);
-          }
-        }
+  //       if (word.AudioUK && !(await AsyncStorage.getItem(ukAudioKey))) {
+  //         const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
+  //         if (ukResponse.info().status === 200) {
+  //           const base64Data = ukResponse.base64();
+  //           await AsyncStorage.setItem(ukAudioKey, base64Data);
+  //         }
+  //       }
 
 
-        if (word.AudioUS && !(await AsyncStorage.getItem(usAudioKey))) {
-          const usResponse = await RNFetchBlob.fetch('GET', word.AudioUS);
-          if (usResponse.info().status === 200) {
-            const base64Data = usResponse.base64();
-            await AsyncStorage.setItem(usAudioKey, base64Data);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error preloading audios:', error);
-    }
-  };
+  //       if (word.AudioUS && !(await AsyncStorage.getItem(usAudioKey))) {
+  //         const usResponse = await RNFetchBlob.fetch('GET', word.AudioUS);
+  //         if (usResponse.info().status === 200) {
+  //           const base64Data = usResponse.base64();
+  //           await AsyncStorage.setItem(usAudioKey, base64Data);
+  //         }
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Error preloading audios:', error);
+  //   }
+  // };
 
 
   const preloadAllAudios = async (words) => {

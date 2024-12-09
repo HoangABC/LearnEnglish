@@ -1,26 +1,14 @@
-const { getDefaultConfig } = require('metro-config');
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
-module.exports = (async () => {
-  const {
-    resolver: { sourceExts, assetExts }
-  } = await getDefaultConfig();
-  return {
-    transformer: {
-      getTransformOptions: async () => ({
-        transform: {
-          experimentalImportSupport: false,
-          inlineRequires: true,
-        },
-      }),
-    },
-    resolver: {
-      sourceExts,
-      assetExts,
-      extraNodeModules: {
-        'net': require.resolve('react-native-tcp'),
-        'tls': require.resolve('react-native-tcp'),
-        'fs': false,
-      }
-    }
-  };
-})();
+const config = {
+  transformer: {
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+  },
+};
+
+module.exports = mergeConfig(getDefaultConfig(__dirname), config);

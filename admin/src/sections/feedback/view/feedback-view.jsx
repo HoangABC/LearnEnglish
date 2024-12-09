@@ -275,7 +275,6 @@ export default function FeedbackPage() {
                     order={order}
                     orderBy={orderBy}
                     headLabel={[
-                      { id: 'Id', label: 'ID' },
                       { id: 'UserName', label: 'User Name' },
                       { id: 'FeedbackText', label: 'Feedback Text' },
                       { id: 'CreatedAt', label: 'Created At' },

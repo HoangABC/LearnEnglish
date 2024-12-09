@@ -108,7 +108,7 @@ const AppTabs = () => (
   </Tab.Navigator>
 );
 
-const AppNavigator = () => {
+const AppNavigator = ({ navigationRef }) => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
@@ -185,7 +185,7 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen
           name="LevelListView"

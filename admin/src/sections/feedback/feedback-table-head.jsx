@@ -37,7 +37,8 @@ export default function FeedbackTableHead({
             sortDirection={orderBy === headCell.id ? order : false}
             sx={{
               minWidth: headCell.id === 'FeedbackText' ? 200 : 'auto',
-              maxWidth: headCell.id === 'FeedbackText' ? 300 : 'auto'
+              maxWidth: headCell.id === 'FeedbackText' ? 300 : 'auto',
+              width: headCell.id === 'STT' ? 70 : 'auto'
             }}
           >
             <TableSortLabel

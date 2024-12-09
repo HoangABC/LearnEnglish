@@ -9,6 +9,8 @@ import { WebView } from 'react-native-webview';
 import useFeedback from '../hooks/useFeedback'
 import { useDispatch, useSelector } from 'react-redux';
 import NetInfo from '@react-native-community/netinfo';
+import notificationService from '../utils/NotificationService';
+import RNFetchBlob from 'rn-fetch-blob';
 
 const Home = () => {
   const navigation = useNavigation();
@@ -104,13 +106,23 @@ const Home = () => {
             parsedExisting.map(feedback => [feedback.FeedbackId, feedback])
           );
           
-          const mergedFeedbacks = userNotifications.map(newFeedback => {
-            const existing = existingMap.get(newFeedback.FeedbackId);
-            return {
-              ...newFeedback,
-              viewed: existing ? existing.viewed : 0
-            };
+          userNotifications.forEach(newFeedback => {
+            if (!existingMap.has(newFeedback.FeedbackId)) {
+              notificationService.showNotification(
+                'Thông báo mới',
+                'Bạn có một phản hồi mới từ quản trị',
+                { 
+                  feedbackId: newFeedback.FeedbackId,
+                  type: 'feedback'
+                }
+              );
+            }
           });
+
+          const mergedFeedbacks = userNotifications.map(newFeedback => ({
+            ...newFeedback,
+            viewed: existingMap.get(newFeedback.FeedbackId)?.viewed || 0
+          }));
 
           await AsyncStorage.setItem(`AdFeedback_${userId}`, JSON.stringify(mergedFeedbacks));
           await loadStoredFeedbacks();
@@ -268,7 +280,7 @@ const Home = () => {
             item.viewed === 1 && styles.viewedText
           ]}
         >
-          {item.FeedbackText}
+          Thông báo từ phản hồi của bạn: {item.FeedbackText}
         </Text>
       </View>
       {showAllNotifications && (
@@ -373,8 +385,17 @@ const Home = () => {
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled={true}
           scrollEventThrottle={16}
-          removeClippedSubviews={true}
           keyboardShouldPersistTaps="handled"
+          onStartShouldSetResponder={() => true}
+          onStartShouldSetResponderCapture={() => true}
+          onMoveShouldSetResponder={() => true}
+          onMoveShouldSetResponderCapture={() => true}
+          onResponderGrant={(e) => {
+            e.stopPropagation();
+          }}
+          onResponderMove={(e) => {
+            e.stopPropagation();
+          }}
         >
           <Text style={styles.definitionText} numberOfLines={0}>
             {item.Definition}
@@ -533,7 +554,7 @@ const Home = () => {
       },
       {
         style: [styles.card, styles.cardPink],
-        text: "GIẢI ĐÁP",
+        text: "GIỚI ĐÁP",
         subText: "THÔNG QUA CHAT BOT",
         image: require('../assets/images/Bot_Support.png'),
         onPress: handleNavigateToChatBot,
@@ -648,6 +669,16 @@ const Home = () => {
       const allFeedbackIds = storedFeedbacks.map(feedback => feedback.FeedbackId);
       setHiddenFeedbacks(allFeedbackIds);
       await AsyncStorage.setItem(`HiddenFeedbacks_${userId}`, JSON.stringify(allFeedbackIds));
+      
+      const updatedFeedbacks = storedFeedbacks.map(feedback => ({
+        ...feedback,
+        viewed: 1
+      }));
+      
+      await AsyncStorage.setItem(`AdFeedback_${userId}`, JSON.stringify(updatedFeedbacks));
+      setStoredFeedbacks(updatedFeedbacks);
+      
+      setUnreadCount(0);
     } catch (error) {
       console.error('Error hiding all feedbacks:', error);
     }
@@ -746,6 +777,108 @@ const Home = () => {
     }
   }, [viewedFeedbacks, userId]);
 
+  const testStatusBarNotification = async () => {
+    try {
+      await notificationService.showNotification(
+        "Thông báo mới", 
+        "Đây là nội dung thông báo test trên thanh trạng thái",
+        {
+          type: 'test',
+          id: Date.now()
+        }
+      );
+    } catch (error) {
+      console.error('Error showing notification:', error);
+    }
+  };
+
+  useEffect(() => {
+    const preloadAudioForWords = async () => {
+      if (mostFavoritedWords?.length > 0) {
+        try {
+          console.log('Starting to preload audio files for most favorited words...');
+          await preloadAllAudios(mostFavoritedWords);
+        } catch (error) {
+          console.error('Error preloading audio files:', error);
+        }
+      }
+    };
+
+    preloadAudioForWords();
+  }, [mostFavoritedWords]);
+
+  const preloadAllAudios = async (words) => {
+    try {
+      console.log(`Starting to preload ${words.length * 2} audio files...`);
+      
+      for (const word of words) {
+        if (word.AudioUK) {
+          const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
+          try {
+            const existingUKAudio = await AsyncStorage.getItem(ukAudioKey);
+            if (!existingUKAudio) {
+              console.log(`Downloading UK audio for: ${word.Word}`);
+              const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
+              if (ukResponse.info().status === 200) {
+                const ukBase64Data = ukResponse.base64();
+                await AsyncStorage.setItem(ukAudioKey, ukBase64Data);
+                console.log(`Successfully saved UK audio for: ${word.Word}`);
+              }
+            }
+          } catch (ukError) {
+            console.error(`Failed to download UK audio for ${word.Word}:`, ukError);
+          }
+        }
+
+        if (word.AudioUS) {
+          const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
+          try {
+            const existingUSAudio = await AsyncStorage.getItem(usAudioKey);
+            if (!existingUSAudio) {
+              console.log(`Downloading US audio for: ${word.Word}`);
+              const usResponse = await RNFetchBlob.fetch('GET', word.AudioUS);
+              if (usResponse.info().status === 200) {
+                const usBase64Data = usResponse.base64();
+                await AsyncStorage.setItem(usAudioKey, usBase64Data);
+                console.log(`Successfully saved US audio for: ${word.Word}`);
+              }
+            }
+          } catch (usError) {
+            console.error(`Failed to download US audio for ${word.Word}:`, usError);
+          }
+        }
+      }
+
+      console.log('Audio preload process completed');
+    } catch (error) {
+      console.error('Error in preloadAllAudios:', error);
+    }
+  };
+
+  useEffect(() => {
+    const preloadFlashCardFavAudio = async () => {
+      try {
+        const user = await AsyncStorage.getItem('user');
+        if (user) {
+          const { Id } = JSON.parse(user);
+          const offlineData = await AsyncStorage.getItem(`favoriteWords_${Id}`);
+          
+          if (offlineData) {
+            const localFavorites = JSON.parse(offlineData);
+            if (Array.isArray(localFavorites) && localFavorites.length > 0) {
+              console.log('Preloading FlashCardFav offline audio...');
+              await preloadAllAudios(localFavorites);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error preloading FlashCardFav audio:', error);
+      }
+    };
+
+    preloadFlashCardFavAudio();
+  }, []);
+
   return (
     <TouchableWithoutFeedback onPress={handlePressOutside}>
       <View style={styles.container}>
@@ -810,22 +943,32 @@ const Home = () => {
           )}
        
         <View style={styles.fixedView}>
-          <ScrollView 
-            horizontal 
-            contentContainerStyle={styles.cardContainer}
-            showsHorizontalScrollIndicator={false}
-            style={styles.scrollView}
-          >
-            {renderStudyCards()}
-          </ScrollView>
+          <View style={styles.studyCardsSection}>
+            <ScrollView 
+              horizontal 
+              contentContainerStyle={styles.cardContainer}
+              showsHorizontalScrollIndicator={false}
+              style={styles.scrollView}
+              nestedScrollEnabled={true}
+              scrollEventThrottle={16}
+              directionalLockEnabled={true}
+              onTouchStart={(e) => {
+                if (e.target !== e.currentTarget) {
+                  e.stopPropagation();
+                }
+              }}
+            >
+              {renderStudyCards()}
+            </ScrollView>
+          </View>
           <View style={styles.popularWordContainer}>
             <ImageBackground source={background} style={styles.backImage}>
               <Text style={styles.popularWordText}>ĐANG ĐƯỢC ĐỀ XUẤT HÔM NAY</Text>
               {renderPopularWords()}
             </ImageBackground>
           </View>
-          </View>
-          {soundUrl && (
+        </View>
+        {soundUrl && (
           <View style={{ height: 0 }}>
             <WebView
               key={webviewKey} 
@@ -892,6 +1035,17 @@ const Home = () => {
             </View>
           </View>
         </Modal>
+        <TouchableOpacity 
+          onPress={testStatusBarNotification}
+          style={{
+            padding: 10,
+            backgroundColor: '#007AFF',
+            borderRadius: 5,
+            margin: 10,
+          }}
+        >
+          <Text style={{ color: 'white' }}>Test Notification</Text>
+        </TouchableOpacity>
       </View>
     </TouchableWithoutFeedback>
   );

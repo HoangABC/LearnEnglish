@@ -70,7 +70,6 @@ export default function FeedbackTableRow({
         <Checkbox checked={selected} />
       </TableCell>
 
-      <TableCell>{Id}</TableCell>
       <TableCell sx={{ 
         maxWidth: 200, 
         overflow: 'hidden',

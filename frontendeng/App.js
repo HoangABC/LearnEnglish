@@ -5,6 +5,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { Provider } from 'react-redux';
 import store from './src/redux/store';
 import FlashMessage from 'react-native-flash-message';
+import { NavigationRef } from './src/navigation/NavigationRef';
 
 const App = () => {
   const [isSplashVisible, setIsSplashVisible] = useState(true);
@@ -32,7 +33,7 @@ const App = () => {
   return (
     <Provider store={store}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <AppNavigator />
+      <AppNavigator navigationRef={NavigationRef} />
       <FlashMessage position="top" />
     </Provider>
   );

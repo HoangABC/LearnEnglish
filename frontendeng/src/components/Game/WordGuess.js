@@ -222,7 +222,7 @@ const handleRemovePress = () => {
         return cellColors.every((row) => row.every((color) => color !== '#008000'));
     };
     
-    const handleCheckManual = () => {
+    const handleCheckManual = async () => {
         const answer = userInput[currentRow].join('');
     
         if (currentRow === 5) {
@@ -238,10 +238,13 @@ const handleRemovePress = () => {
                 return;
             }
 
+            // Đợi validateAndSubmitGuess hoàn thành trước khi kiểm tra và hiện modal
+            await validateAndSubmitGuess(answer);
+            
+            // Di chuyển kiểm tra hasNonGreenCell và hiện modal vào sau khi đã cập nhật màu
             const hasNonGreenCell = cellColors[currentRow].some((color) => color !== '#008000');
             if (hasNonGreenCell) {
                 setModalVisible(true);
-                return;
             }
         } else {
             if (answer.length < 5 || gameOver) {
@@ -253,9 +256,9 @@ const handleRemovePress = () => {
                 setIsValidWord(false);
                 return;
             }
-        }
 
-        validateAndSubmitGuess(answer);
+            await validateAndSubmitGuess(answer);
+        }
     };
     
     
@@ -275,62 +278,53 @@ const handleRemovePress = () => {
     };
 
     const updateColorsForRow = async (answer, correctWord) => {
-        setIsUpdatingColors(true); // Đang cập nhật màu sắc
-        const answerChars = answer.split('');
-        const correctChars = correctWord.split('');
-        const rowColors = Array(5).fill('#000000');
-        const newKeyboardColors = { ...keyboardColors };
-    
-        // Đánh dấu màu cho vị trí đúng
-        answerChars.forEach((char, index) => {
-            if (char === correctChars[index]) {
-                rowColors[index] = '#008000';
-                correctChars[index] = null;
-                newKeyboardColors[char] = { backgroundColor: '#008000', textColor: '#FFFFFF' };
-            }
-        });
-    
-        // Đánh dấu màu cho các chữ cái không đúng
-        answerChars.forEach((char, index) => {
-            if (correctChars.includes(char) && rowColors[index] !== '#008000') {
-                rowColors[index] = '#FFA500';
-                if (!newKeyboardColors[char] || newKeyboardColors[char].backgroundColor !== '#008000') {
-                    newKeyboardColors[char] = { backgroundColor: '#FFA500', textColor: '#000000' };
+        return new Promise((resolve) => {
+            setIsUpdatingColors(true);
+            const answerChars = answer.split('');
+            const correctChars = correctWord.split('');
+            const rowColors = Array(5).fill('#000000');
+            const newKeyboardColors = { ...keyboardColors };
+
+            // Đánh dấu màu cho vị trí đúng
+            answerChars.forEach((char, index) => {
+                if (char === correctChars[index]) {
+                    rowColors[index] = '#008000';
+                    correctChars[index] = null;
+                    newKeyboardColors[char] = { backgroundColor: '#008000', textColor: '#FFFFFF' };
                 }
-            } else if (!correctChars.includes(char)) {
-                if (!newKeyboardColors[char] || newKeyboardColors[char].backgroundColor !== '#008000') {
-                    newKeyboardColors[char] = { backgroundColor: '#000000', textColor: '#FFFFFF' };
-                }
-            }
-        });
-    
-        // Cập nhật màu cho từng ô nhập liệu và bàn phím
-        for (let index = 0; index < rowColors.length; index++) {
-            // Cập nhật màu cho ô nhập liệu trước
-            await new Promise((resolve) => {
-                setTimeout(() => {
-                    animateCellColor(currentRow, index, rowColors[index]); // Cập nhật ô màu
-                    resolve();
-                }, 500); // Thời gian trễ cho ô nhập liệu
             });
-    
-            // Sau khi ô nhập liệu đã ược cập nht, cập nhật màu cho bàn phím với thời gian trễ thêm 0.5 giây
-            await new Promise((resolve) => {
+
+            // Đánh dấu màu cho các chữ cái không đúng
+            answerChars.forEach((char, index) => {
+                if (correctChars.includes(char) && rowColors[index] !== '#008000') {
+                    rowColors[index] = '#FFA500';
+                    if (!newKeyboardColors[char] || newKeyboardColors[char].backgroundColor !== '#008000') {
+                        newKeyboardColors[char] = { backgroundColor: '#FFA500', textColor: '#000000' };
+                    }
+                } else if (!correctChars.includes(char)) {
+                    if (!newKeyboardColors[char] || newKeyboardColors[char].backgroundColor !== '#008000') {
+                        newKeyboardColors[char] = { backgroundColor: '#000000', textColor: '#FFFFFF' };
+                    }
+                }
+            });
+
+            // Cập nhật màu tuần tự cho từng ô
+            let updateCount = 0;
+            rowColors.forEach((color, index) => {
                 setTimeout(() => {
+                    animateCellColor(currentRow, index, color);
                     setKeyboardColors((prev) => ({
                         ...prev,
-                        [answerChars[index]]: newKeyboardColors[answerChars[index]], // Cập nhật màu cho bàn phím
+                        [answerChars[index]]: newKeyboardColors[answerChars[index]],
                     }));
-                    resolve();
-                }, 500); // Thời gian trễ cho bàn phím
+                    updateCount++;
+                    if (updateCount === rowColors.length) {
+                        setIsUpdatingColors(false);
+                        resolve(); // Resolve promise khi tất cả màu đã được cập nhật
+                    }
+                }, index * 500); // Delay 500ms cho mỗi ô
             });
-        }
-    
-        if (currentRow === 5 && checkIfAllRowsIncorrect()) {
-            setModalVisible(true);
-        }
-    
-        setIsUpdatingColors(false); // Đã cập nhật xong
+        });
     };
     
     
@@ -350,26 +344,30 @@ const handleRemovePress = () => {
                 console.log('API',response)
                 if (response && response.payload) {
                     const correctWord = response.payload.word.toUpperCase();
-                     setCorrectWord(correctWord);
-                    // Chờ cho việc cập nhật màu sắc hoàn thành trước khi tiếp tục
+                    setCorrectWord(correctWord);
+
+                    // Đợi cho việc cập nhật màu sắc hoàn thành
                     await updateColorsForRow(answer, correctWord);
-    
+
                     setIsCorrect(response.payload.isCorrect);
-    
+
+                    // Sau khi cập nhật màu xong mới hiển thị modal
                     if (response.payload.isCorrect) {
                         setShowConfetti(true);
-                        setModalVisible(true); // Hiển thị modal khi người dùng thắng
-                    } else if (currentRow === 5) { // Nếu dòng cuối cùng
-                        setModalVisible(true); // Hiển thị modal nếu hết dòng
+                        setModalVisible(true);
+                    } else if (currentRow === 5) {
+                        // Kiểm tra nếu tất cả các ô không phải màu xanh
+                        if (checkIfAllRowsIncorrect()) {
+                            setModalVisible(true);
+                        }
                     }
-    
+
                     setLockedRows((prev) => {
                         const newLockedRows = [...prev];
                         newLockedRows[currentRow] = true;
                         return newLockedRows;
                     });
-    
-                    // Kiểm tra xem currentRow có hợp lệ không trước khi tăng lên
+
                     if (currentRow < userInput.length - 1) {
                         setCurrentRow((prevRow) => prevRow + 1);
                     }
@@ -467,7 +465,7 @@ const handleRemovePress = () => {
                                 <Text 
                                     style={[
                                         styles.inputText, 
-                                        { color: cellColors[rowIndex][colIndex] !== '#FFFFFF' ? '#FFFFFF' : '#000000' }
+                                        { color: cellColors[rowIndex][colIndex] === '#EEC591' ? '#000000' : '#FFFFFF' }
                                     ]}
                                 >
                                     {inputChar}
@@ -518,24 +516,22 @@ const handleRemovePress = () => {
             >
                 <View style={styles.modalView}>
                     <Text style={styles.modalText}>
-                    {isCorrect ? "LEVEL SUCCESS" : "LEVEL FAILED"}
+                        {isCorrect ? "LEVEL SUCCESS" : "LEVEL FAILED"}
                     </Text>
-                    {isCorrect && (
                     <View style={styles.correctAnswerContainer}>
                         <Text style={styles.correctAnswerText}>The correct answer is:</Text>
                         <View style={styles.correctWordContainer}>
                         {correctWord.split('').map((char, index) => (
-                            <View key={index} style={styles.charBox}>
+                            <View key={index} style={[styles.charBox, { backgroundColor: '#008000' }]}>
                             <Text style={styles.correctChar}>{char}</Text>
                             </View>
                         ))}
                         </View>
                     </View>
-                    )}
                     {showConfetti && (
                     <ConfettiCannon
-                        count={200} // Số lượng confetti
-                        origin={{ x: -10, y: 0 }} // Vị trí xuất phát
+                        count={200}
+                        origin={{ x: -10, y: 0 }}
                     />
                     )}
                     <TouchableOpacity style={styles.playNext} onPress={handleNext}>
@@ -605,70 +601,63 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)', // Add a dim background
-      },
-      modalText: {
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    modalText: {
         fontWeight: 'bold',
         marginBottom: 15,
         textAlign: 'center',
         fontSize: 30,
-        color: '#FFFFFF', // Text color in modal
-        fontFamily: 'Arial', // Font family for consistency
-      },
-      textWhite: {
-        color: 'white',
-      },
-      correctAnswerContainer: {
+        color: '#FFFFFF',
+    },
+    correctAnswerContainer: {
         marginTop: 20,
         alignItems: 'center',
-        fontWeight: 'bold',
-        padding:20,
-      },
-      correctAnswerText: {
+        padding: 20,
+    },
+    correctAnswerText: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#FFFFFF',
-        fontFamily: 'Arial', // Font family for consistency
-      },
-      correctWordContainer: {
-        flexDirection: 'row', // Ensure characters are laid out horizontally
+        marginBottom: 10,
+    },
+    correctWordContainer: {
+        flexDirection: 'row',
         marginTop: 10,
-      },
-      charBox: {
-        width: 40,  // Fixed width
-        height: 40,  // Fixed height
+    },
+    charBox: {
+        width: 40,
+        height: 40,
         borderWidth: 1,
-        borderColor: '#000',  // Border color
-        justifyContent: 'center',  // Center vertically
-        alignItems: 'center',  // Center horizontally
-        marginHorizontal: 2,  // Space between boxes
-        backgroundColor: '#33CC00',  // Background color
-        borderRadius: 5,  // Rounded corners
-      },
-      correctChar: {
-        fontSize: 24,  // Font size
+        borderColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 2,
+        backgroundColor: '#008000',
+        borderRadius: 5,
+    },
+    correctChar: {
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#FFFFFF',
-        fontFamily: 'Arial', // Font family for consistency
-      },
-      playNext: {
-        width: '40%', // Full width
-        borderRadius: 10, // Rounded corners
-        backgroundColor: '#A020F0', // Purple background
-        paddingVertical: 10, // Vertical padding
-        paddingHorizontal: 20, // Horizontal padding
-        justifyContent: 'center', // Center vertically
-        alignItems: 'center', // Center horizontally
-        marginVertical: 10, // Vertical margin
-      },
-      playNextText: {
-        color: '#FFFFFF', // White text
-        fontWeight: 'bold', // Bold text
-        fontSize: 20, // Font size
-        textAlign: 'center', // Centered text
-        fontFamily: 'Arial',
-      },
-      submitButton: {
+    },
+    playNext: {
+        width: '40%',
+        borderRadius: 10,
+        backgroundColor: '#A020F0',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    playNextText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 20,
+        textAlign: 'center',
+    },
+    submitButton: {
         width: '50%', // Full width
         borderRadius: 10, // Rounded corners
         backgroundColor: '#0000FF', // Blue background
@@ -677,15 +666,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center', // Center vertically
         alignItems: 'center', // Center horizontally
         marginVertical: 10, // Vertical margin
-      },
-      submitButtonText: {
+    },
+    submitButtonText: {
         color: '#FFFFFF', // White text
         fontWeight: 'bold', // Bold text
         fontSize: 20, // Larger font size for thicker appearance
         textAlign: 'center', // Centered text
         fontFamily: 'Arial', // Font family for consistency
-      },
-    
+    },
 });
 
 export default WordGuess;

@@ -1,4 +1,4 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -159,9 +159,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    width: '100%',
+    marginBottom: 15,
+    paddingHorizontal: 5,
   },
   wordText: {
     fontSize: 24,
@@ -235,10 +235,9 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   popularWordContainer: {
-    marginBottom: '5%',
     width: '100%',
     alignItems: 'center',
-    marginTop:0
+    bottom:'5%'
   },
   backImage: {
     width: '100%',
@@ -258,9 +257,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   transparentBox: {
-    width: Dimensions.get('window').width - 40,
-    height: 'auto',
-    minHeight: 320,
+    width: 429.8, 
+    height: 320, 
     backgroundColor: 'rgba(0, 0, 0, 0.3)', 
     borderRadius: 10,
     borderWidth: 1, 
@@ -270,7 +268,7 @@ const styles = StyleSheet.create({
     marginLeft:20,
     top: 2,
     flexDirection: 'column', 
-    justifyContent: 'flex-start', 
+    justifyContent: 'space-between', 
     position: 'relative', 
   },
   wordContainer: {
@@ -326,7 +324,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10, 
   },
   saveCount: {
     fontSize: 14,
@@ -380,16 +377,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   definitionScrollView: {
-    flex: 1,
-  },
-  definitionContentContainer: {
-    padding: 10,
-    flexGrow: 1,
-  },
-  definitionText: {
-    color: 'white',
-    fontSize: 16,
-    lineHeight: 24,
+    maxHeight: 100,
+    marginVertical: 5,
   },
   notificationContainer: {
     position: 'relative',
@@ -429,183 +418,6 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  emptyNotificationContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  noNotifications: {
-    fontSize: 16,
-    color: '#666',
-  },
-  closeButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    borderRadius: 25,
-    marginTop: 15,
-    width: '100%',
-  },
-  closeButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  notificationList: {
-    maxHeight: 300,
-    width: '100%',
-  },
-  notificationItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  notificationText: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
-  },
-  notificationDate: {
-    fontSize: 12,
-    color: '#666',
-  },
-  notificationContent: {
-    padding: 10,
-  },
-  feedbackText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-  },
-  notificationText: {
-    fontSize: 16,
-    color: '#000',
-    marginBottom: 5,
-  },
-  notificationDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  feedbackItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: 'white',
-  },
-  feedbackContent: {
-    flex: 1,
-    marginRight: 10,
-  },
-  
-  deleteButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#ffebee',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteIcon: {
-    color: '#ff4444',
-  },
-  deleteAllButton: {
-    backgroundColor: '#ff4444',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  deleteAllText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  feedbackTime: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  
-  feedbackSender: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  
-  feedbackMessage: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    width: '90%',
-    maxHeight: '80%',
-  },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-
-  feedbackList: {
-    width: '100%',
-    maxHeight: '85%',
-  },
-
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 15,
-  },
-
-  markAllReadButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-  },
-
-  markAllReadText: {
-    color: 'white',
-    fontSize: 12,
-  },
-
-  toggleButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -613,11 +425,109 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  feedbackList: {
+    marginVertical: 10,
+  },
+  feedbackItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  feedbackContent: {
+    flex: 1,
+    marginRight: 10,
+  },
+  feedbackTime: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 4,
+  },
+  feedbackSender: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  feedbackMessage: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  deleteIcon: {
+    color: '#ff6b6b',
+  },
+  toggleButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    marginLeft: 10,
+  },
   toggleButtonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
+    width:'100%'
+  },
+  deleteAllButton: {
+    backgroundColor: '#ff6b6b',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    marginRight: 8,
+  },
+  deleteAllText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  closeButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    marginTop: 15,
+    alignSelf: 'center',
+    minWidth: 120,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 15,
+    paddingVertical: 20,
+  },
+  viewedFeedbackItem: {
+    backgroundColor: '#f8f9fa',
+  },
+  viewedText: {
+    color: '#999',
   },
   offlineContainer: {
     flex: 1,
@@ -644,52 +554,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 5,
-  },
-  feedbackItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  deleteButton: {
-    padding: 8,
-    marginLeft: 10,
-  },
-  deleteIcon: {
-    color: '#ff4444',
-  },
-  deleteAllButton: {
-    backgroundColor: '#ff4444',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    marginLeft: 10,
-  },
-  deleteAllText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 16,
-    marginTop: 20,
-    fontStyle: 'italic',
-  },
-  feedbackList: {
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  definitionContainer: {
-    height: 100,
-    marginVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
+  }
 });
 
 export default styles;
