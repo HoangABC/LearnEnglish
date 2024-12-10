@@ -9,6 +9,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { WebView } from 'react-native-webview';
 import RNFetchBlob from 'rn-fetch-blob';
+import DeviceInfo from 'react-native-device-info';
 
 const { width } = Dimensions.get('window');
 
@@ -330,7 +331,7 @@ const FlashCardFav = () => {
   //       const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
   //       const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
 
- 
+
   //       if (word.AudioUK && !(await AsyncStorage.getItem(ukAudioKey))) {
   //         const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
   //         if (ukResponse.info().status === 200) {
@@ -356,47 +357,99 @@ const FlashCardFav = () => {
 
   const preloadAllAudios = async (words) => {
     try {
-      console.log(`Starting to preload ${words.length * 2} audio files...`);
       
+      const totalMemory = await DeviceInfo.getTotalMemory();
+      const freeDiskStorage = await DeviceInfo.getFreeDiskStorage();
+
+      const MAX_TOTAL_SIZE = Math.min(freeDiskStorage * 0.1, 500 * 1024 * 1024); 
+      const MAX_FILE_SIZE = Math.min(freeDiskStorage * 0.01, 2 * 1024 * 1024);
+      const MAX_FILES = Math.floor(MAX_TOTAL_SIZE / MAX_FILE_SIZE);
+
+      
+      const existingKeys = (await AsyncStorage.getAllKeys())
+        .filter(key => key.startsWith('audio_'));
+      const existingAudios = new Set(existingKeys);
+
+      let totalSize = 0;
+      for (const key of existingKeys) {
+        const data = await AsyncStorage.getItem(key);
+        if (data) {
+          totalSize += data.length;
+        }
+      }
+
+
+      if (existingKeys.length > MAX_FILES || totalSize > MAX_TOTAL_SIZE) {
+        const keysToRemove = existingKeys.slice(0, Math.floor(existingKeys.length / 2));
+        await AsyncStorage.multiRemove(keysToRemove);
+        keysToRemove.forEach(key => existingAudios.delete(key));
+
+      }
+
       for (const word of words) {
+        // Xử lý UK audio
         if (word.AudioUK) {
           const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
-          try {
-            const existingUKAudio = await AsyncStorage.getItem(ukAudioKey);
-            if (!existingUKAudio) {
-              console.log(`Downloading UK audio for: ${word.Word}`);
+          if (!existingAudios.has(ukAudioKey)) {
+            try {
+
               const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
               if (ukResponse.info().status === 200) {
                 const ukBase64Data = ukResponse.base64();
-                await AsyncStorage.setItem(ukAudioKey, ukBase64Data);
-                console.log(`Successfully saved UK audio for: ${word.Word}`);
+                if (ukBase64Data.length < MAX_FILE_SIZE) {
+                  const newTotalSize = totalSize + ukBase64Data.length;
+                  if (newTotalSize <= MAX_TOTAL_SIZE) {
+                    await AsyncStorage.setItem(ukAudioKey, ukBase64Data);
+                    existingAudios.add(ukAudioKey);
+                    totalSize = newTotalSize;
+
+                  } else {
+
+                    break;
+                  }
+                } else {
+                  console.log(`File too large: ${(ukBase64Data.length/1024).toFixed(2)}KB > ${(MAX_FILE_SIZE/1024).toFixed(2)}KB`);
+                }
               }
+            } catch (ukError) {
+              console.error(`Failed to download UK audio for ${word.Word}:`, ukError);
             }
-          } catch (ukError) {
-            console.error(`Failed to download UK audio for ${word.Word}:`, ukError);
+          } else {
+            console.log(`UK audio for ${word.Word} already cached`);
           }
         }
 
         if (word.AudioUS) {
           const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
-          try {
-            const existingUSAudio = await AsyncStorage.getItem(usAudioKey);
-            if (!existingUSAudio) {
-              console.log(`Downloading US audio for: ${word.Word}`);
+          if (!existingAudios.has(usAudioKey)) {
+            try {
+
               const usResponse = await RNFetchBlob.fetch('GET', word.AudioUS);
               if (usResponse.info().status === 200) {
                 const usBase64Data = usResponse.base64();
-                await AsyncStorage.setItem(usAudioKey, usBase64Data);
-                console.log(`Successfully saved US audio for: ${word.Word}`);
+                if (usBase64Data.length < MAX_FILE_SIZE) {
+                  const newTotalSize = totalSize + usBase64Data.length;
+                  if (newTotalSize <= MAX_TOTAL_SIZE) {
+                    await AsyncStorage.setItem(usAudioKey, usBase64Data);
+                    existingAudios.add(usAudioKey);
+                    totalSize = newTotalSize;
+
+                  } else {
+                    console.log(`Cache limit reached (${(totalSize/1024/1024).toFixed(2)}MB/${(MAX_TOTAL_SIZE/1024/1024).toFixed(2)}MB)`);
+                    break;
+                  }
+                } else {
+                  console.log(`File too large: ${(usBase64Data.length/1024).toFixed(2)}KB > ${(MAX_FILE_SIZE/1024).toFixed(2)}KB`);
+                }
               }
+            } catch (usError) {
+              console.error(`Failed to download US audio for ${word.Word}:`, usError);
             }
-          } catch (usError) {
-            console.error(`Failed to download US audio for ${word.Word}:`, usError);
+          } else {
+            console.log(`US audio for ${word.Word} already cached`);
           }
         }
       }
-
-      console.log('Audio preload process completed');
     } catch (error) {
       console.error('Error in preloadAllAudios:', error);
     }

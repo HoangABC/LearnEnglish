@@ -30,6 +30,7 @@ import ForgotPassPage from '../pages/ForgotPassPage';
 import EmailSendPage from '../pages/EmailSendPage';
 import EmailOTPPage from '../pages/EmailOTPPage';
 import VoiceAIPage from '../pages/VoiceAIPage';
+import ARVocabularyViewPage from '../pages/ARVocabularyViewPage';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -291,6 +292,11 @@ const AppNavigator = ({ navigationRef }) => {
           name="EmailSend"
           component={EmailSendPage}
           options={{ headerTitle: '' }}
+        />
+        <Stack.Screen 
+          name="ARVocabularyView" 
+          component={ARVocabularyViewPage}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="EmailOTP"

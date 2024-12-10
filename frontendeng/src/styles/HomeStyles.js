@@ -483,12 +483,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 15,
     marginLeft: 10,
+    width: 150,
   },
   toggleButtonText: {
     color: 'white',
     fontSize: 13,
     fontWeight: '500',
-    width:'100%'
+    textAlign: 'center',
   },
   deleteAllButton: {
     backgroundColor: '#ff6b6b',

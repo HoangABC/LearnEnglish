@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import NetInfo from '@react-native-community/netinfo';
 import notificationService from '../utils/NotificationService';
 import RNFetchBlob from 'rn-fetch-blob';
+import DeviceInfo from 'react-native-device-info';
 
 const Home = () => {
   const navigation = useNavigation();
@@ -424,11 +425,46 @@ const Home = () => {
     </View>
   );
 
-  const playSound = (audioUrl) => {
+  const playSound = async (audioUrl) => {
     if (!audioUrl) return;
 
-    setSoundUrl(audioUrl);
-    setWebviewKey(prevKey => prevKey + 1);
+    try {
+      const audioKey = `audio_${audioUrl.split('/').pop()}`;
+
+      const localAudioBase64 = await AsyncStorage.getItem(audioKey);
+
+      if (localAudioBase64) {
+        console.log('Playing from local storage');
+        const base64Audio = `data:audio/mp3;base64,${localAudioBase64}`;
+        setSoundUrl(base64Audio);
+        setWebviewKey(prev => prev + 1);
+      } else {
+
+        try {
+          await fetch('https://www.google.com', { mode: 'no-cors' });
+
+          console.log('Playing and downloading');
+          setSoundUrl(audioUrl);
+          setWebviewKey(prev => prev + 1);
+
+          const response = await RNFetchBlob.fetch('GET', audioUrl);
+          if (response.info().status === 200) {
+            const base64Data = response.base64();
+
+            if (base64Data.length < 500000) {
+              await AsyncStorage.setItem(audioKey, base64Data);
+              console.log('Audio cached successfully');
+            } else {
+              console.log('Audio file too large to cache');
+            }
+          }
+        } catch (error) {
+          console.log('Offline - no audio available');
+        }
+      }
+    } catch (error) {
+      console.error('Error playing sound:', error);
+    }
   };
 
   const handleNavigateToFlashCard = () => {
@@ -809,75 +845,85 @@ const Home = () => {
 
   const preloadAllAudios = async (words) => {
     try {
-      console.log(`Starting to preload ${words.length * 2} audio files...`);
+      // Get device storage info
+      const freeDiskStorage = await DeviceInfo.getFreeDiskStorage();
       
+      // Set conservative storage limits (0.5% of free space for total cache, max 50MB)
+      const MAX_TOTAL_SIZE = Math.min(freeDiskStorage * 0.005, 50 * 1024 * 1024); 
+      // Max 500KB per file
+      const MAX_FILE_SIZE = 500 * 1024;
+      const MAX_FILES = Math.floor(MAX_TOTAL_SIZE / MAX_FILE_SIZE);
+
+      // Get existing cached audio files
+      const existingKeys = (await AsyncStorage.getAllKeys())
+        .filter(key => key.startsWith('audio_'));
+      
+      // Clear cache if we're approaching limits
+      if (existingKeys.length > MAX_FILES * 0.9) {
+        // Remove oldest 50% of cached files
+        const keysToRemove = existingKeys.slice(0, Math.floor(existingKeys.length / 2));
+        await AsyncStorage.multiRemove(keysToRemove);
+        console.log(`Cleared ${keysToRemove.length} cached audio files`);
+      }
+
+      // Track total size of newly cached files
+      let totalNewSize = 0;
+
       for (const word of words) {
+        // Skip if we've reached size limits
+        if (totalNewSize >= MAX_TOTAL_SIZE) {
+          console.log('Reached maximum cache size limit');
+          break;
+        }
+
+        // Process UK audio
         if (word.AudioUK) {
-          const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
-          try {
-            const existingUKAudio = await AsyncStorage.getItem(ukAudioKey);
-            if (!existingUKAudio) {
-              console.log(`Downloading UK audio for: ${word.Word}`);
-              const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
-              if (ukResponse.info().status === 200) {
-                const ukBase64Data = ukResponse.base64();
-                await AsyncStorage.setItem(ukAudioKey, ukBase64Data);
-                console.log(`Successfully saved UK audio for: ${word.Word}`);
+          const audioKey = `audio_${word.AudioUK.split('/').pop()}`;
+          if (!(await AsyncStorage.getItem(audioKey))) {
+            try {
+              const response = await RNFetchBlob.fetch('GET', word.AudioUK);
+              if (response.info().status === 200) {
+                const audioData = response.base64();
+                if (audioData.length <= MAX_FILE_SIZE && 
+                    totalNewSize + audioData.length <= MAX_TOTAL_SIZE) {
+                  await AsyncStorage.setItem(audioKey, audioData);
+                  totalNewSize += audioData.length;
+                }
               }
+            } catch (error) {
+              // Log error but continue with other files
+              console.log(`Failed to cache UK audio for word ${word.Word}:`, error.message);
             }
-          } catch (ukError) {
-            console.error(`Failed to download UK audio for ${word.Word}:`, ukError);
           }
         }
 
+        // Process US audio
         if (word.AudioUS) {
-          const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
-          try {
-            const existingUSAudio = await AsyncStorage.getItem(usAudioKey);
-            if (!existingUSAudio) {
-              console.log(`Downloading US audio for: ${word.Word}`);
-              const usResponse = await RNFetchBlob.fetch('GET', word.AudioUS);
-              if (usResponse.info().status === 200) {
-                const usBase64Data = usResponse.base64();
-                await AsyncStorage.setItem(usAudioKey, usBase64Data);
-                console.log(`Successfully saved US audio for: ${word.Word}`);
+          const audioKey = `audio_${word.AudioUS.split('/').pop()}`;
+          if (!(await AsyncStorage.getItem(audioKey))) {
+            try {
+              const response = await RNFetchBlob.fetch('GET', word.AudioUS);
+              if (response.info().status === 200) {
+                const audioData = response.base64();
+                if (audioData.length <= MAX_FILE_SIZE && 
+                    totalNewSize + audioData.length <= MAX_TOTAL_SIZE) {
+                  await AsyncStorage.setItem(audioKey, audioData);
+                  totalNewSize += audioData.length;
+                }
               }
+            } catch (error) {
+              console.log(`Failed to cache US audio for word ${word.Word}:`, error.message);
             }
-          } catch (usError) {
-            console.error(`Failed to download US audio for ${word.Word}:`, usError);
           }
         }
       }
 
-      console.log('Audio preload process completed');
+      console.log(`Successfully cached ${totalNewSize / 1024}KB of new audio files`);
+
     } catch (error) {
       console.error('Error in preloadAllAudios:', error);
     }
   };
-
-  useEffect(() => {
-    const preloadFlashCardFavAudio = async () => {
-      try {
-        const user = await AsyncStorage.getItem('user');
-        if (user) {
-          const { Id } = JSON.parse(user);
-          const offlineData = await AsyncStorage.getItem(`favoriteWords_${Id}`);
-          
-          if (offlineData) {
-            const localFavorites = JSON.parse(offlineData);
-            if (Array.isArray(localFavorites) && localFavorites.length > 0) {
-              console.log('Preloading FlashCardFav offline audio...');
-              await preloadAllAudios(localFavorites);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error preloading FlashCardFav audio:', error);
-      }
-    };
-
-    preloadFlashCardFavAudio();
-  }, []);
 
   return (
     <TouchableWithoutFeedback onPress={handlePressOutside}>
@@ -992,15 +1038,7 @@ const Home = () => {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Thông báo</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {showAllNotifications && filteredFeedbacks.length > 0 && (
-                    <TouchableOpacity
-                      style={styles.deleteAllButton}
-                      onPress={handleHideAllFeedbacks}
-                    >
-                      <Text style={styles.deleteAllText}>Xóa tất cả</Text>
-                    </TouchableOpacity>
-                  )}
+                <View style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
                   <TouchableOpacity
                     style={styles.toggleButton}
                     onPress={toggleNotificationsView}
@@ -1009,6 +1047,15 @@ const Home = () => {
                       {showAllNotifications ? 'Chỉ hiện chưa đọc' : 'Hiện tất cả'}
                     </Text>
                   </TouchableOpacity>
+                  
+                  {showAllNotifications && filteredFeedbacks.length > 0 && (
+                    <TouchableOpacity
+                      style={[styles.deleteAllButton, { marginTop: 8 }]}
+                      onPress={handleHideAllFeedbacks}
+                    >
+                      <Text style={styles.deleteAllText}>Xóa tất cả</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
               
