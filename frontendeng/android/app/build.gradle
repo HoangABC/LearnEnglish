@@ -109,6 +109,17 @@ dependencies {
     implementation("com.facebook.react:react-android")
     implementation "com.airbnb.android:lottie:5.2.0"
     implementation project(':react-native-push-notification')
+    implementation 'com.google.mlkit:object-detection:17.0.2'
+    implementation 'com.google.mlkit:image-labeling:17.0.7'
+    implementation 'com.google.mlkit:image-labeling-common:18.1.0'
+    // implementation(project(':react_viro')) {
+    //     configurations.all {
+    //         resolutionStrategy {
+    //             force 'com.google.android.gms:play-services-basement:18.1.0'
+    //             force 'com.google.android.gms:play-services-base:18.1.0'
+    //         }
+    //     }
+    // }
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

@@ -13,6 +13,87 @@ import DeviceInfo from 'react-native-device-info';
 
 const { width } = Dimensions.get('window');
 
+export const preloadAllAudios = async (words) => {
+  try {
+    const totalMemory = await DeviceInfo.getTotalMemory();
+    const freeDiskStorage = await DeviceInfo.getFreeDiskStorage();
+
+    const MAX_TOTAL_SIZE = Math.min(freeDiskStorage * 0.1, 500 * 1024 * 1024); 
+    const MAX_FILE_SIZE = Math.min(freeDiskStorage * 0.01, 2 * 1024 * 1024);
+    const MAX_FILES = Math.floor(MAX_TOTAL_SIZE / MAX_FILE_SIZE);
+
+    const existingKeys = (await AsyncStorage.getAllKeys())
+      .filter(key => key.startsWith('audio_'));
+    const existingAudios = new Set(existingKeys);
+
+    let totalSize = 0;
+    for (const key of existingKeys) {
+      const data = await AsyncStorage.getItem(key);
+      if (data) {
+        totalSize += data.length;
+      }
+    }
+
+    if (existingKeys.length > MAX_FILES || totalSize > MAX_TOTAL_SIZE) {
+      const keysToRemove = existingKeys.slice(0, Math.floor(existingKeys.length / 2));
+      await AsyncStorage.multiRemove(keysToRemove);
+      keysToRemove.forEach(key => existingAudios.delete(key));
+    }
+
+    for (const word of words) {
+      if (word.AudioUK) {
+        const ukAudioKey = `audio_${word.AudioUK.split('/').pop()}`;
+        if (!existingAudios.has(ukAudioKey)) {
+          try {
+            const ukResponse = await RNFetchBlob.fetch('GET', word.AudioUK);
+            if (ukResponse.info().status === 200) {
+              const ukBase64Data = ukResponse.base64();
+              if (ukBase64Data.length < MAX_FILE_SIZE) {
+                const newTotalSize = totalSize + ukBase64Data.length;
+                if (newTotalSize <= MAX_TOTAL_SIZE) {
+                  await AsyncStorage.setItem(ukAudioKey, ukBase64Data);
+                  existingAudios.add(ukAudioKey);
+                  totalSize = newTotalSize;
+                } else {
+                  break;
+                }
+              }
+            }
+          } catch (ukError) {
+            console.error(`Failed to download UK audio for ${word.Word}:`, ukError);
+          }
+        }
+      }
+
+      if (word.AudioUS) {
+        const usAudioKey = `audio_${word.AudioUS.split('/').pop()}`;
+        if (!existingAudios.has(usAudioKey)) {
+          try {
+            const usResponse = await RNFetchBlob.fetch('GET', word.AudioUS);
+            if (usResponse.info().status === 200) {
+              const usBase64Data = usResponse.base64();
+              if (usBase64Data.length < MAX_FILE_SIZE) {
+                const newTotalSize = totalSize + usBase64Data.length;
+                if (newTotalSize <= MAX_TOTAL_SIZE) {
+                  await AsyncStorage.setItem(usAudioKey, usBase64Data);
+                  existingAudios.add(usAudioKey);
+                  totalSize = newTotalSize;
+                } else {
+                  break;
+                }
+              }
+            }
+          } catch (usError) {
+            console.error(`Failed to download US audio for ${word.Word}:`, usError);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error in preloadAllAudios:', error);
+  }
+};
+
 const FlashCardFav = () => {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [userId, setUserId] = useState(null);

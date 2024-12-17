@@ -11,7 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import NetInfo from '@react-native-community/netinfo';
 import notificationService from '../utils/NotificationService';
 import RNFetchBlob from 'rn-fetch-blob';
-import DeviceInfo from 'react-native-device-info';
+import { preloadAllAudios } from '../components/FlashCard/FlashCardFav';
 
 const Home = () => {
   const navigation = useNavigation();
@@ -36,6 +36,7 @@ const Home = () => {
   const [hiddenFeedbacks, setHiddenFeedbacks] = useState([]);
   const [filteredFeedbacks, setFilteredFeedbacks] = useState([]);
   const [viewedFeedbacks, setViewedFeedbacks] = useState(new Set());
+  const [favoriteWords, setFavoriteWords] = useState([]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -491,6 +492,9 @@ const Home = () => {
   const handleNavigateToVoiceAI = () => {
     navigation.navigate('VoiceAI');
   };
+  const handleNavigateToARVocabulary = () => {
+    navigation.navigate('ARVocabularyView');
+  };
   const uniqueSearchResults = searchResults.filter(
     (item, index, self) =>
       index === self.findIndex((t) => t.Id === item.Id && t.Word.trim().toLowerCase() === item.Word.trim().toLowerCase())
@@ -594,6 +598,14 @@ const Home = () => {
         subText: "THÔNG QUA CHAT BOT",
         image: require('../assets/images/Bot_Support.png'),
         onPress: handleNavigateToChatBot,
+        requiresNetwork: true
+      },
+      {
+        style: [styles.card, styles.cardTeal],
+        text: "NHẬN DIỆN TỪ VỰNG",
+        subText: "THÔNG QUA HÌNH ẢNH",
+        image: require('../assets/images/Study_Voca.png'),
+        onPress: handleNavigateToARVocabulary,
         requiresNetwork: true
       }
     ];
@@ -829,101 +841,71 @@ const Home = () => {
   };
 
   useEffect(() => {
-    const preloadAudioForWords = async () => {
-      if (mostFavoritedWords?.length > 0) {
-        try {
-          console.log('Starting to preload audio files for most favorited words...');
-          await preloadAllAudios(mostFavoritedWords);
-        } catch (error) {
-          console.error('Error preloading audio files:', error);
+    const loadFavoriteWordsAndPreloadAudio = async () => {
+      try {
+        if (!userId) return;
+
+        // Kiểm tra dữ liệu offline trước
+        const offlineData = await AsyncStorage.getItem(`favoriteWords_${userId}`);
+        if (offlineData) {
+          const localFavorites = JSON.parse(offlineData);
+          if (Array.isArray(localFavorites) && localFavorites.length > 0) {
+            console.log('Preloading audio from cached favorites...');
+            // Chỉ tải audio nếu chưa có trong cache
+            const audioKeys = await AsyncStorage.getAllKeys();
+            const wordsNeedingAudio = localFavorites.filter(word => {
+              const ukAudioKey = `audio_${word.AudioUK?.split('/').pop()}`;
+              const usAudioKey = `audio_${word.AudioUS?.split('/').pop()}`;
+              return !audioKeys.includes(ukAudioKey) || !audioKeys.includes(usAudioKey);
+            });
+            
+            if (wordsNeedingAudio.length > 0) {
+              await preloadAllAudios(wordsNeedingAudio);
+            } else {
+              console.log('All audio files already cached');
+            }
+          }
         }
+
+        // Kiểm tra kết nối mạng và cập nhật dữ liệu nếu online
+        try {
+          const response = await fetch('https://www.google.com', { 
+            method: 'HEAD',
+            mode: 'no-cors',
+            timeout: 5000
+          });
+
+          // Nếu online, lấy dữ liệu mới
+          console.log('Online mode - fetching new data');
+          await handleFetchFavoriteWords(userId);
+          if (Array.isArray(favoriteWords) && favoriteWords.length > 0) {
+            // Lưu dữ liệu mới vào cache
+            await AsyncStorage.setItem(
+              `favoriteWords_${userId}`, 
+              JSON.stringify(favoriteWords)
+            );
+            // Chỉ tải audio cho những từ chưa có trong cache
+            const audioKeys = await AsyncStorage.getAllKeys();
+            const newWordsNeedingAudio = favoriteWords.filter(word => {
+              const ukAudioKey = `audio_${word.AudioUK?.split('/').pop()}`;
+              const usAudioKey = `audio_${word.AudioUS?.split('/').pop()}`;
+              return !audioKeys.includes(ukAudioKey) || !audioKeys.includes(usAudioKey);
+            });
+            
+            if (newWordsNeedingAudio.length > 0) {
+              await preloadAllAudios(newWordsNeedingAudio);
+            }
+          }
+        } catch (error) {
+          console.log('Offline mode - using cached data only');
+        }
+      } catch (error) {
+        console.error('Error in loadFavoriteWordsAndPreloadAudio:', error);
       }
     };
 
-    preloadAudioForWords();
-  }, [mostFavoritedWords]);
-
-  const preloadAllAudios = async (words) => {
-    try {
-      // Get device storage info
-      const freeDiskStorage = await DeviceInfo.getFreeDiskStorage();
-      
-      // Set conservative storage limits (0.5% of free space for total cache, max 50MB)
-      const MAX_TOTAL_SIZE = Math.min(freeDiskStorage * 0.005, 50 * 1024 * 1024); 
-      // Max 500KB per file
-      const MAX_FILE_SIZE = 500 * 1024;
-      const MAX_FILES = Math.floor(MAX_TOTAL_SIZE / MAX_FILE_SIZE);
-
-      // Get existing cached audio files
-      const existingKeys = (await AsyncStorage.getAllKeys())
-        .filter(key => key.startsWith('audio_'));
-      
-      // Clear cache if we're approaching limits
-      if (existingKeys.length > MAX_FILES * 0.9) {
-        // Remove oldest 50% of cached files
-        const keysToRemove = existingKeys.slice(0, Math.floor(existingKeys.length / 2));
-        await AsyncStorage.multiRemove(keysToRemove);
-        console.log(`Cleared ${keysToRemove.length} cached audio files`);
-      }
-
-      // Track total size of newly cached files
-      let totalNewSize = 0;
-
-      for (const word of words) {
-        // Skip if we've reached size limits
-        if (totalNewSize >= MAX_TOTAL_SIZE) {
-          console.log('Reached maximum cache size limit');
-          break;
-        }
-
-        // Process UK audio
-        if (word.AudioUK) {
-          const audioKey = `audio_${word.AudioUK.split('/').pop()}`;
-          if (!(await AsyncStorage.getItem(audioKey))) {
-            try {
-              const response = await RNFetchBlob.fetch('GET', word.AudioUK);
-              if (response.info().status === 200) {
-                const audioData = response.base64();
-                if (audioData.length <= MAX_FILE_SIZE && 
-                    totalNewSize + audioData.length <= MAX_TOTAL_SIZE) {
-                  await AsyncStorage.setItem(audioKey, audioData);
-                  totalNewSize += audioData.length;
-                }
-              }
-            } catch (error) {
-              // Log error but continue with other files
-              console.log(`Failed to cache UK audio for word ${word.Word}:`, error.message);
-            }
-          }
-        }
-
-        // Process US audio
-        if (word.AudioUS) {
-          const audioKey = `audio_${word.AudioUS.split('/').pop()}`;
-          if (!(await AsyncStorage.getItem(audioKey))) {
-            try {
-              const response = await RNFetchBlob.fetch('GET', word.AudioUS);
-              if (response.info().status === 200) {
-                const audioData = response.base64();
-                if (audioData.length <= MAX_FILE_SIZE && 
-                    totalNewSize + audioData.length <= MAX_TOTAL_SIZE) {
-                  await AsyncStorage.setItem(audioKey, audioData);
-                  totalNewSize += audioData.length;
-                }
-              }
-            } catch (error) {
-              console.log(`Failed to cache US audio for word ${word.Word}:`, error.message);
-            }
-          }
-        }
-      }
-
-      console.log(`Successfully cached ${totalNewSize / 1024}KB of new audio files`);
-
-    } catch (error) {
-      console.error('Error in preloadAllAudios:', error);
-    }
-  };
+    loadFavoriteWordsAndPreloadAudio();
+  }, [userId]);
 
   return (
     <TouchableWithoutFeedback onPress={handlePressOutside}>

@@ -49,12 +49,20 @@ const addWord = async (req, res) => {
       queryURL
     } = req.body;
 
-    const processAudioUrl = async (audioData) => {
-      if (!audioData) return null;
+    const audioUKFile = req.files?.audioUKFile;
+    const audioUSFile = req.files?.audioUSFile;
+
+    const processAudioUrl = async (audioData, audioFile) => {
+      if (!audioData && !audioFile) return null;
       
       try {
+        // Nếu audioData là một mảng, lấy phần tử đầu tiên
+        if (Array.isArray(audioData)) {
+          audioData = audioData[0]; // Lấy phần tử đầu tiên
+        }
+
         // Nếu là Base64
-        if (audioData.startsWith('data:audio')) {
+        if (audioData && typeof audioData === 'string' && audioData.startsWith('data:audio')) {
           const base64Data = audioData.split(';base64,').pop();
           const fileName = `${Date.now()}-${word}.mp3`;
           const filePath = path.join(__dirname, '../public/audio', fileName);
@@ -66,6 +74,14 @@ const addWord = async (req, res) => {
           return `/src/public/audio/${fileName}`;
         }
         
+        // Nếu là file âm thanh được upload
+        if (audioFile) {
+          const fileName = `${Date.now()}-${audioFile.name}`;
+          const uploadPath = path.join(__dirname, '../public/audio', fileName);
+          await audioFile.mv(uploadPath);
+          return `/src/public/audio/${fileName}`;
+        }
+        
         // Nếu là URL từ nguồn khác, giữ nguyên
         return audioData;
       } catch (error) {
@@ -74,8 +90,8 @@ const addWord = async (req, res) => {
       }
     };
 
-    const processedAudioUK = await processAudioUrl(audioUK);
-    const processedAudioUS = await processAudioUrl(audioUS);
+    const processedAudioUK = await processAudioUrl(audioUK, audioUKFile);
+    const processedAudioUS = await processAudioUrl(audioUS, audioUSFile);
 
     console.log('Original audioUK:', audioUK);
     console.log('Processed audioUK:', processedAudioUK);
@@ -288,13 +304,17 @@ const getRandomWordByLevel = async (req, res) => {
 
     const pool = await poolPromise;
 
-    const levelMappingResult = await pool.request()
-      .input('levelId', sql.Int, levelId)
-      .query('SELECT LevelWordId FROM LevelMapping WHERE LevelId = @levelId AND Status = 1');
+    const levelWordIds = [];
 
-    console.log('Level mapping result:', levelMappingResult.recordset);
+    for (let i = 1; i <= levelId; i++) {
+      const levelMappingResult = await pool.request()
+        .input('levelId', sql.Int, i)
+        .query('SELECT LevelWordId FROM LevelMapping WHERE LevelId = @levelId AND Status = 1');
 
-    const levelWordIds = levelMappingResult.recordset.map(row => row.LevelWordId);
+      levelMappingResult.recordset.forEach(row => {
+        levelWordIds.push(row.LevelWordId);
+      });
+    }
 
     if (levelWordIds.length === 0) {
       console.log('No words found for this level');
@@ -470,6 +490,16 @@ const submitWordGuessAnswer = async (req, res) => {
     }
 
     const pool = await poolPromise;
+
+    const userLevelResult = await pool.request()
+      .input('userId', sql.Int, userId)
+      .query('SELECT LevelId FROM Users WHERE Id = @userId');
+
+    const userLevelId = userLevelResult.recordset[0]?.LevelId;
+
+    if (userLevelId === 4) {
+      return res.status(403).json({ message: 'You are at the highest level and cannot progress further.' });
+    }
 
     const countResult = await pool.request()
       .input('userId', sql.Int, userId)

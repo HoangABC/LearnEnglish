@@ -11,6 +11,7 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
 import com.dieam.reactnativepushnotification.ReactNativePushNotificationPackage
+import com.frontendeng.MLKitPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -18,8 +19,8 @@ class MainApplication : Application(), ReactApplication {
       object : DefaultReactNativeHost(this) {
         override fun getPackages(): List<ReactPackage> =
             PackageList(this).packages.apply {
-              // Nếu bạn đã sử dụng autolinking, hãy loại bỏ dòng này
-              // add(ReactNativePushNotificationPackage())
+              // Thêm MLKitPackage vào danh sách
+              add(MLKitPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

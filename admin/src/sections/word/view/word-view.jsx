@@ -346,6 +346,13 @@ export default function WordPage() {
     setOpenEditModal(true);
   };
 
+  const handleEditorChange = (content, field) => {
+    setEditingWord((prev) => ({
+      ...prev,
+      [field]: content,
+    }));
+  };
+
   const handleCloseEditModal = () => {
     setOpenEditModal(false);
     setEditingWord(null);
@@ -846,7 +853,7 @@ export default function WordPage() {
                   <ReactQuill
                     theme="snow"
                     value={editingWord.example}
-                    onChange={(content) => setEditingWord({ ...editingWord, example: content })}
+                    onChange={(content) => handleEditorChange(content, 'example')}
                     modules={modules}
                     formats={formats}
                     style={{ height: '200px', marginBottom: '50px' }}
@@ -857,7 +864,7 @@ export default function WordPage() {
                   <ReactQuill
                     theme="snow"
                     value={editingWord.exampleVI}
-                    onChange={(content) => setEditingWord({ ...editingWord, exampleVI: content })}
+                    onChange={(content) => handleEditorChange(content, 'exampleVI')}
                     modules={modules}
                     formats={formats}
                     style={{ height: '200px', marginBottom: '50px' }}
@@ -912,12 +919,12 @@ export default function WordPage() {
                       if (file) {
                         try {
                           const response = await api.uploadAudio(file);
-                          const audioPath = response.data.url; // Giờ sẽ nhận được đường dẫn dạng /src/public/audio/filename.mp3
+                          const audioPath = response.data.url; 
                           
                           setEditingWord({ 
                             ...editingWord, 
                             audioUKFile: file,
-                            audioUK: audioPath // Lưu đường dẫn tương đối
+                            audioUK: audioPath 
                           });
 
                           setSnackbarMessage('Audio file uploaded successfully');

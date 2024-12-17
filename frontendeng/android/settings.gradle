@@ -2,3 +2,5 @@ rootProject.name = 'frontendeng'
 apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
+include ':react_viro'
+project(':react_viro').projectDir = new File(rootProject.projectDir, '../node_modules/@viro-community/react-viro/android')

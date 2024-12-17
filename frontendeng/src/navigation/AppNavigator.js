@@ -31,6 +31,7 @@ import EmailSendPage from '../pages/EmailSendPage';
 import EmailOTPPage from '../pages/EmailOTPPage';
 import VoiceAIPage from '../pages/VoiceAIPage';
 import ARVocabularyViewPage from '../pages/ARVocabularyViewPage';
+import AIWordDetailPage from '../pages/AIWordDetailPage';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -302,6 +303,17 @@ const AppNavigator = ({ navigationRef }) => {
           name="EmailOTP"
           component={EmailOTPPage}
           options={{ headerTitle: '' }}
+        />
+        <Stack.Screen 
+          name="AIWordDetail" 
+          component={AIWordDetailPage}
+          options={{
+            title: 'Word Details',
+            headerStyle: {
+              backgroundColor: '#2196F3',
+            },
+            headerTintColor: '#fff',
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -1,241 +1,300 @@
-import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  View,
-  TouchableOpacity,
-  Text,
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  TouchableOpacity, 
   Modal,
-  SafeAreaView,
+  ScrollView,
+  Image,
+  Pressable,
+  NativeModules
 } from 'react-native';
-import {
-  ViroARScene,
-  ViroARSceneNavigator,
-  ViroText,
-  ViroConstants,
-  ViroARTrackingTargets,
-  ViroARImageMarker,
-} from '@viro-community/react-viro';
+import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Appbar } from 'react-native-paper';
+import { launchImageLibrary } from 'react-native-image-picker';
 
-const ARScene = ({ onWordDetected }) => {
-  const [text, setText] = useState('Initializing AR...');
-
-  const onInitialized = (state, reason) => {
-    if (state === ViroConstants.TRACKING_NORMAL) {
-      setText('');
-    } else if (state === ViroConstants.TRACKING_NONE) {
-      setText('No tracking available');
-    }
-  };
-
-  // Định nghĩa các target images để tracking
-  useEffect(() => {
-    ViroARTrackingTargets.createTargets({
-      "table": {
-        source: require("../../assets/images/Bot.png"),
-        orientation: "Up",
-        physicalWidth: 0.1 // real world width in meters
-      },
-      "chair": {
-        source: require("../../assets/images/Bot.png"),
-        orientation: "Up",
-        physicalWidth: 0.1
-      },
-      // Thêm các target khác
-    });
-  }, []);
-
-  return (
-    <ViroARScene onTrackingUpdated={onInitialized}>
-      {text ? (
-        <ViroText
-          text={text}
-          scale={[0.5, 0.5, 0.5]}
-          position={[0, 0, -1]}
-          style={styles.helloWorldTextStyle}
-        />
-      ) : null}
-
-      <ViroARImageMarker target={"table"}
-        onAnchorFound={() => {
-          onWordDetected({
-            word: "Table",
-            translation: "Cái bàn",
-            position: { x: 0, y: 0.1, z: -1 }
-          });
-        }}
-      >
-        <ViroText
-          text="Table - Cái bàn"
-          scale={[0.1, 0.1, 0.1]}
-          position={[0, 0, 0]}
-          style={styles.wordTextStyle}
-        />
-      </ViroARImageMarker>
-
-      {/* Thêm các markers khác tương tự */}
-    </ViroARScene>
-  );
-};
+const { MLKitModule } = NativeModules;
 
 const ARVocabularyView = () => {
   const navigation = useNavigation();
-  const [selectedWord, setSelectedWord] = useState(null);
-  const [detectedWords, setDetectedWords] = useState([]);
+  const devices = useCameraDevices();
+  const [device, setDevice] = useState(null);
+  const [format, setFormat] = useState(null);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [detectedObject, setDetectedObject] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const cameraRef = useRef(null);
+  const [detectedObjects, setDetectedObjects] = useState([]);
+  const [showResults, setShowResults] = useState(false);
+  const [detectedLabels, setDetectedLabels] = useState([]);
+  const [capturedImage, setCapturedImage] = useState(null);
 
-  const handleWordDetected = (wordInfo) => {
-    setDetectedWords(prev => [...prev, wordInfo]);
+  useEffect(() => {
+    (async () => {
+      const status = await Camera.requestCameraPermission();
+      if (status === 'granted') {
+        setHasPermission(true);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (devices && devices.length > 0) {
+      const backDevice = devices.find((d) => d.position === 'back');
+      setDevice(backDevice);
+
+      if (backDevice && backDevice.formats.length > 0) {
+        const suitableFormat = backDevice.formats.find(f => 
+          f.maxFps >= 30 && f.minFps <= 30
+        );
+        setFormat(suitableFormat || backDevice.formats[0]);
+      }
+    }
+  }, [devices]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (detectedLabels.length > 0) {
+        setShowResults(true);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, detectedLabels]);
+
+  const takePhotoAndDetect = async () => {
+    if (isProcessing) return;
+    if (!cameraRef.current) return;
+
+    try {
+      setIsProcessing(true);
+      
+      const photo = await cameraRef.current.takePhoto({
+        qualityPrioritization: 'quality',
+        flash: 'off',
+      });
+
+      setCapturedImage(photo.path);
+      
+      const results = await MLKitModule.detectObjects(photo.path);
+
+      if (results && results.length > 0) {
+        setDetectedLabels(results);
+        setShowResults(true);
+      } else {
+        setDetectedLabels([{ text: 'No objects detected', confidence: 0 }]);
+        setShowResults(true);
+      }
+
+    } catch (error) {
+      console.error('Process error:', error);
+      setDetectedLabels([{ text: 'Error occurred', confidence: 0 }]);
+      setShowResults(true);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <Appbar.Header style={styles.header}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="AR Vocabulary" />
-        <Appbar.Action 
-          icon="information" 
-          onPress={() => {/* Show help/info */}} 
-        />
-      </Appbar.Header>
+  const selectImage = async () => {
+    try {
+      const result = await launchImageLibrary({ mediaType: 'photo' });
+      if (result.didCancel) {
+        return;
+      }
+      if (result.errorCode) {
+        return;
+      }
+      if (result.assets && result.assets.length > 0) {
+        const photoPath = result.assets[0].uri.replace('file://', '');
+        setCapturedImage(photoPath);
+        const results = await MLKitModule.detectObjects(photoPath);
 
-      <ViroARSceneNavigator
-        autofocus={true}
-        initialScene={{
-          scene: () => <ARScene onWordDetected={handleWordDetected} />
-        }}
-        style={styles.arView}
+        if (results && results.length > 0) {
+          setDetectedLabels(results);
+          setShowResults(true);
+        } else {
+          setDetectedLabels([{ text: 'No objects detected', confidence: 0 }]);
+          setShowResults(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error selecting image: ', error);
+    }
+  };
+
+  const ResultsModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showResults}
+      onRequestClose={() => setShowResults(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          {capturedImage && (
+            <Image 
+              source={{ uri: `file://${capturedImage}` }}
+              style={styles.capturedImage}
+            />
+          )}
+          <ScrollView style={styles.resultsList}>
+            {detectedLabels.map((label, index) => (
+              <TouchableOpacity 
+                key={index}
+                style={styles.resultItem}
+                onPress={() => {
+                  navigation.push('AIWordDetail', { word: label.text.toLowerCase() });
+                }}
+              >
+                <Text style={styles.labelText}>{label.text}</Text>
+                
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={() => setShowResults(false)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  if (!hasPermission) return <Text>No access to camera</Text>;
+  if (!device || !format) return <Text>Loading...</Text>;
+
+  return (
+    <View style={styles.container}>
+      <Camera
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        device={device}
+        format={format}
+        isActive={true}
+        photo={true}
       />
 
-      {/* Overlay for detected words list */}
-      <View style={styles.wordsList}>
-        {detectedWords.map((word, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.wordItem}
-            onPress={() => setSelectedWord(word)}
-          >
-            <Text style={styles.wordText}>{word.word}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.cameraOverlay}>
+        <TouchableOpacity 
+          style={styles.captureButton}
+          onPress={takePhotoAndDetect}
+          disabled={isProcessing}
+        >
+          <Text style={{ fontSize: 24, color: '#007AFF' }}>📸</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Word Detail Modal */}
-      <Modal
-        visible={selectedWord !== null}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setSelectedWord(null)}
+      <TouchableOpacity 
+        style={styles.uploadButton}
+        onPress={selectImage}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity 
-              style={styles.closeButton}
-              onPress={() => setSelectedWord(null)}
-            >
-              <Icon name="close" size={24} color="#000" />
-            </TouchableOpacity>
+        <Text style={{ fontSize: 24, color: 'white' }}>📁</Text>
+      </TouchableOpacity>
 
-            {selectedWord && (
-              <>
-                <Text style={styles.modalWord}>{selectedWord.word}</Text>
-                <Text style={styles.modalTranslation}>
-                  {selectedWord.translation}
-                </Text>
-                <TouchableOpacity style={styles.addToFlashcardButton}>
-                  <Text style={styles.buttonText}>Add to Flashcards</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+      <ResultsModal />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#000',
   },
-  header: {
-    backgroundColor: '#fff',
-  },
-  arView: {
-    flex: 1,
-  },
-  helloWorldTextStyle: {
-    fontFamily: 'Arial',
-    fontSize: 30,
-    color: '#ffffff',
-    textAlignVertical: 'center',
-    textAlign: 'center',
-  },
-  wordTextStyle: {
-    fontFamily: 'Arial',
-    fontSize: 12,
-    color: '#ffffff',
-    textAlignVertical: 'center',
-    textAlign: 'center',
-  },
-  wordsList: {
+  cameraOverlay: {
     position: 'absolute',
-    right: 20,
-    top: 100,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 10,
-    borderRadius: 10,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
   },
-  wordItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ffffff44',
+  captureButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fff',
+    borderWidth: 5,
+    borderColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    marginBottom: 20,
   },
-  wordText: {
-    color: '#fff',
-    fontSize: 16,
+  uploadButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#28a745',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    position: 'absolute',
+    bottom: 30,
+    left: 30,
+  },
+  buttonIcon: {
+    width: 40,
+    height: 40,
   },
   modalContainer: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    minHeight: 300,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  capturedImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  resultsList: {
+    maxHeight: 300,
+  },
+  resultItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  labelText: {
+    fontSize: 18,
+    fontWeight: '500',
+    width: '60%',
   },
   closeButton: {
-    position: 'absolute',
-    right: 15,
-    top: 15,
-    padding: 5,
-  },
-  modalWord: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  modalTranslation: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 20,
-  },
-  addToFlashcardButton: {
-    backgroundColor: '#4CAF50',
+    marginTop: 15,
     padding: 15,
-    borderRadius: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
     alignItems: 'center',
   },
-  buttonText: {
-    color: '#fff',
+  closeButtonText: {
+    color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });
 

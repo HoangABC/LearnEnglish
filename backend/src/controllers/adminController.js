@@ -16,42 +16,37 @@ const transporter = nodemailer.createTransport({
 
 const login = async (req, res) => {
     const { emailOrUsername, password } = req.body;
-    console.log('Email/Username:', emailOrUsername); // Log thông tin email hoặc username
-    console.log('Password:', password); // Log thông tin password
+    console.log('Email/Username:', emailOrUsername); 
+    console.log('Password:', password);
   
-    // Kiểm tra xem email/username và mật khẩu có được gửi không
     if (!emailOrUsername || !password) {
-      return res.status(400).json({ message: 'Email/Username and password are required' });
+      return res.status(400).json({ message: 'Email/Username và mật khẩu là bắt buộc' });
     }
   
     try {
-      // Kết nối với cơ sở dữ liệu
+
       const pool = await poolPromise;
       console.log('Connected to the database');
-      
-      // Truy vấn tìm admin theo email hoặc username từ bảng Admin
+
       const query = 'SELECT * FROM [Admin] WHERE Email = @EmailOrUsername OR Username = @EmailOrUsername';
       const result = await pool.request()
         .input('EmailOrUsername', sql.VarChar, emailOrUsername)
         .query(query);
   
-      console.log('Database query result:', result.recordset); // Log kết quả truy vấn
+      console.log('Database query result:', result.recordset); 
   
-      // Nếu tìm thấy người dùng
       if (result.recordset.length > 0) {
         const admin = result.recordset[0];
-        console.log('Admin found:', admin); // Log thông tin admin tìm thấy
-  
-        // Kiểm tra trạng thái của admin (ví dụ: email chưa được xác nhận)
+        console.log('Admin found:', admin);
+
         if (admin.Status === 0) {
-          return res.status(401).json({ message: 'Email not confirmed. Please check your email.' });
+          return res.status(401).json({ message: 'Email chưa được xác nhận. Vui lòng kiểm tra email của bạn.' });
         }
-  
-        // So sánh mật khẩu (so sánh trực tiếp nếu mật khẩu chưa mã hóa)
+
         if (password === admin.Password) {
           req.session.user = admin;
           res.status(200).json({ 
-            message: 'Admin logged in successfully!', 
+            message: 'Admin đã đăng nhập thành công!', 
             user: { 
               Id: admin.Id, 
               name: admin.Name, 
@@ -60,14 +55,14 @@ const login = async (req, res) => {
             } 
           });
         } else {
-          res.status(401).json({ message: 'Incorrect username or password.' });
+          res.status(401).json({ message: 'Mật khẩu không chính xác.' });
         }
       } else {
-        res.status(401).json({ message: 'Invalid credentials' });
+        res.status(401).json({ message: 'Thông tin đăng nhập không chính xác' });
       }
     } catch (err) {
-      console.log('Error in login:', err); // Log lỗi nếu có
-      res.status(500).send({ message: 'Server error. Please try again later.' });
+      console.log('Error in login:', err);
+      res.status(500).send({ message: 'Lỗi máy chủ. Vui lòng thử lại sau.' });
     }
   };
   
@@ -76,7 +71,7 @@ const logout = (req, res) => {
   if (req.session && req.session.user) {
     req.session.destroy((err) => {
       if (err) {
-        return res.status(500).json({ message: 'Đăng xuất không thành công, vui lòng thử lại!' });
+        return res.status(500).json({ message: 'Không thể đăng xuất, vui lòng thử lại!' });
       }
 
       res.status(200).json({ message: 'Đăng xuất thành công!' });
@@ -86,7 +81,6 @@ const logout = (req, res) => {
   }
 };
 
-// Lấy tất cả feedback
 const getAllFeedbacks = async (req, res) => {
   try {
       const pool = await poolPromise;
@@ -110,8 +104,7 @@ const getAllFeedbacks = async (req, res) => {
           `);
       
       const feedbacks = result.recordset;
-      
-      // Emit socket event với dữ liệu mới nhất
+
       req.app.get('io').emit('feedbacks_updated', feedbacks);
       
       res.status(200).json({
@@ -122,13 +115,12 @@ const getAllFeedbacks = async (req, res) => {
       console.error('Error getting feedbacks:', error);
       res.status(500).json({
           success: false,
-          message: 'Internal server error',
+          message: 'Lỗi máy chủ',
           error: error.message
       });
   }
 };
 
-// Lấy feedback theo ID
 const getFeedbackById = async (req, res) => {
   try {
       const { id } = req.params;
@@ -156,7 +148,7 @@ const getFeedbackById = async (req, res) => {
       if (result.recordset.length === 0) {
           return res.status(404).json({
               success: false,
-              message: 'Feedback not found'
+              message: 'Không tìm thấy phản hồi'
           });
       }
 
@@ -168,13 +160,12 @@ const getFeedbackById = async (req, res) => {
       console.error('Error getting feedback:', error);
       res.status(500).json({
           success: false,
-          message: 'Internal server error',
+          message: 'Lỗi máy chủ',
           error: error.message
       });
   }
 };
 
-// Lấy feedback theo UserId
 const getFeedbacksByUserId = async (req, res) => {
   try {
       const { userId } = req.params;
@@ -208,7 +199,7 @@ const getFeedbacksByUserId = async (req, res) => {
       console.error('Error getting user feedbacks:', error);
       res.status(500).json({
           success: false,
-          message: 'Internal server error',
+          message: 'Lỗi máy chủ',
           error: error.message
       });
   }
@@ -229,7 +220,7 @@ const respondToFeedback = async (req, res) => {
         if (!feedbackId || !responseText || !adminId) {
             return res.status(400).json({
                 success: false,
-                message: 'Feedback ID, response text and admin ID are required',
+                message: 'ID phản hồi, nội dung trả lời và ID admin là bắt buộc',
                 receivedData: { feedbackId, responseText, adminId }
             });
         }
@@ -243,7 +234,7 @@ const respondToFeedback = async (req, res) => {
         if (feedbackCheck.recordset.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Feedback not found'
+                message: 'Không tìm thấy phản hồi'
             });
         }
 
@@ -264,7 +255,6 @@ const respondToFeedback = async (req, res) => {
                 WHERE Id = @feedbackId
             `);
 
-        // Sau khi lưu thành công, emit sự kiện
         const updatedFeedback = {
             Id: feedbackId,
             AdminResponse: responseText,
@@ -276,13 +266,13 @@ const respondToFeedback = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: 'Response sent successfully'
+            message: 'Phản hồi đã được gửi thành công'
         });
     } catch (error) {
         console.error('Error in respondToFeedback:', error);
         res.status(500).json({
             success: false,
-            message: 'Internal server error',
+            message: 'Lỗi máy chủ',
             error: error.message,
             requestBody: req.body
         });
