@@ -594,7 +594,7 @@ const Home = () => {
       },
       {
         style: [styles.card, styles.cardPink],
-        text: "GIỚI ĐÁP",
+        text: "GIẢI ĐÁP",
         subText: "THÔNG QUA CHAT BOT",
         image: require('../assets/images/Bot_Support.png'),
         onPress: handleNavigateToChatBot,

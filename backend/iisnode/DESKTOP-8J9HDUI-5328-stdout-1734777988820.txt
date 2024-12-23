@@ -1,0 +1,4 @@
+IP: 192.168.1.100
+Server is running on http://192.168.1.100:\\.\pipe\7a5046d2-7abb-4be2-ad5b-bebb84e1df71
+Connected to SQL Server
+Tables and data created or updated successfully.

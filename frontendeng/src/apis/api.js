@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = `http://192.168.1.100:3000`;
+const BASE_URL = `https://app.easyenglish.cfd`;
 
 
 const apiClient = axios.create({

@@ -4,8 +4,8 @@ import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
 
 const LevelWordGuess = () => {
-  const [selectedLevel, setSelectedLevel] = useState(2); // Default 'Normal'
-  const [tempLevel, setTempLevel] = useState(2); // For temporary value
+  const [selectedLevel, setSelectedLevel] = useState(2);
+  const [tempLevel, setTempLevel] = useState(2); 
   const navigation = useNavigation();
   const [fadeAnim] = useState(new Animated.Value(1));
   const [currentText, setCurrentText] = useState('NORMAL');
@@ -25,24 +25,24 @@ const LevelWordGuess = () => {
   const handleSlidingComplete = (value) => {
     let snappedValue;
     if (value < 1.5) {
-      snappedValue = 1; // Snap to Easy
+      snappedValue = 1; 
     } else if (value < 2.5) {
-      snappedValue = 2; // Snap to Normal
+      snappedValue = 2; 
     } else {
-      snappedValue = 3; // Snap to Hard
+      snappedValue = 3; 
     }
     setSelectedLevel(snappedValue);
     setTempLevel(snappedValue);
   };
 
   const updateLevelText = (value) => {
-    // Fade out
+
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 150,
       useNativeDriver: true,
     }).start(() => {
-      // Update text
+
       if (value < 1.5) {
         setCurrentText('EASY');
       } else if (value < 2.5) {
@@ -51,7 +51,7 @@ const LevelWordGuess = () => {
         setCurrentText('HARD');
       }
       
-      // Fade in
+
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 150,

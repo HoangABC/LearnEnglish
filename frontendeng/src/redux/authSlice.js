@@ -66,10 +66,22 @@ export const updateUserLevel = createAsyncThunk(
   async ({ id, levelId }, { rejectWithValue }) => {
     try {
       const response = await api.updateUserLevel(id, levelId);
+      
+      // Kiểm tra mã trạng thái
       if (response.status === 200) {
         return { id, levelId };
+      } else if (response.status === 400) {
+        // Xử lý trường hợp lỗi 400
+        return rejectWithValue('Cập nhật LevelId không thành công: ' + response.data.message);
+      } else if (response.status === 404) {
+        // Xử lý trường hợp không tìm thấy người dùng
+        return rejectWithValue('Người dùng không tồn tại.');
+      } else if (response.status === 500) {
+        // Xử lý trường hợp lỗi server
+        return rejectWithValue('Lỗi hệ thống, vui lòng thử lại sau.');
       } else {
-        return rejectWithValue('Cập nhật LevelId không thành công');
+        // Xử lý các mã trạng thái khác
+        return rejectWithValue('Có lỗi xảy ra: ' + response.data.message);
       }
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
