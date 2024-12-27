@@ -9,7 +9,7 @@ import ConfettiCannon from 'react-native-confetti-cannon';
 import wordList from '../../data/wordList.json';
 
 const WordGuess = () => {
-    const [userInput, setUserInput] = useState(Array.from({ length: 6 }, () => Array(5).fill('')));
+    const [userInput, setUserInput] = useState(Array.from({ length: 6 }, () => Array(6).fill('')));
     const [lockedRows, setLockedRows] = useState(Array(6).fill(false));
     const [gameOver, setGameOver] = useState(false);
     const [userId, setUserId] = useState(null);
@@ -20,7 +20,7 @@ const WordGuess = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [canInput, setCanInput] = useState(true);
     const [currentRow, setCurrentRow] = useState(0);
-    const [cellColors, setCellColors] = useState(Array.from({ length: 6 }, () => Array(5).fill('#FFFFFF')));
+    const [cellColors, setCellColors] = useState(Array.from({ length: 6 }, () => Array(6).fill('#FFFFFF')));
     const [keyboardColors, setKeyboardColors] = useState({});
     const navigation = useNavigation();
     const [showConfetti, setShowConfetti] = useState(false);
